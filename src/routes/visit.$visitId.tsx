@@ -407,14 +407,32 @@ function VisitPage() {
                     Your entries
                   </h2>
                   <ul className="space-y-2">
-                    {artworks.map((a) => (
-                      <ArtworkCard
-                        key={a.id}
-                        artwork={a}
-                        onDelete={() => deleteMut.mutate(a.id)}
-                      />
-                    ))}
+                    {artworks.map((a) =>
+                      editingId === a.id ? (
+                        <li key={a.id}>
+                          <EditArtworkForm
+                            artwork={a}
+                            onCancel={() => setEditingId(null)}
+                            onSave={async (patch) => {
+                              await updateFn({
+                                data: { sessionId, visitId, artworkId: a.id, ...patch },
+                              });
+                              await qc.invalidateQueries({ queryKey: ["visit", visitId] });
+                              setEditingId(null);
+                            }}
+                          />
+                        </li>
+                      ) : (
+                        <ArtworkCard
+                          key={a.id}
+                          artwork={a}
+                          onEdit={() => setEditingId(a.id)}
+                          onDelete={() => deleteMut.mutate(a.id)}
+                        />
+                      ),
+                    )}
                   </ul>
+
                 </div>
               ) : null}
 
