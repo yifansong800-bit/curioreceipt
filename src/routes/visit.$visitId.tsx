@@ -543,8 +543,8 @@ function AddArtworkForm({
   const [artist, setArtist] = useState("");
   const [year, setYear] = useState("");
   const [medium, setMedium] = useState("");
-  const [lingerMin, setLingerMin] = useState<number>(0);
-  const [lingerSec, setLingerSec] = useState<number>(0);
+  const [lingerMin, setLingerMin] = useState<string>("");
+  const [lingerSec, setLingerSec] = useState<string>("");
   const [emotions, setEmotions] = useState<string[]>([]);
   const [customEmotion, setCustomEmotion] = useState("");
   const [rating, setRating] = useState<number>(0);
