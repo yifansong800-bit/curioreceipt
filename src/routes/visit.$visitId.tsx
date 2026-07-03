@@ -205,7 +205,7 @@ function VisitPage() {
         {/* Right: printer + receipt */}
         <div className="lg:sticky lg:top-8 self-start">
           <PrinterStage
-            mode={stage}
+            mode={stage === "compose" ? "idle" : stage}
             onPrintComplete={() => setStage("printed")}
           >
             <div ref={receiptRef}>
