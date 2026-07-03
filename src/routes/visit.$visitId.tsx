@@ -181,12 +181,51 @@ function VisitPage() {
   async function renderReceiptBlob(): Promise<{ blob: Blob; filename: string } | null> {
     const node = document.getElementById("curio-receipt") as HTMLElement | null;
     if (!node || !visit) return null;
-    const dataUrl = await toJpeg(node, {
-      pixelRatio: 2,
-      cacheBust: true,
-      backgroundColor: "#f5ead5",
-      quality: 0.95,
-    });
+
+    // The receipt lives inside a `transform: scale(...)` wrapper on the print
+    // view (so it fits under the printer). html-to-image samples the live
+    // rendered size, which on mobile is shrunk by that transform and yields a
+    // tiny/blank capture with broken text wrapping. Temporarily neutralize any
+    // ancestor transforms so the receipt is measured at its natural 360px
+    // layout, snapshot, then restore.
+    const touched: { el: HTMLElement; transform: string; transformOrigin: string }[] = [];
+    let anc: HTMLElement | null = node.parentElement;
+    while (anc && anc !== document.body) {
+      const cs = window.getComputedStyle(anc);
+      if (cs.transform && cs.transform !== "none") {
+        touched.push({
+          el: anc,
+          transform: anc.style.transform,
+          transformOrigin: anc.style.transformOrigin,
+        });
+        anc.style.transform = "none";
+        anc.style.transformOrigin = "top left";
+      }
+      anc = anc.parentElement;
+    }
+
+    let dataUrl: string;
+    try {
+      const naturalWidth = node.offsetWidth || 360;
+      const naturalHeight = node.offsetHeight || node.scrollHeight;
+      dataUrl = await toJpeg(node, {
+        pixelRatio: 2,
+        cacheBust: true,
+        backgroundColor: "#f5ead5",
+        quality: 0.95,
+        width: naturalWidth,
+        height: naturalHeight,
+        canvasWidth: naturalWidth,
+        canvasHeight: naturalHeight,
+        style: { transform: "none", transformOrigin: "top left" },
+      });
+    } finally {
+      for (const t of touched) {
+        t.el.style.transform = t.transform;
+        t.el.style.transformOrigin = t.transformOrigin;
+      }
+    }
+
     const res = await fetch(dataUrl);
     const blob = await res.blob();
     const stamp = new Date().toISOString().slice(0, 10);
