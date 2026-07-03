@@ -67,7 +67,7 @@ function Index() {
   return (
     <Dialog>
       <div
-        className="relative min-h-screen flex items-center justify-center"
+        className="relative h-[100dvh] overflow-y-auto flex flex-col items-center justify-start sm:h-auto sm:min-h-screen sm:justify-center"
         style={{
           paddingLeft: "max(1.75rem, env(safe-area-inset-left))",
           paddingRight: "max(1.75rem, env(safe-area-inset-right))",
@@ -160,7 +160,7 @@ function Index() {
         </form>
       </div>
 
-      <DialogContent className="max-w-md border text-left" style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}>
+      <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-md border text-left" style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}>
         <DialogTitle className="text-lg tracking-tight">About Curio</DialogTitle>
         <div className="space-y-4 text-sm sm:text-base leading-relaxed" style={{ color: "var(--ink)" }}>
           <p>
