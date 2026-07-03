@@ -268,9 +268,24 @@ function VisitPage() {
         await new Promise((r) => setTimeout(r, 120));
       }
 
-      dataUrl = canvas
-        ? canvas.toDataURL("image/jpeg", 0.95)
-        : await toJpeg(node, opts);
+      if (canvas) {
+        // Composite the captured canvas over a solid paper-cream fill so the
+        // scalloped-edge transparent pixels don't serialize to white in JPEG.
+        const flat = document.createElement("canvas");
+        flat.width = canvas.width;
+        flat.height = canvas.height;
+        const fctx = flat.getContext("2d");
+        if (fctx) {
+          fctx.fillStyle = "#f5ead5";
+          fctx.fillRect(0, 0, flat.width, flat.height);
+          fctx.drawImage(canvas, 0, 0);
+          dataUrl = flat.toDataURL("image/jpeg", 0.95);
+        } else {
+          dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+        }
+      } else {
+        dataUrl = await toJpeg(node, opts);
+      }
     } finally {
       for (const t of touched) {
         t.el.style.transform = t.transform;
