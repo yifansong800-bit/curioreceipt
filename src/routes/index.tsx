@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -180,6 +180,15 @@ function Index() {
               Cassie
             </a>{" "}
             (Northwestern ’29) on Lovable.
+          </p>
+          <p>
+            <Link
+              to="/privacy"
+              className="text-[10px] uppercase tracking-widest underline"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              Privacy Policy
+            </Link>
           </p>
         </div>
       </DialogContent>
