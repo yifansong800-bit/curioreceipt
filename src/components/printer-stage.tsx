@@ -152,27 +152,14 @@ export function PrinterStage({
                 width: "100%",
               }}
             >
-              <div
-                style={{
-                  width: receiptNaturalWidth * receiptScale,
-                  height: "auto",
-                }}
-              >
-              <div
-                style={{
-                  width: receiptNaturalWidth,
-                  transform: `scale(${receiptScale})`,
-                  transformOrigin: "top center",
-                }}
+              <ScaledReceipt
+                naturalWidth={receiptNaturalWidth}
+                scale={receiptScale}
               >
                 <div
                   style={{
                     position: "relative",
                     willChange: "transform",
-                    // Default hidden above the slot; the CSS animation reveals
-                    // it step-by-step once `armed` is true. Keeping this base
-                    // transform means even if the animation attach is delayed
-                    // by a frame, nothing flashes at translateY(0).
                     transform: mode === "printed" ? "translateY(0)" : "translateY(-100%)",
                     visibility: armed ? "visible" : "hidden",
                     ...(mode === "printing" && armed && !reduce
@@ -203,8 +190,8 @@ export function PrinterStage({
                     }}
                   />
                 </div>
-              </div>
-              </div>
+              </ScaledReceipt>
+
 
 
             </motion.div>
