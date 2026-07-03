@@ -112,6 +112,8 @@ function VisitPage() {
   const [sharing, setSharing] = useState(false);
   const [shareHint, setShareHint] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [shared, setShared] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1);
