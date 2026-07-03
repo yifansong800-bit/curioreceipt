@@ -148,8 +148,7 @@ export function PrinterStage({
           />
         </div>
 
-        {/* placeholder to preserve original closing div balance */}
-        <div style={{ display: "none" }} />
+
 
         {/* Receipt lane: pulled up so its top edge sits at the slot mouth. */}
         <AnimatePresence initial={false}>
