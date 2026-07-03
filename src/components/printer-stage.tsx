@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import printerImg from "@/assets/printer.png";
 
