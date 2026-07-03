@@ -1,9 +1,15 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
 
-import printerImg from "@/assets/printer.jpg";
+import printerImg from "@/assets/printer.png";
 
 type Mode = "idle" | "printing" | "printed";
+
+// Measured from the generated bird's-eye printer PNG (1024x1024):
+// paper-exit slot mouth is centered around 72% down the image.
+const SLOT_Y_PCT = 72;
+// Slot mouth width relative to the printer image width.
+const SLOT_WIDTH_PCT = 44;
 
 export function PrinterStage({
   mode,
@@ -15,17 +21,31 @@ export function PrinterStage({
   children: ReactNode;
 }) {
   const reduce = useReducedMotion();
-  const printerWidth = 500;
+  const printerWidth = 460;
+  // The generated PNG is square (1024x1024).
+  const printerHeight = printerWidth;
+  const slotY = (printerHeight * SLOT_Y_PCT) / 100;
+  const slotWidth = (printerWidth * SLOT_WIDTH_PCT) / 100;
+
+  // Receipt renders at its natural 360px width. Scale it down so the paper
+  // reads as roughly slot-width when it hangs out (slightly wider than the
+  // slot mouth, matching the reference photo).
+  const receiptNaturalWidth = 360;
+  const receiptScale = (slotWidth * 1.15) / receiptNaturalWidth;
 
   return (
-    <div className="mx-auto" style={{ width: printerWidth }}>
-      {/* Printer body */}
-      <div style={{ position: "relative", zIndex: 2 }}>
+    <div
+      className="mx-auto"
+      style={{ width: printerWidth, position: "relative" }}
+    >
+      {/* Printer image sits on top so the receipt appears to come out of
+          the slot mouth (anything above the slot is hidden behind it). */}
+      <div style={{ position: "relative", zIndex: 3 }}>
         <img
           src={printerImg}
           alt=""
           width={1024}
-          height={768}
+          height={1024}
           style={{
             width: printerWidth,
             height: "auto",
@@ -37,23 +57,25 @@ export function PrinterStage({
         />
       </div>
 
-      {/* Receipt track: pulled up so its top edge aligns with the printer's
-          paper-exit slot (slot sits ~75% down the printer image). */}
+      {/* Receipt lane: absolutely anchored to the slot mouth. Content is
+          clipped above the slot line by overflow:hidden on the outer div,
+          and the inner motion.div translates from fully-hidden-above to 0. */}
       <div
         style={{
-          // 100% - 75% = 25% of image height = negative overlap
-          marginTop: `calc(${printerWidth} * (768 / 1024) * -0.25)`,
-          position: "relative",
+          position: "absolute",
+          top: slotY,
+          left: 0,
+          right: 0,
           zIndex: 1,
           display: "flex",
           justifyContent: "center",
+          pointerEvents: "none",
         }}
       >
         <AnimatePresence initial={false}>
           {mode !== "idle" ? (
             <motion.div
               key="track"
-              // Track expands as receipt emerges so layout below reflows.
               initial={{ maxHeight: 0 }}
               animate={{ maxHeight: 2400 }}
               exit={{ maxHeight: 0, opacity: 0 }}
@@ -61,7 +83,7 @@ export function PrinterStage({
                 duration: reduce ? 0.2 : mode === "printed" ? 0 : 3.2,
                 ease: [0.22, 1, 0.36, 1],
               }}
-              style={{ overflow: "hidden", width: "100%" }}
+              style={{ overflow: "hidden" }}
             >
               <motion.div
                 initial={
@@ -79,7 +101,11 @@ export function PrinterStage({
                 onAnimationComplete={() => {
                   if (mode === "printing") onPrintComplete?.();
                 }}
-                style={{ display: "flex", justifyContent: "center" }}
+                style={{
+                  transformOrigin: "top center",
+                  transform: `scale(${receiptScale})`,
+                  width: receiptNaturalWidth,
+                }}
               >
                 {/* Tiny stepper-motor jitter while printing */}
                 {mode === "printing" && !reduce ? (
