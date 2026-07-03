@@ -982,105 +982,54 @@ function AddArtworkForm({
     e.preventDefault();
     if (busy) return;
     setBusy(true);
+
+    const lingerMinRaw = lingerMin.trim();
+    const lingerSecRaw = lingerSec.trim();
+    const lingerSeconds =
+      lingerMinRaw === "" && lingerSecRaw === ""
+        ? -1
+        : Math.max(0, Math.floor(parseInt(lingerMinRaw || "0", 10))) * 60 +
+          Math.max(0, Math.floor(parseInt(lingerSecRaw || "0", 10)));
+
+    // Fire-and-forget: parent inserts an optimistic row immediately and
+    // handles the photo upload + server insert in the background. That
+    // lets us reset the form right away so the entry appears in the
+    // list without waiting for the network round-trip.
     try {
-      let imagePath: string | null = null;
-      let photoTakenAt: string | null = null;
-      let palette: string[] = [];
-      if (file) {
-        // Photo-processing steps are best-effort: if any of them fail
-        // (exif, palette, arrayBuffer, base64), fall back to adding the
-        // artwork without an image rather than aborting the whole submit.
-        try {
-          try {
-            const meta = await exifr.parse(file, ["DateTimeOriginal"]);
-            if (meta?.DateTimeOriginal) {
-              photoTakenAt = new Date(meta.DateTimeOriginal).toISOString();
-            }
-          } catch {
-            /* no exif; that's fine */
-          }
-          try {
-            palette = await extractPalette(file, 3);
-          } catch {
-            /* palette optional */
-          }
-          const downscaled = await downscaleImage(file, 2000, 0.85);
-          const buf = await downscaled.arrayBuffer();
-          let binary = "";
-          const bytes = new Uint8Array(buf);
-          const chunk = 0x8000;
-          for (let i = 0; i < bytes.length; i += chunk) {
-            binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-          }
-          const dataBase64 = btoa(binary);
-          const { path } = await uploadFn({
-            data: {
-              sessionId,
-              visitId,
-              contentType: "image/jpeg",
-              ext: "jpg",
-              dataBase64,
-            },
-          });
-          imagePath = path;
-        } catch (uploadErr) {
-          console.error("[curio] photo upload failed", uploadErr);
-          const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr);
-          const proceed = window.confirm(
-            `Couldn't upload the photo (${msg}). Add this artwork without an image?`,
-          );
-          if (!proceed) {
-            setBusy(false);
-            return;
-          }
-          imagePath = null;
-          palette = [];
-          photoTakenAt = null;
-        }
-      }
-
-      const lingerMinRaw = lingerMin.trim();
-      const lingerSecRaw = lingerSec.trim();
-      const lingerSeconds =
-        lingerMinRaw === "" && lingerSecRaw === ""
-          ? -1
-          : Math.max(0, Math.floor(parseInt(lingerMinRaw || "0", 10))) * 60 +
-            Math.max(0, Math.floor(parseInt(lingerSecRaw || "0", 10)));
-
-      await onSubmit({
-        imagePath,
+      onSubmit({
+        file,
         title: title.trim(),
         artist: artist.trim(),
         year: year.trim(),
         medium: medium.trim(),
         lingerSeconds,
         emotions,
-        photoTakenAt,
-        palette,
         rating,
       });
-
-      // reset
-      setTitle("");
-      setArtist("");
-      setYear("");
-      setMedium("");
-      setLingerMin("");
-      setLingerSec("");
-      setEmotions([]);
-      setCustomEmotion("");
-      setRating(0);
-      setFile(null);
-      setSavedCount((n) => n + 1);
-      setUploadClosed(true);
     } catch (err) {
       console.error("[curio] add artwork failed", err);
       const msg = err instanceof Error ? err.message : String(err);
       alert(`Couldn't add artwork: ${msg}`);
-    } finally {
       setBusy(false);
+      return;
     }
+
+    // reset immediately
+    setTitle("");
+    setArtist("");
+    setYear("");
+    setMedium("");
+    setLingerMin("");
+    setLingerSec("");
+    setEmotions([]);
+    setCustomEmotion("");
+    setRating(0);
+    setFile(null);
+    setSavedCount((n) => n + 1);
+    setUploadClosed(true);
+    setBusy(false);
   }
+
 
 
 
