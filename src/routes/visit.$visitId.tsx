@@ -208,7 +208,24 @@ function VisitPage() {
     try {
       const naturalWidth = node.offsetWidth || 360;
       const naturalHeight = node.offsetHeight || node.scrollHeight;
-      dataUrl = await toJpeg(node, {
+
+      // Ensure every <img> inside the receipt (dithered artwork data URLs)
+      // is fully decoded before snapshotting. On iOS Safari html-to-image
+      // frequently produces a blank capture for images that haven't finished
+      // decoding at snapshot time, which is why artworks came out empty.
+      const imgs = Array.from(node.querySelectorAll("img"));
+      await Promise.all(
+        imgs.map((img) => {
+          if (img.complete && img.naturalWidth > 0) return img.decode().catch(() => {});
+          return new Promise<void>((resolve) => {
+            const done = () => resolve();
+            img.addEventListener("load", done, { once: true });
+            img.addEventListener("error", done, { once: true });
+          });
+        }),
+      );
+
+      const opts = {
         pixelRatio: 2,
         cacheBust: true,
         backgroundColor: "#f5ead5",
@@ -218,13 +235,21 @@ function VisitPage() {
         canvasWidth: naturalWidth,
         canvasHeight: naturalHeight,
         style: { transform: "none", transformOrigin: "top left" },
-      });
+      } as const;
+      // iOS Safari: the first html-to-image pass often drops <img> content
+      // when rendering through <foreignObject>. Running the snapshot a few
+      // times in a row primes the cache and yields a fully-populated result.
+      // See https://github.com/bubkoo/html-to-image/issues/361
+      await toJpeg(node, opts);
+      await toJpeg(node, opts);
+      dataUrl = await toJpeg(node, opts);
     } finally {
       for (const t of touched) {
         t.el.style.transform = t.transform;
         t.el.style.transformOrigin = t.transformOrigin;
       }
     }
+
 
     const res = await fetch(dataUrl);
     const blob = await res.blob();
