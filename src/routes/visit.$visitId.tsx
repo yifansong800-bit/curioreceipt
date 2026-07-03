@@ -1043,9 +1043,7 @@ function AddArtworkForm({
           Math.max(0, Math.floor(parseInt(lingerSecRaw || "0", 10)));
 
     // Fire-and-forget: parent inserts an optimistic row immediately and
-    // handles the photo upload + server insert in the background. That
-    // lets us reset the form right away so the entry appears in the
-    // list without waiting for the network round-trip.
+    // handles the photo upload + server insert in the background.
     try {
       onSubmit({
         file,
@@ -1065,7 +1063,7 @@ function AddArtworkForm({
       return;
     }
 
-    // reset immediately
+    // reset immediately so the form is ready for the next entry
     setTitle("");
     setArtist("");
     setYear("");
@@ -1078,7 +1076,10 @@ function AddArtworkForm({
     setFile(null);
     setSavedCount((n) => n + 1);
     setUploadClosed(true);
-    setBusy(false);
+
+    // Keep the "adding..." label visible briefly so the action feels
+    // acknowledged even though the row appears optimistically.
+    window.setTimeout(() => setBusy(false), 800);
   }
 
 
