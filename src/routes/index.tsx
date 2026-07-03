@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { createVisit, suggestMuseums } from "@/lib/visits.functions";
 import { getSessionId } from "@/lib/session";
+import { Footer } from "@/components/Footer";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -67,7 +68,7 @@ function Index() {
   return (
     <Dialog>
       <div
-        className="relative h-[100dvh] overflow-y-auto flex flex-col items-center justify-center pl-[max(2rem,env(safe-area-inset-left))] pr-[max(2rem,env(safe-area-inset-right))] sm:pl-[max(1.75rem,env(safe-area-inset-left))] sm:pr-[max(1.75rem,env(safe-area-inset-right))] sm:h-auto sm:min-h-screen"
+        className="relative h-[100dvh] overflow-hidden flex flex-col items-center justify-center pl-[max(2rem,env(safe-area-inset-left))] pr-[max(2rem,env(safe-area-inset-right))] sm:pl-[max(1.75rem,env(safe-area-inset-left))] sm:pr-[max(1.75rem,env(safe-area-inset-right))] sm:h-auto sm:min-h-screen"
         style={{
           paddingTop: "max(1.5rem, env(safe-area-inset-top))",
           paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
@@ -157,6 +158,8 @@ function Index() {
           ) : null}
         </form>
       </div>
+
+      <Footer className="mt-auto" />
 
       <DialogContent className="max-w-[calc(100%-4rem)] sm:max-w-md border text-left" style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}>
         <DialogTitle className="text-lg tracking-tight">About Curio</DialogTitle>
