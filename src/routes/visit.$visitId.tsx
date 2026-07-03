@@ -17,7 +17,9 @@ import { ArtworkCard } from "@/components/artwork-card";
 import { slugify } from "@/lib/format";
 
 type View = "compose" | "print";
-type Stage = "printing" | "printed";
+type Stage = "idle" | "printing" | "printed";
+
+const PRINTER_WARMUP_MS = 2000;
 
 const MAX_ARTWORKS = 3;
 
@@ -83,7 +85,7 @@ function VisitPage() {
   });
 
   const [view, setView] = useState<View>("compose");
-  const [stage, setStage] = useState<Stage>("printing");
+  const [stage, setStage] = useState<Stage>("idle");
   const [downloading, setDownloading] = useState(false);
   const receiptRef = useRef<HTMLDivElement | null>(null);
 
@@ -92,14 +94,25 @@ function VisitPage() {
 
   function goToPrint() {
     if (artworks.length === 0) return;
-    setStage("printing");
+    setStage("idle");
     setView("print");
   }
 
   function goToCompose() {
     setView("compose");
-    setStage("printing");
+    setStage("idle");
   }
+
+  function reprint() {
+    setStage("idle");
+  }
+
+  // Warm-up: show only the printer for a moment, then start feeding.
+  useEffect(() => {
+    if (view !== "print" || stage !== "idle") return;
+    const t = window.setTimeout(() => setStage("printing"), PRINTER_WARMUP_MS);
+    return () => window.clearTimeout(t);
+  }, [view, stage]);
 
   // Escape returns to compose from the print view.
   useEffect(() => {
