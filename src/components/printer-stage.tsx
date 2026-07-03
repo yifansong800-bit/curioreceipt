@@ -15,7 +15,7 @@ export function PrinterStage({
   children: ReactNode;
 }) {
   const reduce = useReducedMotion();
-  const printerWidth = 440;
+  const printerWidth = 500;
 
   return (
     <div className="mx-auto" style={{ width: printerWidth }}>
