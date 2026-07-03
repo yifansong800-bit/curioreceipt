@@ -53,7 +53,7 @@ export async function ditherImage(
     data.data[i * 4 + 3] = 255;
   }
   ctx.putImageData(data, 0, 0);
-  return canvas.toDataURL("image/png");
+  return { dataUrl: canvas.toDataURL("image/png"), width: w, height: h };
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
