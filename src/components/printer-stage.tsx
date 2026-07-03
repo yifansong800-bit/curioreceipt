@@ -76,118 +76,122 @@ export function PrinterStage({
       className="mx-auto w-full"
       style={{ maxWidth: MAX_PRINTER_WIDTH }}
     >
-    <div className="mx-auto" style={{ width: printerWidth }}>
-      {/* Printer image — behind the receipt so the paper appears to drape
-          out of the slot mouth over the printer's front lip. */}
-      <img
-        src={printerImg}
-        alt=""
-        width={1024}
-        height={1024}
-        style={{
-          width: printerWidth,
-          height: "auto",
-          display: "block",
-          position: "relative",
-          zIndex: 1,
-          userSelect: "none",
-          pointerEvents: "none",
-        }}
-        draggable={false}
-      />
+      <div className="mx-auto flex flex-col items-center" style={{ width: printerWidth }}>
+        {/* Printer image — always visible so the user sees the machine during warmup,
+            and behind the receipt so the paper appears to drape out of the slot mouth. */}
+        <img
+          src={printerImg}
+          alt=""
+          width={1024}
+          height={1024}
+          style={{
+            width: printerWidth,
+            height: "auto",
+            display: "block",
+            position: "relative",
+            zIndex: 1,
+            userSelect: "none",
+            pointerEvents: "none",
+          }}
+          draggable={false}
+        />
 
-      {/* Receipt lane: pulled up so its top edge sits at the slot mouth.
-          overflow:hidden clips the animated content above that edge. */}
-      <AnimatePresence initial={false}>
-        {mode === "printing" || mode === "printed" ? (
-          <motion.div
-            key="lane"
-            initial={{ height: 0, opacity: 1 }}
-            animate={{ height: "auto" }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            style={{
-              marginTop: -pullUp,
-              position: "relative",
-              zIndex: 2,
-              overflow: "hidden",
-              display: "flex",
-              justifyContent: "center",
-            }}
-          >
-            <div style={{ zoom: receiptScale, width: receiptNaturalWidth }}>
-              <motion.div
-                initial={
-                  mode === "printed"
-                    ? { y: 0 }
-                    : reduce
-                      ? { y: 0, opacity: 0 }
-                      : { y: "-100%" }
-                }
-                animate={reduce ? { y: 0, opacity: 1 } : { y: 0 }}
-                transition={{
-                  duration: reduce ? 0.25 : mode === "printed" ? 0 : feedDurationMs / 1000,
-                  ease: reduce ? "easeOut" : [0.22, 1, 0.36, 1],
-                }}
+        {/* Warm-up indicator: placed directly beneath the printer image. */}
+        {mode === "idle" ? (
+          <div className="w-full mt-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span
+                className="text-xs uppercase tracking-widest"
+                style={{ color: "var(--ink-soft)" }}
               >
-                {mode === "printing" && !reduce ? (
-                  <motion.div
-                    animate={{ y: [0, -0.8, 0.8, -0.6, 0.6, 0] }}
-                    transition={{
-                      duration: 0.18,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                  >
-                    {children}
-                  </motion.div>
-                ) : (
-                  children
-                )}
-              </motion.div>
+                Warming up printer
+              </span>
+              <span
+                className="text-xs tabular-nums"
+                style={{ color: "var(--ink-soft)" }}
+              >
+                {(warmupDuration / 1000).toFixed(1)}s
+              </span>
             </div>
-          </motion.div>
+            <div
+              className="h-1 w-full overflow-hidden"
+              style={{ backgroundColor: "var(--border)" }}
+            >
+              <motion.div
+                className="h-full origin-left"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: warmupDuration / 1000, ease: "linear" }}
+                style={{ backgroundColor: "var(--ink)" }}
+              />
+            </div>
+          </div>
         ) : null}
-      </AnimatePresence>
 
-      {mode === "idle" ? (
-        <div className="mt-4 space-y-2" style={{ width: printerWidth }}>
-          <div className="flex items-center justify-between">
-            <span
-              className="text-xs uppercase tracking-widest"
-              style={{ color: "var(--ink-soft)" }}
-            >
-              Warming up printer
-            </span>
-            <span
-              className="text-xs tabular-nums"
-              style={{ color: "var(--ink-soft)" }}
-            >
-              {(warmupDuration / 1000).toFixed(1)}s
-            </span>
-          </div>
-          <div
-            className="h-1 w-full overflow-hidden"
-            style={{ backgroundColor: "var(--border)" }}
-          >
+        {/* Receipt lane: pulled up so its top edge sits at the slot mouth.
+            overflow:hidden clips the animated content above that edge. */}
+        <AnimatePresence initial={false}>
+          {mode === "printing" || mode === "printed" ? (
             <motion.div
-              className="h-full origin-left"
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: warmupDuration / 1000, ease: "linear" }}
-              style={{ backgroundColor: "var(--ink)" }}
-            />
+              key="lane"
+              initial={{ height: 0, opacity: 1 }}
+              animate={{ height: "auto" }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                marginTop: -pullUp,
+                position: "relative",
+                zIndex: 2,
+                overflow: "hidden",
+                display: "flex",
+                justifyContent: "center",
+                width: "100%",
+              }}
+            >
+              <div style={{ zoom: receiptScale, width: receiptNaturalWidth }}>
+                <motion.div
+                  initial={
+                    mode === "printed"
+                      ? { y: 0 }
+                      : reduce
+                        ? { y: 0, opacity: 0 }
+                        : { y: "-100%" }
+                  }
+                  animate={reduce ? { y: 0, opacity: 1 } : { y: 0 }}
+                  transition={{
+                    duration: reduce ? 0.25 : mode === "printed" ? 0 : feedDurationMs / 1000,
+                    ease: reduce ? "easeOut" : [0.22, 1, 0.36, 1],
+                  }}
+                >
+                  {mode === "printing" && !reduce ? (
+                    <motion.div
+                      animate={{ y: [0, -0.8, 0.8, -0.6, 0.6, 0] }}
+                      transition={{
+                        duration: 0.18,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
+                    >
+                      {children}
+                    </motion.div>
+                  ) : (
+                    children
+                  )}
+                </motion.div>
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+
+        {mode === "printing" ? (
+          <div
+            className="text-center mt-3 text-xs uppercase tracking-widest"
+            style={{ color: "var(--ink-soft)" }}
+          >
+            printing…
           </div>
-        </div>
-      ) : mode === "printing" ? (
-        <div
-          className="text-center mt-3 text-xs uppercase tracking-widest"
-          style={{ color: "var(--ink-soft)" }}
-        >
-          printing…
-        </div>
-      ) : null}
-    </div>
+        ) : null}
+      </div>
     </div>
   );
 }
