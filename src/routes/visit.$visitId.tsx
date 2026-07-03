@@ -487,6 +487,18 @@ function VisitPage() {
                         {shareHint}
                       </p>
                     ) : null}
+                    <Link
+                      to="/"
+                      className="block w-full text-center uppercase tracking-widest text-sm py-3 border"
+                      style={{
+                        borderColor: "var(--ink)",
+                        backgroundColor: "var(--paper)",
+                        color: "var(--ink)",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Log another museum
+                    </Link>
                   </>
                 ) : null}
               </div>
