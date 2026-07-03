@@ -102,11 +102,8 @@ export function PrinterStage({
                 }
                 animate={reduce ? { y: 0, opacity: 1 } : { y: 0 }}
                 transition={{
-                  duration: reduce ? 0.25 : mode === "printed" ? 0 : 3.2,
+                  duration: reduce ? 0.25 : mode === "printed" ? 0 : feedDurationMs / 1000,
                   ease: reduce ? "easeOut" : [0.22, 1, 0.36, 1],
-                }}
-                onAnimationComplete={() => {
-                  if (mode === "printing") onPrintComplete?.();
                 }}
               >
                 {mode === "printing" && !reduce ? (
