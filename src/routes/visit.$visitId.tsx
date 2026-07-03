@@ -16,6 +16,7 @@ import { addArtwork, deleteArtwork, updateArtwork, uploadArtworkPhoto } from "@/
 import { Receipt, type ReceiptArtwork } from "@/components/receipt";
 import { PrinterStage } from "@/components/printer-stage";
 import { ArtworkCard } from "@/components/artwork-card";
+import { Footer } from "@/components/Footer";
 import { slugify } from "@/lib/format";
 
 type View = "compose" | "print";
