@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { Share2 } from "lucide-react";
 import exifr from "exifr";
 import { toPng } from "html-to-image";
 import { extractPalette } from "@/lib/palette";
@@ -103,6 +104,8 @@ function VisitPage() {
   const [view, setView] = useState<View>("compose");
   const [stage, setStage] = useState<Stage>("idle");
   const [downloading, setDownloading] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareHint, setShareHint] = useState<string | null>(null);
   const printStageRef = useRef<HTMLDivElement | null>(null);
   const receiptRef = useRef<HTMLDivElement | null>(null);
 
@@ -156,25 +159,78 @@ function VisitPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [view]);
 
-  async function handleDownload() {
+  async function renderReceiptBlob(): Promise<{ blob: Blob; filename: string } | null> {
     const node = document.getElementById("curio-receipt") as HTMLElement | null;
-    if (!node || !visit) return;
+    if (!node || !visit) return null;
+    const dataUrl = await toPng(node, {
+      pixelRatio: 2,
+      cacheBust: true,
+      backgroundColor: "transparent",
+    });
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const stamp = new Date().toISOString().slice(0, 10);
+    return { blob, filename: `curio-${slugify(visit.museum)}-${stamp}.png` };
+  }
+
+  async function handleDownload() {
+    if (!visit) return;
     setDownloading(true);
     try {
-      const dataUrl = await toPng(node, {
-        pixelRatio: 2,
-        cacheBust: true,
-        backgroundColor: "transparent",
-      });
+      const out = await renderReceiptBlob();
+      if (!out) return;
+      const url = URL.createObjectURL(out.blob);
       const link = document.createElement("a");
-      const stamp = new Date().toISOString().slice(0, 10);
-      link.download = `curio-${slugify(visit.museum)}-${stamp}.png`;
-      link.href = dataUrl;
+      link.download = out.filename;
+      link.href = url;
       link.click();
+      URL.revokeObjectURL(url);
     } finally {
       setDownloading(false);
     }
   }
+
+  async function handleShare() {
+    if (!visit) return;
+    setSharing(true);
+    setShareHint(null);
+    try {
+      const out = await renderReceiptBlob();
+      if (!out) return;
+      const file = new File([out.blob], out.filename, { type: "image/png" });
+      const caption = `My visit to ${visit.museum} — logged on Curio ✦`;
+      const nav = navigator as Navigator & {
+        canShare?: (data: ShareData) => boolean;
+      };
+      if (nav.canShare?.({ files: [file] })) {
+        try {
+          await nav.share({
+            files: [file],
+            title: "My Curio receipt",
+            text: caption,
+          });
+          return;
+        } catch (err) {
+          if ((err as DOMException)?.name === "AbortError") return;
+        }
+      }
+      // Fallback: download + open Instagram
+      const url = URL.createObjectURL(out.blob);
+      const link = document.createElement("a");
+      link.download = out.filename;
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+      try {
+        await navigator.clipboard?.writeText(caption);
+      } catch {}
+      window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
+      setShareHint("Saved to your device — drop it into an Instagram Story or Post.");
+    } finally {
+      setSharing(false);
+    }
+  }
+
 
   if (visitQuery.isLoading || !sessionId) {
     return <Loading />;
@@ -393,23 +449,48 @@ function VisitPage() {
                 </PrinterStage>
               </div>
 
-              <div className="mx-auto mt-6" style={{ maxWidth: 360 }}>
+              <div className="mx-auto mt-6 space-y-3" style={{ maxWidth: 360 }}>
                 {stage === "printed" ? (
-                  <button
-                    onClick={handleDownload}
-                    disabled={downloading}
-                    className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
-                    style={{
-                      borderColor: "var(--ink)",
-                      backgroundColor: "var(--ink)",
-                      color: "var(--paper)",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {downloading ? "Rendering..." : "Download receipt (PNG)"}
-                  </button>
+                  <>
+                    <button
+                      onClick={handleDownload}
+                      disabled={downloading || sharing}
+                      className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
+                      style={{
+                        borderColor: "var(--ink)",
+                        backgroundColor: "var(--ink)",
+                        color: "var(--paper)",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {downloading ? "Rendering..." : "Download receipt (PNG)"}
+                    </button>
+                    <button
+                      onClick={handleShare}
+                      disabled={sharing || downloading}
+                      className="w-full inline-flex items-center justify-center gap-2 uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
+                      style={{
+                        borderColor: "var(--ink)",
+                        backgroundColor: "var(--paper)",
+                        color: "var(--ink)",
+                        fontWeight: 700,
+                      }}
+                    >
+                      <Share2 className="h-4 w-4" />
+                      {sharing ? "Preparing..." : "Share to Instagram"}
+                    </button>
+                    {shareHint ? (
+                      <p
+                        className="text-xs text-center"
+                        style={{ color: "var(--ink-soft)" }}
+                      >
+                        {shareHint}
+                      </p>
+                    ) : null}
+                  </>
                 ) : null}
               </div>
+
             </motion.div>
           )}
         </AnimatePresence>
