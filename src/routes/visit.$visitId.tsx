@@ -558,13 +558,13 @@ function AddArtworkForm({
         />
         {preview ? (
           <div
-            className="mx-auto overflow-hidden"
-            style={{ width: 160, height: 160 }}
+            className="mx-auto flex items-center justify-center w-full"
+            style={{ maxWidth: 260, aspectRatio: "1 / 1" }}
           >
             <img
               src={preview}
               alt=""
-              className="w-full h-full object-cover"
+              className="max-w-full max-h-full w-auto h-auto object-contain"
             />
           </div>
         ) : (
