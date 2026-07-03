@@ -103,6 +103,8 @@ function VisitPage() {
   const [view, setView] = useState<View>("compose");
   const [stage, setStage] = useState<Stage>("idle");
   const [downloading, setDownloading] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareHint, setShareHint] = useState<string | null>(null);
   const printStageRef = useRef<HTMLDivElement | null>(null);
   const receiptRef = useRef<HTMLDivElement | null>(null);
 
