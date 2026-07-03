@@ -106,7 +106,13 @@ function VisitPage() {
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareHint, setShareHint] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1);
+  }, []);
   const printStageRef = useRef<HTMLDivElement | null>(null);
+
   const receiptRef = useRef<HTMLDivElement | null>(null);
 
   const atCap = artworks.length >= MAX_ARTWORKS;
