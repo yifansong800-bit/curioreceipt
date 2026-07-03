@@ -217,7 +217,7 @@ function DitheredImage({ src, size }: { src: string; size: number }) {
     // Do NOT clear `out` here — keep the previous dithered frame on screen
     // while the new one computes so the receipt never flashes back to the
     // original color image mid-print.
-    ditherImage(src, bucketed * 1.2)
+    ditherImage(src, bucketed * 1.45)
       .then((result) => {
         if (!cancelled) {
           setOut(result.dataUrl);
@@ -256,7 +256,6 @@ function DitheredImage({ src, size }: { src: string; size: number }) {
             height: "100%",
             objectFit: "contain",
             display: "block",
-            imageRendering: "pixelated",
           }}
         />
       ) : null}
