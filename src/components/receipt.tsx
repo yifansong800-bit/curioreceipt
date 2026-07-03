@@ -197,12 +197,19 @@ function ImageGrid({ artworks }: { artworks: ReceiptArtwork[] }) {
 
 function DitheredImage({ src, size }: { src: string; size: number }) {
   const [out, setOut] = useState<string | null>(null);
+  const [aspectRatio, setAspectRatio] = useState<number>(1);
+
   useEffect(() => {
     let cancelled = false;
     setOut(null);
     ditherImage(src, size * 1.2)
-      .then((data) => {
-        if (!cancelled) setOut(data);
+      .then((result) => {
+        if (!cancelled) {
+          setOut(result.dataUrl);
+          if (result.height > 0) {
+            setAspectRatio(result.width / result.height);
+          }
+        }
       })
       .catch(() => {
         if (!cancelled) setOut(src);
@@ -212,11 +219,15 @@ function DitheredImage({ src, size }: { src: string; size: number }) {
     };
   }, [src, size]);
 
+  // Show the full image uncropped by fitting its natural aspect ratio
+  // within the allotted column width.
+  const displayHeight = Math.max(1, Math.round(size / aspectRatio));
+
   return (
     <div
       style={{
         width: size,
-        height: size,
+        height: displayHeight,
         overflow: "hidden",
         display: "block",
       }}
@@ -228,7 +239,7 @@ function DitheredImage({ src, size }: { src: string; size: number }) {
         style={{
           width: "100%",
           height: "100%",
-          objectFit: "cover",
+          objectFit: "contain",
           display: "block",
           imageRendering: "pixelated",
         }}
