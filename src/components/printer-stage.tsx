@@ -5,7 +5,7 @@
 // the receipt with the printer's output slot.
 // ============================================================
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import printerImg from "@/assets/printer.png";
 
