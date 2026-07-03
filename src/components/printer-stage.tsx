@@ -71,6 +71,11 @@ export function PrinterStage({
   }, [mode, feedDurationMs, onPrintComplete]);
 
   return (
+    <div
+      ref={wrapRef}
+      className="mx-auto w-full"
+      style={{ maxWidth: MAX_PRINTER_WIDTH }}
+    >
     <div className="mx-auto" style={{ width: printerWidth }}>
       {/* Printer image — behind the receipt so the paper appears to drape
           out of the slot mouth over the printer's front lip. */}
