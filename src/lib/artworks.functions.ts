@@ -69,7 +69,46 @@ export const addArtwork = createServerFn({ method: "POST" })
     return row;
   });
 
+export const updateArtwork = createServerFn({ method: "POST" })
+  .inputValidator((raw: unknown) =>
+    z
+      .object({ sessionId: uuid, visitId: uuid, artworkId: uuid })
+      .and(artworkFields.partial())
+      .parse(raw),
+  )
+  .handler(async ({ data }) => {
+    await assertOwns(data.sessionId, data.visitId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const patch: {
+      title?: string;
+      artist?: string;
+      year?: string;
+      medium?: string;
+      linger_seconds?: number;
+      emotions?: string[];
+      rating?: number;
+    } = {};
+    if (data.title !== undefined) patch.title = data.title;
+    if (data.artist !== undefined) patch.artist = data.artist;
+    if (data.year !== undefined) patch.year = data.year;
+    if (data.medium !== undefined) patch.medium = data.medium;
+    if (data.lingerSeconds !== undefined) patch.linger_seconds = data.lingerSeconds;
+    if (data.emotions !== undefined) patch.emotions = data.emotions;
+    if (data.rating !== undefined) patch.rating = data.rating;
+
+    const { data: row, error } = await supabaseAdmin
+      .from("artworks")
+      .update(patch)
+      .eq("id", data.artworkId)
+      .eq("visit_id", data.visitId)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
 export const deleteArtwork = createServerFn({ method: "POST" })
+
   .inputValidator((raw: unknown) =>
     z
       .object({ sessionId: uuid, visitId: uuid, artworkId: uuid })

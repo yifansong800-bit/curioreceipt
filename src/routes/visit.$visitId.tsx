@@ -12,7 +12,7 @@ import { downscaleImage } from "@/lib/downscale";
 
 import { getSessionId } from "@/lib/session";
 import { getVisit, updateVisitLocation } from "@/lib/visits.functions";
-import { addArtwork, deleteArtwork, uploadArtworkPhoto } from "@/lib/artworks.functions";
+import { addArtwork, deleteArtwork, updateArtwork, uploadArtworkPhoto } from "@/lib/artworks.functions";
 import { Receipt, type ReceiptArtwork } from "@/components/receipt";
 import { PrinterStage } from "@/components/printer-stage";
 import { ArtworkCard } from "@/components/artwork-card";
@@ -75,7 +75,9 @@ function VisitPage() {
   const getFn = useServerFn(getVisit);
   const addFn = useServerFn(addArtwork);
   const delFn = useServerFn(deleteArtwork);
+  const updateFn = useServerFn(updateArtwork);
   const updateLocFn = useServerFn(updateVisitLocation);
+
   const reduce = useReducedMotion();
 
   const [sessionId, setSessionId] = useState<string>("");
@@ -104,6 +106,8 @@ function VisitPage() {
 
   const [view, setView] = useState<View>("compose");
   const [stage, setStage] = useState<Stage>("idle");
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   const [sharing, setSharing] = useState(false);
   const [shareHint, setShareHint] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -403,14 +407,32 @@ function VisitPage() {
                     Your entries
                   </h2>
                   <ul className="space-y-2">
-                    {artworks.map((a) => (
-                      <ArtworkCard
-                        key={a.id}
-                        artwork={a}
-                        onDelete={() => deleteMut.mutate(a.id)}
-                      />
-                    ))}
+                    {artworks.map((a) =>
+                      editingId === a.id ? (
+                        <li key={a.id}>
+                          <EditArtworkForm
+                            artwork={a}
+                            onCancel={() => setEditingId(null)}
+                            onSave={async (patch) => {
+                              await updateFn({
+                                data: { sessionId, visitId, artworkId: a.id, ...patch },
+                              });
+                              await qc.invalidateQueries({ queryKey: ["visit", visitId] });
+                              setEditingId(null);
+                            }}
+                          />
+                        </li>
+                      ) : (
+                        <ArtworkCard
+                          key={a.id}
+                          artwork={a}
+                          onEdit={() => setEditingId(a.id)}
+                          onDelete={() => deleteMut.mutate(a.id)}
+                        />
+                      ),
+                    )}
                   </ul>
+
                 </div>
               ) : null}
 
@@ -1102,3 +1124,284 @@ function LocationEditor({
     </div>
   );
 }
+
+type EditPatch = {
+  title: string;
+  artist: string;
+  year: string;
+  medium: string;
+  lingerSeconds: number;
+  emotions: string[];
+  rating: number;
+};
+
+function EditArtworkForm({
+  artwork,
+  onSave,
+  onCancel,
+}: {
+  artwork: ReceiptArtwork;
+  onSave: (patch: EditPatch) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState(artwork.title ?? "");
+  const [artist, setArtist] = useState(artwork.artist ?? "");
+  const [year, setYear] = useState(artwork.year ?? "");
+  const [medium, setMedium] = useState(artwork.medium ?? "");
+  const initialLinger = artwork.linger_seconds ?? -1;
+  const [lingerMin, setLingerMin] = useState<string>(
+    initialLinger < 0 ? "" : String(Math.floor(initialLinger / 60)),
+  );
+  const [lingerSec, setLingerSec] = useState<string>(
+    initialLinger < 0 ? "" : String(initialLinger % 60),
+  );
+  const [emotions, setEmotions] = useState<string[]>(artwork.emotions ?? []);
+  const [customEmotion, setCustomEmotion] = useState("");
+  const [rating, setRating] = useState<number>(artwork.rating ?? 0);
+  const [busy, setBusy] = useState(false);
+
+  function toggleEmotion(e: string) {
+    setEmotions((prev) =>
+      prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e],
+    );
+  }
+  function addCustom() {
+    const v = customEmotion.trim().toLowerCase();
+    if (!v) return;
+    if (!emotions.includes(v)) setEmotions([...emotions, v]);
+    setCustomEmotion("");
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    try {
+      const minRaw = lingerMin.trim();
+      const secRaw = lingerSec.trim();
+      const lingerSeconds =
+        minRaw === "" && secRaw === ""
+          ? -1
+          : Math.max(0, Math.floor(parseInt(minRaw || "0", 10))) * 60 +
+            Math.max(0, Math.floor(parseInt(secRaw || "0", 10)));
+      await onSave({
+        title: title.trim(),
+        artist: artist.trim(),
+        year: year.trim(),
+        medium: medium.trim(),
+        lingerSeconds,
+        emotions,
+        rating,
+      });
+    } catch (err) {
+      console.error("[curio] update artwork failed", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`Couldn't save changes: ${msg}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="border p-4 space-y-4"
+      style={{ borderColor: "var(--border)" }}
+    >
+      <div
+        className="text-xs uppercase tracking-widest flex items-center justify-between"
+        style={{ color: "var(--ink-soft)" }}
+      >
+        <span>Editing entry {String(artwork.position).padStart(2, "0")}</span>
+      </div>
+
+      <MiniField label="TITLE" value={title} onChange={setTitle} placeholder="SARS" />
+      <div className="grid grid-cols-[1fr_100px] gap-3">
+        <MiniField label="ARTIST" value={artist} onChange={setArtist} placeholder="Fang Lijun" />
+        <MiniField label="YEAR" value={year} onChange={setYear} placeholder="2003" />
+      </div>
+      <div>
+        <MiniField label="MEDIUM" value={medium} onChange={setMedium} placeholder="oil on canvas" />
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {MEDIUM_PRESETS.map((m) => {
+            const on = medium.trim().toLowerCase() === m;
+            return (
+              <button
+                type="button"
+                key={m}
+                onClick={() => setMedium(on ? "" : m)}
+                className="px-2 py-1 text-xs border"
+                style={{
+                  borderColor: "var(--ink)",
+                  backgroundColor: on ? "var(--ink)" : "transparent",
+                  color: on ? "var(--paper)" : "var(--ink)",
+                }}
+              >
+                [{m}]
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <div
+          className="text-xs uppercase tracking-widest mb-1 flex items-baseline gap-2 flex-wrap"
+          style={{ color: "var(--ink-soft)" }}
+        >
+          <span>LINGER TIME</span>
+          <span style={{ textTransform: "none", letterSpacing: 0, fontStyle: "italic" }}>
+            you can estimate this!
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <input
+            type="number"
+            min={0}
+            max={720}
+            value={lingerMin}
+            onChange={(e) => setLingerMin(e.target.value)}
+            className="w-16 bg-transparent border-b py-1 outline-none tabular-nums"
+            style={{ borderColor: "var(--ink)" }}
+          />
+          <span>min</span>
+          <input
+            type="number"
+            min={0}
+            max={59}
+            value={lingerSec}
+            onChange={(e) => setLingerSec(e.target.value)}
+            className="w-16 bg-transparent border-b py-1 outline-none tabular-nums"
+            style={{ borderColor: "var(--ink)" }}
+          />
+          <span>sec</span>
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--ink-soft)" }}>
+          RATING
+        </div>
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((n) => {
+            const on = rating >= n;
+            return (
+              <button
+                type="button"
+                key={n}
+                onClick={() => setRating(rating === n ? 0 : n)}
+                aria-label={`${n} star${n === 1 ? "" : "s"}`}
+                className="text-2xl leading-none px-1"
+                style={{ color: on ? "var(--ink)" : "var(--ink-soft)", opacity: on ? 1 : 0.5 }}
+              >
+                {on ? "★" : "☆"}
+              </button>
+            );
+          })}
+          {rating > 0 ? (
+            <button
+              type="button"
+              onClick={() => setRating(0)}
+              className="ml-2 text-xs uppercase tracking-widest underline"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              clear
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--ink-soft)" }}>
+          I WAS…
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {EMOTION_PRESETS.map((e) => {
+            const on = emotions.includes(e);
+            return (
+              <button
+                type="button"
+                key={e}
+                onClick={() => toggleEmotion(e)}
+                className="px-2 py-1 text-xs border"
+                style={{
+                  borderColor: "var(--ink)",
+                  backgroundColor: on ? "var(--ink)" : "transparent",
+                  color: on ? "var(--paper)" : "var(--ink)",
+                }}
+              >
+                [{e}]
+              </button>
+            );
+          })}
+          {emotions
+            .filter((e) => !EMOTION_PRESETS.includes(e))
+            .map((e) => (
+              <button
+                type="button"
+                key={e}
+                onClick={() => toggleEmotion(e)}
+                className="px-2 py-1 text-xs border"
+                style={{
+                  borderColor: "var(--ink)",
+                  backgroundColor: "var(--ink)",
+                  color: "var(--paper)",
+                }}
+              >
+                [{e}] ×
+              </button>
+            ))}
+        </div>
+        <div className="flex gap-2 mt-2">
+          <input
+            value={customEmotion}
+            onChange={(e) => setCustomEmotion(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === ",") {
+                e.preventDefault();
+                addCustom();
+              }
+            }}
+            placeholder="add your own"
+            maxLength={30}
+            className="flex-1 bg-transparent border-b py-1 text-sm outline-none"
+            style={{ borderColor: "var(--ink)" }}
+          />
+          <button
+            type="button"
+            onClick={addCustom}
+            className="text-xs uppercase tracking-widest underline"
+          >
+            add
+          </button>
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={busy}
+          className="flex-1 uppercase tracking-widest text-sm py-2 border disabled:opacity-40"
+          style={{
+            borderColor: "var(--ink)",
+            backgroundColor: "var(--ink)",
+            color: "var(--paper)",
+            fontWeight: 700,
+          }}
+        >
+          {busy ? "saving…" : "save changes"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={busy}
+          className="uppercase tracking-widest text-sm py-2 px-4 border disabled:opacity-40"
+          style={{ borderColor: "var(--ink)" }}
+        >
+          cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+

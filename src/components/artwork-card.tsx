@@ -4,10 +4,13 @@ import type { ReceiptArtwork } from "@/components/receipt";
 export function ArtworkCard({
   artwork,
   onDelete,
+  onEdit,
 }: {
   artwork: ReceiptArtwork;
   onDelete?: () => void;
+  onEdit?: () => void;
 }) {
+
   const palette = artwork.palette ?? [];
   const hasPalette = palette.length > 0;
   const gradient = hasPalette
@@ -66,15 +69,27 @@ export function ArtworkCard({
           </div>
         </div>
 
-        {onDelete ? (
-          <button
-            onClick={onDelete}
-            className="shrink-0 text-xs underline px-1"
-            style={{ color: "var(--ink-soft)" }}
-          >
-            remove
-          </button>
-        ) : null}
+        <div className="shrink-0 flex flex-col items-end gap-1">
+          {onEdit ? (
+            <button
+              onClick={onEdit}
+              className="text-xs underline px-1"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              edit
+            </button>
+          ) : null}
+          {onDelete ? (
+            <button
+              onClick={onDelete}
+              className="text-xs underline px-1"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              remove
+            </button>
+          ) : null}
+        </div>
+
       </div>
     </li>
   );
