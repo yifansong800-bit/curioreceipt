@@ -45,6 +45,12 @@ const knownMuseums: KnownMuseum[] = [
   { name: "National Gallery of Victoria", city: "Melbourne", country: "Australia", aliases: ["ngv"] },
   { name: "Frida Kahlo Museum", city: "Mexico City", country: "Mexico", aliases: ["casa azul", "blue house museum"] },
   { name: "Museo Nacional de Antropología", city: "Mexico City", country: "Mexico", aliases: ["national museum of anthropology mexico", "museo nacional de antropologia"] },
+  { name: "M+", city: "Hong Kong", country: "Hong Kong", aliases: ["m plus", "m+ museum", "m plus museum", "west kowloon m+"] },
+  { name: "Mori Art Museum", city: "Tokyo", country: "Japan", aliases: ["mori museum"] },
+  { name: "teamLab Planets", city: "Tokyo", country: "Japan", aliases: ["teamlab planets tokyo", "team lab planets"] },
+  { name: "teamLab Borderless", city: "Tokyo", country: "Japan", aliases: ["teamlab borderless", "team lab borderless"] },
+  { name: "21c Museum Hotel", city: "Louisville", country: "United States", aliases: ["21c museum", "21c"] },
+  { name: "Hirshhorn Museum and Sculpture Garden", city: "Washington", country: "United States", aliases: ["hirshhorn", "the hirshhorn"] },
 ];
 
 const museumSuggestionSchema = z.object({
@@ -69,25 +75,40 @@ function normalizeMuseumText(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/[^a-z0-9+]+/g, " ")
     .replace(/^the\s+/, "")
     .trim();
 }
 
+function looseNormalizeMuseumText(value: string) {
+  // Preserves +, &, digits so short symbolic names like "M+", "V&A", "21c" still match.
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function candidatesForMuseum(museum: KnownMuseum) {
-  return [museum.name, ...(museum.aliases ?? [])].map(normalizeMuseumText).filter(Boolean);
+  const names = [museum.name, ...(museum.aliases ?? [])];
+  const normal = names.map(normalizeMuseumText).filter(Boolean);
+  const loose = names.map(looseNormalizeMuseumText).filter(Boolean);
+  return Array.from(new Set([...normal, ...loose]));
 }
 
 function scoreKnownMuseum(query: string, museum: KnownMuseum) {
-  const q = normalizeMuseumText(query);
+  const qNormal = normalizeMuseumText(query);
+  const qLoose = looseNormalizeMuseumText(query);
+  const q = qNormal || qLoose;
   if (!q) return 0;
-  const tokens = q.split(" ").filter(Boolean);
+  const tokens = q.split(/\s+/).filter(Boolean);
   let best = 0;
   for (const candidate of candidatesForMuseum(museum)) {
     if (candidate === q) best = Math.max(best, 100);
     else if (candidate.startsWith(q)) best = Math.max(best, 90);
     else if (candidate.includes(q)) best = Math.max(best, 75);
-    else if (tokens.every((token) => candidate.includes(token))) best = Math.max(best, 55 + tokens.length);
+    else if (tokens.length && tokens.every((token) => candidate.includes(token))) best = Math.max(best, 55 + tokens.length);
   }
   return best;
 }
@@ -205,21 +226,26 @@ export const suggestMuseums = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const local = localMuseumSuggestions(data.query);
-    if (local.length > 0) return { suggestions: local };
+    try {
+      if (local.length > 0) return { suggestions: local };
 
-    const ai = await generateJsonObject(
-      museumSuggestionsSchema,
-      "You autocomplete real, existing museum and art institution names worldwide. " +
-        `User is typing: "${data.query}". ` +
-        "Return a JSON object with one key, suggestions, containing up to 6 real museums whose official English name best matches this prefix or fuzzy match. " +
-        "Prefer well-known institutions. Include small/regional museums only if they clearly match. " +
-        "For each suggestion: name is the museum's canonical English name; city is the common English city name " +
-        "(e.g. 'New York', 'Paris'); country is the full English country name (e.g. 'United States', 'France'). " +
-        "If unsure of a location, set that field to null. Never invent museums that don't exist. " +
-        "If nothing plausibly matches, return {\"suggestions\":[]}.",
-      1800,
-    );
-    return { suggestions: dedupeSuggestions([...local, ...(ai?.suggestions ?? [])]) };
+      const ai = await generateJsonObject(
+        museumSuggestionsSchema,
+        "You autocomplete real, existing museum and art institution names worldwide. " +
+          `User is typing: "${data.query}". ` +
+          "Return a JSON object with one key, suggestions, containing up to 6 real museums whose official English name best matches this prefix or fuzzy match. " +
+          "Prefer well-known institutions. Include small/regional museums only if they clearly match. " +
+          "For each suggestion: name is the museum's canonical English name; city is the common English city name " +
+          "(e.g. 'New York', 'Paris'); country is the full English country name (e.g. 'United States', 'France'). " +
+          "If unsure of a location, set that field to null. Never invent museums that don't exist. " +
+          "If nothing plausibly matches, return {\"suggestions\":[]}.",
+        1800,
+      );
+      return { suggestions: dedupeSuggestions([...local, ...(ai?.suggestions ?? [])]) };
+    } catch (err) {
+      console.error("suggestMuseums failed", err instanceof Error ? err.message : err);
+      return { suggestions: local };
+    }
   });
 
 export const createVisit = createServerFn({ method: "POST" })
