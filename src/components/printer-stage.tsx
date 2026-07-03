@@ -188,5 +188,6 @@ export function PrinterStage({
         </div>
       ) : null}
     </div>
+    </div>
   );
 }
