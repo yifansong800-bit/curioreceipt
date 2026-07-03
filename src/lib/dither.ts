@@ -108,6 +108,9 @@ function buildEnhancedGrayscale(data: Uint8ClampedArray, w: number, h: number) {
   return enhanced;
 }
 
+const ATKINSON_THRESHOLD = 145;
+const THRESHOLD_JITTER = 7;
+
 function atkinsonDiffuse(gray: Float32Array, w: number, h: number) {
   const spread = (x: number, y: number, error: number) => {
     if (x >= 0 && x < w && y >= 0 && y < h) {
@@ -119,7 +122,7 @@ function atkinsonDiffuse(gray: Float32Array, w: number, h: number) {
     for (let x = 0; x < w; x++) {
       const i = y * w + x;
       const old = gray[i];
-      const threshold = 128 + (((x * 13 + y * 7) % 11) - 5);
+      const threshold = ATKINSON_THRESHOLD + (((x * 13 + y * 7) % (THRESHOLD_JITTER * 2 + 1)) - THRESHOLD_JITTER);
       const next = old < threshold ? 0 : 255;
       const error = old - next;
       gray[i] = next;
