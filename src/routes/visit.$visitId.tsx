@@ -150,7 +150,15 @@ function VisitPage() {
 
   if (!visit) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{
+          paddingLeft: "max(1.5rem, env(safe-area-inset-left))",
+          paddingRight: "max(1.5rem, env(safe-area-inset-right))",
+          paddingTop: "max(1.5rem, env(safe-area-inset-top))",
+          paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
+        }}
+      >
         <div className="text-center max-w-sm">
           <div style={{ fontFamily: "var(--font-display)", fontSize: 48 }}>404</div>
           <p className="mt-2 text-sm" style={{ color: "var(--ink-soft)" }}>
@@ -171,7 +179,16 @@ function VisitPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto px-6 py-8" style={{ maxWidth: 640 }}>
+      <div
+        className="mx-auto"
+        style={{
+          maxWidth: 640,
+          paddingLeft: "max(1.25rem, env(safe-area-inset-left))",
+          paddingRight: "max(1.25rem, env(safe-area-inset-right))",
+          paddingTop: "max(1.5rem, env(safe-area-inset-top))",
+          paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
+        }}
+      >
         <AnimatePresence mode="wait" initial={false}>
           {view === "compose" ? (
             <motion.div
