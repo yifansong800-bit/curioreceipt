@@ -54,7 +54,8 @@ export function PrinterStage({
   // pushes elements below it downward — otherwise it overlaps the
   // Download / Edit buttons underneath.
   const receiptNaturalWidth = 360;
-  const receiptScale = (printerWidth * (SLOT_WIDTH_PCT / 100) * 1.15) / receiptNaturalWidth;
+  // Match receipt width exactly to the printer's slot width.
+  const receiptScale = (printerWidth * (SLOT_WIDTH_PCT / 100)) / receiptNaturalWidth;
 
   // Deterministic gating: fire onPrintComplete exactly when the feed
   // animation finishes. Using a timer (not motion's onAnimationComplete)
