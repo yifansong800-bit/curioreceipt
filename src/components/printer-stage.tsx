@@ -156,11 +156,20 @@ export function PrinterStage({
                 <div
                   style={{
                     position: "relative",
-                    ...(mode === "printing" && !reduce
+                    willChange: "transform",
+                    // Default hidden above the slot; the CSS animation reveals
+                    // it step-by-step once `armed` is true. Keeping this base
+                    // transform means even if the animation attach is delayed
+                    // by a frame, nothing flashes at translateY(0).
+                    transform: mode === "printed" ? "translateY(0)" : "translateY(-100%)",
+                    visibility: armed ? "visible" : "hidden",
+                    ...(mode === "printing" && armed && !reduce
                       ? {
                           animation: `curio-feed ${FEED_DURATION_MS}ms steps(${FEED_STEPS}, end) forwards`,
                         }
-                      : { transform: "translateY(0)" }),
+                      : mode === "printing" && armed && reduce
+                        ? { transform: "translateY(0)" }
+                        : {}),
                   }}
                 >
                   {children}
@@ -183,6 +192,7 @@ export function PrinterStage({
                   />
                 </div>
               </div>
+
             </motion.div>
           ) : null}
         </AnimatePresence>
