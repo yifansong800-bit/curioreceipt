@@ -163,6 +163,7 @@ export function PrinterStage({
                     duration: reduce ? 0.25 : mode === "printed" ? 0 : feedDurationMs / 1000,
                     ease: reduce ? "easeOut" : [0.22, 1, 0.36, 1],
                   }}
+                  style={{ position: "relative" }}
                 >
                   {mode === "printing" && !reduce ? (
                     <motion.div
@@ -178,6 +179,24 @@ export function PrinterStage({
                   ) : (
                     children
                   )}
+                  {/* Crumpled-paper shadow overlay: soft diagonal creases that
+                      sit on top of the receipt while it's feeding out. */}
+                  <div
+                    aria-hidden
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      pointerEvents: "none",
+                      mixBlendMode: "multiply",
+                      opacity: mode === "printing" ? 0.55 : 0.35,
+                      backgroundImage: [
+                        "linear-gradient(105deg, transparent 0%, rgba(0,0,0,0.14) 12%, transparent 22%, transparent 38%, rgba(0,0,0,0.10) 46%, transparent 58%, transparent 72%, rgba(0,0,0,0.12) 82%, transparent 92%)",
+                        "linear-gradient(75deg, transparent 0%, transparent 18%, rgba(0,0,0,0.08) 28%, transparent 40%, transparent 62%, rgba(0,0,0,0.10) 72%, transparent 84%)",
+                        "radial-gradient(120% 40px at 50% 0%, rgba(0,0,0,0.28), transparent 70%)",
+                      ].join(", "),
+                      transition: "opacity 0.4s ease",
+                    }}
+                  />
                 </motion.div>
               </div>
             </motion.div>
