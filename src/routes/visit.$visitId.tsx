@@ -158,25 +158,78 @@ function VisitPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [view]);
 
-  async function handleDownload() {
+  async function renderReceiptBlob(): Promise<{ blob: Blob; filename: string } | null> {
     const node = document.getElementById("curio-receipt") as HTMLElement | null;
-    if (!node || !visit) return;
+    if (!node || !visit) return null;
+    const dataUrl = await toPng(node, {
+      pixelRatio: 2,
+      cacheBust: true,
+      backgroundColor: "transparent",
+    });
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const stamp = new Date().toISOString().slice(0, 10);
+    return { blob, filename: `curio-${slugify(visit.museum)}-${stamp}.png` };
+  }
+
+  async function handleDownload() {
+    if (!visit) return;
     setDownloading(true);
     try {
-      const dataUrl = await toPng(node, {
-        pixelRatio: 2,
-        cacheBust: true,
-        backgroundColor: "transparent",
-      });
+      const out = await renderReceiptBlob();
+      if (!out) return;
+      const url = URL.createObjectURL(out.blob);
       const link = document.createElement("a");
-      const stamp = new Date().toISOString().slice(0, 10);
-      link.download = `curio-${slugify(visit.museum)}-${stamp}.png`;
-      link.href = dataUrl;
+      link.download = out.filename;
+      link.href = url;
       link.click();
+      URL.revokeObjectURL(url);
     } finally {
       setDownloading(false);
     }
   }
+
+  async function handleShare() {
+    if (!visit) return;
+    setSharing(true);
+    setShareHint(null);
+    try {
+      const out = await renderReceiptBlob();
+      if (!out) return;
+      const file = new File([out.blob], out.filename, { type: "image/png" });
+      const caption = `My visit to ${visit.museum} — logged on Curio ✦`;
+      const nav = navigator as Navigator & {
+        canShare?: (data: ShareData) => boolean;
+      };
+      if (nav.canShare?.({ files: [file] })) {
+        try {
+          await nav.share({
+            files: [file],
+            title: "My Curio receipt",
+            text: caption,
+          });
+          return;
+        } catch (err) {
+          if ((err as DOMException)?.name === "AbortError") return;
+        }
+      }
+      // Fallback: download + open Instagram
+      const url = URL.createObjectURL(out.blob);
+      const link = document.createElement("a");
+      link.download = out.filename;
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+      try {
+        await navigator.clipboard?.writeText(caption);
+      } catch {}
+      window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
+      setShareHint("Saved to your device — drop it into an Instagram Story or Post.");
+    } finally {
+      setSharing(false);
+    }
+  }
+
 
   if (visitQuery.isLoading || !sessionId) {
     return <Loading />;
