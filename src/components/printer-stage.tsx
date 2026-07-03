@@ -5,83 +5,13 @@ import printerImg from "@/assets/printer.png";
 
 type Mode = "idle" | "printing" | "printed";
 
-// Measured from the generated bird's-eye printer PNG (1024x1024).
-// Slot mouth (the dark gap) sits ~66% down the image.
-const SLOT_Y_PCT = 66;
-// Slot mouth width relative to the printer image width.
-const SLOT_WIDTH_PCT = 33;
+// Measured from the printer PNG (1024x1024). Slot is the horizontal
+// silver output opening; the receipt should feed out from its top edge.
+const SLOT_Y_PCT = 60;
+const SLOT_WIDTH_PCT = 62;
 
 const MAX_PRINTER_WIDTH = 460;
 
-function PrinterBody({
-  width,
-  slotTopPercent,
-  slotWidthPercent,
-}: {
-  width: number;
-  slotTopPercent: number;
-  slotWidthPercent: number;
-}) {
-  const slotWidth = width * (slotWidthPercent / 100);
-
-  return (
-    <div
-      aria-hidden
-      data-printer-visual-anchor="warmup-visible"
-      style={{
-        width,
-        aspectRatio: "1 / 1",
-        position: "relative",
-        borderRadius: "18%",
-        overflow: "hidden",
-        background:
-          "radial-gradient(circle at 52% 18%, rgba(255,255,255,0.95), transparent 28%), linear-gradient(145deg, #fffdf6 0%, #eee8d8 58%, #d5ccb8 100%)",
-        border: "1px solid rgba(53, 46, 35, 0.18)",
-        boxShadow:
-          "0 24px 44px rgba(53, 46, 35, 0.18), inset 0 2px 8px rgba(255,255,255,0.9), inset 0 -18px 28px rgba(72, 60, 42, 0.08)",
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          top: "32%",
-          height: 1,
-          background: "rgba(53, 46, 35, 0.2)",
-          boxShadow: "0 1px 0 rgba(255,255,255,0.75)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          top: `${slotTopPercent}%`,
-          left: "50%",
-          width: slotWidth,
-          height: Math.max(8, width * 0.03),
-          transform: "translate(-50%, -50%)",
-          borderRadius: 5,
-          background: "linear-gradient(#0f0e0d, #363025 54%, #0b0a09)",
-          border: "2px solid rgba(255,255,255,0.62)",
-          boxShadow:
-            "0 0 0 1px rgba(53,46,35,0.24), inset 0 2px 4px rgba(0,0,0,0.85)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          top: "24%",
-          right: "18%",
-          width: Math.max(5, width * 0.018),
-          height: Math.max(5, width * 0.018),
-          borderRadius: "50%",
-          background: "rgba(53,46,35,0.52)",
-          boxShadow: "0 0 0 1px rgba(255,255,255,0.55)",
-        }}
-      />
-    </div>
-  );
-}
 
 export function PrinterStage({
   mode,
@@ -148,9 +78,9 @@ export function PrinterStage({
       style={{ maxWidth: MAX_PRINTER_WIDTH }}
     >
       <div className="mx-auto flex flex-col items-center" style={{ width: printerWidth }}>
-        {/* Keep the printer mounted in every phase. The CSS body is the
-            guaranteed warm-up visual; the PNG is decorative, so a future
-            asset/style change cannot leave the warm-up stage blank again. */}
+        {/* Printer image is the sole visual — shown in every phase,
+            including warm-up. Uses a soft drop-shadow so the white body
+            stays visible against the cream page background. */}
         <div
           style={{
             width: printerWidth,
@@ -160,32 +90,24 @@ export function PrinterStage({
             isolation: "isolate",
           }}
         >
-          <PrinterBody
-            width={printerWidth}
-            slotTopPercent={SLOT_Y_PCT}
-            slotWidthPercent={SLOT_WIDTH_PCT}
-          />
           <img
             src={printerImg}
             alt=""
             width={1024}
             height={1024}
             style={{
-              position: "absolute",
-              inset: 0,
               width: "100%",
               height: "100%",
               objectFit: "contain",
               display: "block",
-              zIndex: 1,
-              opacity: mode === "idle" ? 0 : 1,
-              transition: "opacity 0.2s ease",
               userSelect: "none",
               pointerEvents: "none",
+              filter: "drop-shadow(0 18px 28px rgba(53, 46, 35, 0.18))",
             }}
             draggable={false}
           />
         </div>
+
 
         {/* Warm-up indicator: placed directly beneath the printer image. */}
         {mode === "idle" ? (
