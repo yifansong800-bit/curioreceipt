@@ -15,6 +15,9 @@ const knownMuseums: KnownMuseum[] = [
   { name: "Museum of Modern Art", city: "New York", country: "United States", aliases: ["moma", "mo ma"] },
   { name: "Solomon R. Guggenheim Museum", city: "New York", country: "United States", aliases: ["guggenheim", "guggenheim museum"] },
   { name: "Whitney Museum of American Art", city: "New York", country: "United States", aliases: ["the whitney", "whitney museum"] },
+  { name: "Brooklyn Museum", city: "New York", country: "United States", aliases: ["brooklyn museum of art"] },
+  { name: "Cooper Hewitt, Smithsonian Design Museum", city: "New York", country: "United States", aliases: ["cooper hewitt", "cooper-hewitt"] },
+  { name: "The Frick Collection", city: "New York", country: "United States", aliases: ["frick", "frick collection"] },
   { name: "The Art Institute of Chicago", city: "Chicago", country: "United States", aliases: ["art institute chicago", "aic"] },
   { name: "The Getty Center", city: "Los Angeles", country: "United States", aliases: ["getty", "getty center", "j paul getty museum"] },
   { name: "San Francisco Museum of Modern Art", city: "San Francisco", country: "United States", aliases: ["sfmoma", "sf moma"] },
@@ -139,10 +142,35 @@ async function generateJsonObject<T>(schema: z.ZodType<T>, prompt: string, timeo
   const key = process.env.LOVABLE_API_KEY;
   if (!key) return null;
 
-  const abort = new AbortController();
-  const timeout = setTimeout(() => abort.abort(), timeoutMs);
+  const lookup = (async () => {
+    const abort = new AbortController();
+    const timeout = setTimeout(() => abort.abort(), timeoutMs);
+    try {
+      const gateway = createLovableAiGatewayProvider(key);
+      const { text } = await generateText({
+        model: gateway("google/gemini-3-flash-preview"),
+        temperature: 0,
+        maxOutputTokens: 700,
+        abortSignal: abort.signal,
+        prompt: `${prompt}\n\nReturn ONLY valid JSON. Do not wrap it in markdown.`,
+      });
+      return parseJsonObject(text, schema);
+    } catch (err) {
+      if (!abort.signal.aborted) {
+        console.error("Museum AI lookup failed", err instanceof Error ? err.message : err);
+      }
+      return null;
+    } finally {
+      clearTimeout(timeout);
+    }
+  })();
 
-  try {
+  return Promise.race([
+    lookup,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+  ]);
+
+  /* try {
     const gateway = createLovableAiGatewayProvider(key);
     const { text } = await generateText({
       model: gateway("google/gemini-3-flash-preview"),
@@ -159,7 +187,7 @@ async function generateJsonObject<T>(schema: z.ZodType<T>, prompt: string, timeo
     return null;
   } finally {
     clearTimeout(timeout);
-  }
+  } */
 }
 
 async function resolveMuseumLocationInternal(
@@ -196,6 +224,8 @@ export const suggestMuseums = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const local = localMuseumSuggestions(data.query);
+    if (local.length > 0) return { suggestions: local };
+
     const ai = await generateJsonObject(
       museumSuggestionsSchema,
       "You autocomplete real, existing museum and art institution names worldwide. " +
