@@ -147,9 +147,9 @@ export function PrinterStage({
       style={{ maxWidth: MAX_PRINTER_WIDTH }}
     >
       <div className="mx-auto flex flex-col items-center" style={{ width: printerWidth }}>
-        {/* Keep the printer mounted in every phase. The CSS body is the
-            guaranteed warm-up visual; the PNG is decorative, so a future
-            asset/style change cannot leave the warm-up stage blank again. */}
+        {/* Printer image is the sole visual — shown in every phase,
+            including warm-up. Uses a soft drop-shadow so the white body
+            stays visible against the cream page background. */}
         <div
           style={{
             width: printerWidth,
@@ -159,32 +159,24 @@ export function PrinterStage({
             isolation: "isolate",
           }}
         >
-          <PrinterBody
-            width={printerWidth}
-            slotTopPercent={SLOT_Y_PCT}
-            slotWidthPercent={SLOT_WIDTH_PCT}
-          />
           <img
             src={printerImg}
             alt=""
             width={1024}
             height={1024}
             style={{
-              position: "absolute",
-              inset: 0,
               width: "100%",
               height: "100%",
               objectFit: "contain",
               display: "block",
-              zIndex: 1,
-              opacity: mode === "idle" ? 0 : 1,
-              transition: "opacity 0.2s ease",
               userSelect: "none",
               pointerEvents: "none",
+              filter: "drop-shadow(0 18px 28px rgba(53, 46, 35, 0.18))",
             }}
             draggable={false}
           />
         </div>
+
 
         {/* Warm-up indicator: placed directly beneath the printer image. */}
         {mode === "idle" ? (
