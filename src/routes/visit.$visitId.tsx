@@ -746,8 +746,9 @@ function AddArtworkForm({
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [converting, setConverting] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
+  const [uploadClosed, setUploadClosed] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!file) {
@@ -773,6 +774,7 @@ function AddArtworkForm({
 
     if (!isHeic) {
       setFile(picked);
+      setUploadClosed(true);
       return;
     }
 
@@ -787,6 +789,7 @@ function AddArtworkForm({
       const blob = Array.isArray(converted) ? converted[0] : converted;
       const jpgName = picked.name.replace(/\.(heic|heif)$/i, "") + ".jpg";
       setFile(new File([blob], jpgName, { type: "image/jpeg" }));
+      setUploadClosed(true);
     } catch (err) {
       console.error("HEIC conversion failed", err);
       alert("Couldn't read this photo — try a JPG or PNG.");
@@ -903,7 +906,7 @@ function AddArtworkForm({
       setRating(0);
       setFile(null);
       setSavedCount((n) => n + 1);
-      setCollapsed(true);
+      setUploadClosed(true);
     } catch (err) {
       console.error("[curio] add artwork failed", err);
       const msg = err instanceof Error ? err.message : String(err);
@@ -914,28 +917,6 @@ function AddArtworkForm({
   }
 
 
-  if (collapsed) {
-    return (
-      <div
-        className="mt-8 border px-4 py-3 flex items-center justify-between gap-3"
-        style={{ borderColor: "var(--border)" }}
-      >
-        <span
-          className="text-xs uppercase tracking-widest"
-          style={{ color: "var(--ink-soft)" }}
-        >
-          ✓ Artwork {savedCount} saved
-        </span>
-        <button
-          type="button"
-          onClick={() => setCollapsed(false)}
-          className="text-xs uppercase tracking-widest underline"
-        >
-          + Add another
-        </button>
-      </div>
-    );
-  }
 
   return (
     <form
@@ -950,37 +931,60 @@ function AddArtworkForm({
         + Add artwork
       </div>
 
-      <label
-        className="block border-2 border-dashed p-4 text-center cursor-pointer"
-        style={{ borderColor: "var(--border)" }}
-      >
-        <input
-          type="file"
-          accept="image/*,.heic,.heif,image/heic,image/heif"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-        {converting ? (
-          <span className="text-sm" style={{ color: "var(--ink-soft)" }}>
-            Converting photo…
-          </span>
-        ) : preview ? (
-          <div
-            className="mx-auto relative overflow-hidden"
-            style={{ width: "100%", maxWidth: 260, aspectRatio: "1 / 1" }}
-          >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.heic,.heif,image/heic,image/heif"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {uploadClosed ? (
+        <div
+          className="flex items-center gap-3 border p-3"
+          style={{ borderColor: "var(--border)" }}
+        >
+          {file && preview ? (
             <img
               src={preview}
               alt=""
-              className="absolute inset-0 w-full h-full object-contain"
+              className="w-12 h-12 object-cover"
             />
-          </div>
-        ) : (
-          <span className="text-sm" style={{ color: "var(--ink-soft)" }}>
-            tap to upload photo
+          ) : null}
+          <span
+            className="text-xs uppercase tracking-widest"
+            style={{ color: "var(--ink-soft)" }}
+          >
+            {file && preview
+              ? "✓ photo uploaded"
+              : `✓ Artwork ${savedCount} saved`}
           </span>
-        )}
-      </label>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="ml-auto text-xs uppercase tracking-widest underline"
+          >
+            {file && preview ? "change" : "add another photo"}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full block border-2 border-dashed p-4 text-center"
+          style={{ borderColor: "var(--border)" }}
+        >
+          {converting ? (
+            <span className="text-sm" style={{ color: "var(--ink-soft)" }}>
+              Converting photo…
+            </span>
+          ) : (
+            <span className="text-sm" style={{ color: "var(--ink-soft)" }}>
+              tap to upload photo
+            </span>
+          )}
+        </button>
+      )}
 
 
       <MiniField label="TITLE" value={title} onChange={setTitle} placeholder="SARS" />
