@@ -341,6 +341,8 @@ function VisitPage() {
                     {remaining === 1 ? "spot" : "spots"} left
                   </div>
                   <AddArtworkForm
+                    sessionId={sessionId}
+                    visitId={visitId}
                     onSubmit={async (payload) => {
                       await addFn({
                         data: {
