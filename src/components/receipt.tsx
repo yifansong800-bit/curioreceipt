@@ -44,7 +44,9 @@ export function Receipt({
   date,
   artworks,
 }: ReceiptProps) {
-  const totalSeconds = artworks.reduce((sum, a) => sum + (a.linger_seconds || 0), 0);
+  const loggedArtworks = artworks.filter((a) => a.linger_seconds >= 0);
+  const totalSeconds = loggedArtworks.reduce((sum, a) => sum + a.linger_seconds, 0);
+  const totalTimeValue = loggedArtworks.length === 0 ? "-" : formatTotalTime(totalSeconds);
   const sess = String(sessionNumber).padStart(2, "0");
   const location = [city, country].filter(Boolean).join(", ").toUpperCase();
 
@@ -107,7 +109,7 @@ export function Receipt({
 
       <div style={{ marginTop: 12, ...lineStyle }}>{DASH_ROW}</div>
       <Row label="SUBTOTAL ITEM" value={String(artworks.length)} />
-      <Row label="TOTAL TIME SPENT" value={formatTotalTime(totalSeconds)} />
+      <Row label="TOTAL TIME SPENT" value={totalTimeValue} />
       <div style={{ marginTop: 12, ...lineStyle }}>{STAR_ROW}</div>
       <div style={{ textAlign: "center", marginTop: 10, letterSpacing: 1 }}>
         THANK YOU FOR VISTING!
@@ -144,7 +146,7 @@ function ArtworkBlock({ art }: { art: ReceiptArtwork }) {
       </div>
       <Row
         label="* LINGER TIME"
-        value={formatLingerShort(art.linger_seconds || 0)}
+        value={formatLingerShort(art.linger_seconds)}
       />
       <Row
         label="* MEDIUM"

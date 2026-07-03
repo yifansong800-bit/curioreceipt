@@ -114,6 +114,14 @@ function VisitPage() {
 
   function goToPrint() {
     if (artworks.length === 0) return;
+    const missing = artworks.filter((a) => a.linger_seconds < 0);
+    if (missing.length > 0) {
+      const noun = missing.length === 1 ? "artwork" : "artworks";
+      const proceed = window.confirm(
+        `You haven't logged linger time for ${missing.length} ${noun}. Print receipt anyway?`
+      );
+      if (!proceed) return;
+    }
     setStage("idle");
     setView("print");
   }
@@ -543,8 +551,8 @@ function AddArtworkForm({
   const [artist, setArtist] = useState("");
   const [year, setYear] = useState("");
   const [medium, setMedium] = useState("");
-  const [lingerMin, setLingerMin] = useState<number>(0);
-  const [lingerSec, setLingerSec] = useState<number>(0);
+  const [lingerMin, setLingerMin] = useState<string>("");
+  const [lingerSec, setLingerSec] = useState<string>("");
   const [emotions, setEmotions] = useState<string[]>([]);
   const [customEmotion, setCustomEmotion] = useState("");
   const [rating, setRating] = useState<number>(0);
@@ -644,8 +652,13 @@ function AddArtworkForm({
         imagePath = key;
       }
 
+      const lingerMinRaw = lingerMin.trim();
+      const lingerSecRaw = lingerSec.trim();
       const lingerSeconds =
-        Math.max(0, Math.floor(lingerMin)) * 60 + Math.max(0, Math.floor(lingerSec));
+        lingerMinRaw === "" && lingerSecRaw === ""
+          ? -1
+          : Math.max(0, Math.floor(parseInt(lingerMinRaw || "0", 10))) * 60 +
+            Math.max(0, Math.floor(parseInt(lingerSecRaw || "0", 10)));
 
       await onSubmit({
         imagePath,
@@ -665,8 +678,8 @@ function AddArtworkForm({
       setArtist("");
       setYear("");
       setMedium("");
-      setLingerMin(0);
-      setLingerSec(0);
+      setLingerMin("");
+      setLingerSec("");
       setEmotions([]);
       setCustomEmotion("");
       setRating(0);
@@ -769,7 +782,7 @@ function AddArtworkForm({
             min={0}
             max={720}
             value={lingerMin}
-            onChange={(e) => setLingerMin(Number(e.target.value) || 0)}
+            onChange={(e) => setLingerMin(e.target.value)}
             className="w-16 bg-transparent border-b py-1 outline-none tabular-nums"
             style={{ borderColor: "var(--ink)" }}
           />
@@ -779,7 +792,7 @@ function AddArtworkForm({
             min={0}
             max={59}
             value={lingerSec}
-            onChange={(e) => setLingerSec(Number(e.target.value) || 0)}
+            onChange={(e) => setLingerSec(e.target.value)}
             className="w-16 bg-transparent border-b py-1 outline-none tabular-nums"
             style={{ borderColor: "var(--ink)" }}
           />

@@ -21,7 +21,7 @@ const artworkFields = z.object({
   artist: z.string().max(120).default(""),
   year: z.string().max(20).default(""),
   medium: z.string().max(80).default(""),
-  lingerSeconds: z.number().int().min(0).max(60 * 60 * 12).default(0),
+  lingerSeconds: z.number().int().min(-1).max(60 * 60 * 12).default(-1),
   emotions: z.array(z.string().trim().min(1).max(40)).max(12).default([]),
   photoTakenAt: z.string().nullable().optional(),
   palette: z.array(z.string().max(32)).max(6).default([]),
