@@ -295,7 +295,7 @@ function VisitPage() {
                 </button>
                 {stage === "printed" ? (
                   <button
-                    onClick={() => setStage("printing")}
+                    onClick={reprint}
                     className="text-xs uppercase tracking-widest underline"
                     style={{ color: "var(--ink-soft)" }}
                   >
