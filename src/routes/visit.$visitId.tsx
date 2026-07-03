@@ -677,6 +677,7 @@ function VisitPage() {
         </AnimatePresence>
       </div>
     </div>
+    <Footer />
   );
 }
 
