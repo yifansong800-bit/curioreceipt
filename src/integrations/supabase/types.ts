@@ -14,7 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      artworks: {
+        Row: {
+          artist: string
+          created_at: string
+          emotions: string[]
+          id: string
+          image_url: string | null
+          linger_seconds: number
+          medium: string
+          photo_taken_at: string | null
+          position: number
+          session_id: string
+          title: string
+          visit_id: string
+          year: string
+        }
+        Insert: {
+          artist?: string
+          created_at?: string
+          emotions?: string[]
+          id?: string
+          image_url?: string | null
+          linger_seconds?: number
+          medium?: string
+          photo_taken_at?: string | null
+          position?: number
+          session_id: string
+          title?: string
+          visit_id: string
+          year?: string
+        }
+        Update: {
+          artist?: string
+          created_at?: string
+          emotions?: string[]
+          id?: string
+          image_url?: string | null
+          linger_seconds?: number
+          medium?: string
+          photo_taken_at?: string | null
+          position?: number
+          session_id?: string
+          title?: string
+          visit_id?: string
+          year?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artworks_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visits: {
+        Row: {
+          created_at: string
+          id: string
+          museum: string
+          session_id: string
+          session_number: number
+          visitor_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          museum: string
+          session_id: string
+          session_number?: number
+          visitor_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          museum?: string
+          session_id?: string
+          session_number?: number
+          visitor_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
