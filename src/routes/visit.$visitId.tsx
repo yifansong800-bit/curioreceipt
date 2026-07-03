@@ -785,6 +785,29 @@ function AddArtworkForm({
   }
 
 
+  if (collapsed) {
+    return (
+      <div
+        className="mt-8 border px-4 py-3 flex items-center justify-between gap-3"
+        style={{ borderColor: "var(--border)" }}
+      >
+        <span
+          className="text-xs uppercase tracking-widest"
+          style={{ color: "var(--ink-soft)" }}
+        >
+          ✓ Artwork {savedCount} saved
+        </span>
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          className="text-xs uppercase tracking-widest underline"
+        >
+          + Add another
+        </button>
+      </div>
+    );
+  }
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -814,13 +837,13 @@ function AddArtworkForm({
           </span>
         ) : preview ? (
           <div
-            className="mx-auto flex items-center justify-center w-full"
-            style={{ maxWidth: 260, aspectRatio: "1 / 1" }}
+            className="mx-auto relative overflow-hidden"
+            style={{ width: "100%", maxWidth: 260, aspectRatio: "1 / 1" }}
           >
             <img
               src={preview}
               alt=""
-              className="max-w-full max-h-full w-auto h-auto object-contain"
+              className="absolute inset-0 w-full h-full object-contain"
             />
           </div>
         ) : (
@@ -829,6 +852,7 @@ function AddArtworkForm({
           </span>
         )}
       </label>
+
 
       <MiniField label="TITLE" value={title} onChange={setTitle} placeholder="SARS" />
       <div className="grid grid-cols-[1fr_100px] gap-3">
