@@ -205,10 +205,17 @@ function DitheredImage({ src, size }: { src: string; size: number }) {
   const [out, setOut] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState<number>(1);
 
+  // Quantize size to avoid re-dithering on tiny sub-pixel changes from
+  // ResizeObserver / zoom scaling during the print animation — which
+  // was causing brief flashes back to the original (non-dithered) image.
+  const bucketed = Math.max(32, Math.round(size / 8) * 8);
+
   useEffect(() => {
     let cancelled = false;
-    setOut(null);
-    ditherImage(src, size * 1.2)
+    // Do NOT clear `out` here — keep the previous dithered frame on screen
+    // while the new one computes so the receipt never flashes back to the
+    // original color image mid-print.
+    ditherImage(src, bucketed * 1.2)
       .then((result) => {
         if (!cancelled) {
           setOut(result.dataUrl);
@@ -218,15 +225,14 @@ function DitheredImage({ src, size }: { src: string; size: number }) {
         }
       })
       .catch(() => {
-        if (!cancelled) setOut(src);
+        // Swallow: keep prior dithered frame (or nothing) rather than
+        // falling back to the original color source.
       });
     return () => {
       cancelled = true;
     };
-  }, [src, size]);
+  }, [src, bucketed]);
 
-  // Show the full image uncropped by fitting its natural aspect ratio
-  // within the allotted column width.
   const displayHeight = Math.max(1, Math.round(size / aspectRatio));
 
   return (
@@ -236,20 +242,22 @@ function DitheredImage({ src, size }: { src: string; size: number }) {
         height: displayHeight,
         overflow: "hidden",
         display: "block",
+        background: "transparent",
       }}
     >
-      <img
-        src={out ?? src}
-        alt=""
-        crossOrigin="anonymous"
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-          display: "block",
-          imageRendering: "pixelated",
-        }}
-      />
+      {out ? (
+        <img
+          src={out}
+          alt=""
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            display: "block",
+            imageRendering: "pixelated",
+          }}
+        />
+      ) : null}
     </div>
   );
 }
