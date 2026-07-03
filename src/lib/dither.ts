@@ -65,7 +65,6 @@ export async function ditherImage(
 function buildEnhancedGrayscale(data: Uint8ClampedArray, w: number, h: number) {
   const base = new Float32Array(w * h);
   const enhanced = new Float32Array(w * h);
-  const factor = (259 * (CONTRAST * 255 + 255)) / (255 * (259 - CONTRAST * 255));
 
   for (let i = 0; i < w * h; i++) {
     const p = i * 4;
@@ -73,7 +72,7 @@ function buildEnhancedGrayscale(data: Uint8ClampedArray, w: number, h: number) {
     const g = data[p + 1];
     const b = data[p + 2];
     const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-    base[i] = clamp(factor * (luminance - 128) + 128 + BRIGHTNESS);
+    base[i] = clamp((luminance - 128) * CONTRAST + 128 + BRIGHTNESS);
   }
 
   for (let y = 0; y < h; y++) {
