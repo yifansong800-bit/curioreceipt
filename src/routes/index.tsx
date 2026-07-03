@@ -57,7 +57,7 @@ function Index() {
           className="text-center leading-none"
           style={{
             fontFamily: "var(--font-display)",
-            fontSize: 72,
+            fontSize: "clamp(48px, 14vw, 72px)",
             letterSpacing: 3,
           }}
         >
