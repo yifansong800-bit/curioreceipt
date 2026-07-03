@@ -31,12 +31,15 @@ const STAR_ROW = "********************************";
 export function Receipt({
   visitorName,
   museum,
+  city,
+  country,
   sessionNumber,
   date,
   artworks,
 }: ReceiptProps) {
   const totalSeconds = artworks.reduce((sum, a) => sum + (a.linger_seconds || 0), 0);
   const sess = String(sessionNumber).padStart(2, "0");
+  const location = [city, country].filter(Boolean).join(", ").toUpperCase();
 
   return (
     <div
