@@ -140,8 +140,16 @@ export function PrinterStage({
               filter: "drop-shadow(0 18px 28px rgba(53, 46, 35, 0.18))",
             }}
             draggable={false}
+            onLoad={() => setPrinterLoaded(true)}
+            ref={(el) => {
+              // Handle cached images where onLoad may not fire.
+              if (el && el.complete && el.naturalWidth > 0) setPrinterLoaded(true);
+            }}
           />
         </div>
+
+        {/* placeholder to preserve original closing div balance */}
+        <div style={{ display: "none" }} />
 
         {/* Receipt lane: pulled up so its top edge sits at the slot mouth. */}
         <AnimatePresence initial={false}>
