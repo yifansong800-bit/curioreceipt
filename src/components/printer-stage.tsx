@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import printerImg from "@/assets/printer.png";
 
@@ -10,6 +10,8 @@ type Mode = "idle" | "printing" | "printed";
 const SLOT_Y_PCT = 72;
 // Slot mouth width relative to the printer image width.
 const SLOT_WIDTH_PCT = 44;
+
+const MAX_PRINTER_WIDTH = 460;
 
 export function PrinterStage({
   mode,
@@ -23,7 +25,24 @@ export function PrinterStage({
   children: ReactNode;
 }) {
   const reduce = useReducedMotion();
-  const printerWidth = 460;
+
+  // Responsive printer width: shrinks to fit narrow viewports so nothing
+  // overflows on phones, but caps at MAX_PRINTER_WIDTH on desktop.
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const [printerWidth, setPrinterWidth] = useState<number>(MAX_PRINTER_WIDTH);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.getBoundingClientRect().width;
+      if (w > 0) setPrinterWidth(Math.min(MAX_PRINTER_WIDTH, Math.floor(w)));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const printerHeight = printerWidth; // PNG is square
   const slotY = (printerHeight * SLOT_Y_PCT) / 100;
   // Distance from bottom of printer image up to the slot line — how much we
