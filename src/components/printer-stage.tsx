@@ -37,6 +37,20 @@ export function PrinterStage({
   const receiptNaturalWidth = 360;
   const receiptScale = (printerWidth * (SLOT_WIDTH_PCT / 100) * 1.15) / receiptNaturalWidth;
 
+  // Deterministic gating: fire onPrintComplete exactly when the feed
+  // animation finishes. Using a timer (not motion's onAnimationComplete)
+  // means interruptions from navigating back mid-print never spuriously
+  // mark the receipt as "printed". If the user leaves the printing
+  // state, the timer is cleared before it can fire.
+  const feedDurationMs = reduce ? 250 : 3200;
+  useEffect(() => {
+    if (mode !== "printing") return;
+    const t = window.setTimeout(() => {
+      onPrintComplete?.();
+    }, feedDurationMs);
+    return () => window.clearTimeout(t);
+  }, [mode, feedDurationMs, onPrintComplete]);
+
   return (
     <div className="mx-auto" style={{ width: printerWidth }}>
       {/* Printer image — behind the receipt so the paper appears to drape
