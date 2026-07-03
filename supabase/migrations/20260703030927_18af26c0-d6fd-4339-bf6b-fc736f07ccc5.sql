@@ -1,0 +1,1 @@
+ALTER TABLE public.visits ADD COLUMN city text, ADD COLUMN country text;

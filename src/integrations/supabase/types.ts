@@ -75,6 +75,8 @@ export type Database = {
       }
       visits: {
         Row: {
+          city: string | null
+          country: string | null
           created_at: string
           id: string
           museum: string
@@ -83,6 +85,8 @@ export type Database = {
           visitor_name: string
         }
         Insert: {
+          city?: string | null
+          country?: string | null
           created_at?: string
           id?: string
           museum: string
@@ -91,6 +95,8 @@ export type Database = {
           visitor_name: string
         }
         Update: {
+          city?: string | null
+          country?: string | null
           created_at?: string
           id?: string
           museum?: string
