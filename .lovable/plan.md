@@ -1,21 +1,14 @@
-## Changes to `src/components/printer-stage.tsx`
+**Why:** iPhone camera roll photos are HEIC by default. Safari sometimes transcodes on upload, but not reliably; desktop browsers can't decode HEIC at all — which is why the uploaded HEIC didn't display. The file input already accepts camera-roll photos on mobile (`accept="image/*"` triggers the Photos picker on iOS/Android); the missing piece is format handling.
 
-**Lock printer asset & sizes (no future drift)**
-- Add a comment banner at top: "DO NOT MODIFY — printer asset, SLOT_Y_PCT, SLOT_WIDTH_PCT are locked."
-- Freeze constants: `SLOT_Y_PCT = 60`, `SLOT_WIDTH_PCT = 62`, printer PNG = `src/assets/printer.png`.
+**Change — `src/routes/visit.$visitId.tsx` only:**
 
-**Remove warm-up progress bar**
-- Delete the `warmup` phase UI (progress bar + "warming up" text).
-- Keep the 2s delay — but during it, render only the printer (no bar, no label).
-- Phase state becomes: `idle` (2s printer-only) → `printing` (receipt emerges) → `done` (download enabled).
+1. `bun add heic2any`.
+2. File input:
+   - `accept="image/*,.heic,.heif"` so iOS/desktop pickers surface HEIC files from the camera roll and Finder.
+   - In `onChange`, detect HEIC via MIME (`image/heic` / `image/heif`) or `.heic`/`.heif` extension (iOS sometimes reports empty MIME).
+   - If HEIC: dynamic `import("heic2any")` (client-only, keeps SSR clean), convert to JPEG blob (quality 0.9), wrap as a new `File` with `.jpg` name + `image/jpeg` type, then `setFile`.
+   - Add a "Converting photo…" state on the upload label during conversion so users aren't confused on slower phones.
+   - On failure, toast: "Couldn't read this photo — try a JPG or PNG."
+3. No downstream changes — dither, palette, and Supabase storage upload already handle JPEG.
 
-**Slower, incremental "1 inch at a time" print motion**
-- Replace the current sliding keyframes with a stepped reveal.
-- Total print duration: ~8s (vs current 4s).
-- Use ~8–10 discrete steps, each advancing the receipt ~1 inch (≈96px at base scale), with a short pause between steps to mimic mechanical feed (step easing, not smooth linear).
-- Implementation: framer-motion `animate` with `times` array and `ease: "steps"` per segment, OR CSS `steps()` timing function on a translateY keyframe. Each step: quick push (~150ms) + hold (~700ms).
-
-**Download button gating**
-- Unchanged behavior: unlocks exactly when the stepped animation's total duration elapses (`setTimeout` matches new 8s duration + 2s warmup delay).
-
-No changes to receipt look, crumple overlay, printer PNG, slot geometry, or any other file.
+No schema, storage bucket, receipt, or printer changes.

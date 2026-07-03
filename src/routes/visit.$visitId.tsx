@@ -458,6 +458,7 @@ function AddArtworkForm({
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [converting, setConverting] = useState(false);
 
   useEffect(() => {
     if (!file) {
@@ -468,6 +469,43 @@ function AddArtworkForm({
     setPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!picked) return;
+
+    const name = picked.name.toLowerCase();
+    const isHeic =
+      picked.type === "image/heic" ||
+      picked.type === "image/heif" ||
+      name.endsWith(".heic") ||
+      name.endsWith(".heif");
+
+    if (!isHeic) {
+      setFile(picked);
+      return;
+    }
+
+    setConverting(true);
+    try {
+      const { default: heic2any } = await import("heic2any");
+      const converted = await heic2any({
+        blob: picked,
+        toType: "image/jpeg",
+        quality: 0.9,
+      });
+      const blob = Array.isArray(converted) ? converted[0] : converted;
+      const jpgName = picked.name.replace(/\.(heic|heif)$/i, "") + ".jpg";
+      setFile(new File([blob], jpgName, { type: "image/jpeg" }));
+    } catch (err) {
+      console.error("HEIC conversion failed", err);
+      alert("Couldn't read this photo — try a JPG or PNG.");
+    } finally {
+      setConverting(false);
+    }
+  }
+
 
   function toggleEmotion(e: string) {
     setEmotions((prev) =>
@@ -567,12 +605,15 @@ function AddArtworkForm({
       >
         <input
           type="file"
-          accept="image/*"
-          capture="environment"
+          accept="image/*,.heic,.heif,image/heic,image/heif"
           className="hidden"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          onChange={handleFileChange}
         />
-        {preview ? (
+        {converting ? (
+          <span className="text-sm" style={{ color: "var(--ink-soft)" }}>
+            Converting photo…
+          </span>
+        ) : preview ? (
           <div
             className="mx-auto flex items-center justify-center w-full"
             style={{ maxWidth: 260, aspectRatio: "1 / 1" }}
