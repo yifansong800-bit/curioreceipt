@@ -194,10 +194,11 @@ function VisitPage() {
               </div>
 
               <h1
-                className="mt-6"
+                className="mt-6 break-words"
                 style={{
                   fontFamily: "var(--font-display)",
-                  fontSize: 40,
+                  fontSize: "clamp(28px, 8vw, 40px)",
+                  lineHeight: 1.1,
                   letterSpacing: 2,
                 }}
               >
