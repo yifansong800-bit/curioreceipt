@@ -1,3 +1,9 @@
+// ============================================================
+// DO NOT MODIFY — printer asset (`@/assets/printer.png`),
+// SLOT_Y_PCT (60), and SLOT_WIDTH_PCT (62) are LOCKED and tuned
+// to the current printer artwork. Changing them will misalign
+// the receipt with the printer's output slot.
+// ============================================================
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -5,29 +11,28 @@ import printerImg from "@/assets/printer.png";
 
 type Mode = "idle" | "printing" | "printed";
 
-// Measured from the printer PNG (1024x1024). Slot is the horizontal
-// silver output opening; the receipt should feed out from its top edge.
+// LOCKED — measured against src/assets/printer.png (1024x1024).
 const SLOT_Y_PCT = 60;
 const SLOT_WIDTH_PCT = 62;
-
 const MAX_PRINTER_WIDTH = 460;
 
+// Stepped feed: 8 discrete "clicks" ≈ 1 inch each.
+const FEED_STEPS = 8;
+const FEED_DURATION_MS = 8000;
 
 export function PrinterStage({
   mode,
-  warmupDuration = 2000,
   onPrintComplete,
   children,
 }: {
   mode: Mode;
+  /** Retained for API compatibility; no longer rendered. */
   warmupDuration?: number;
   onPrintComplete?: () => void;
   children: ReactNode;
 }) {
   const reduce = useReducedMotion();
 
-  // Responsive printer width: shrinks to fit narrow viewports so nothing
-  // overflows on phones, but caps at MAX_PRINTER_WIDTH on desktop.
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [printerWidth, setPrinterWidth] = useState<number>(MAX_PRINTER_WIDTH);
   useEffect(() => {
@@ -43,26 +48,15 @@ export function PrinterStage({
     return () => ro.disconnect();
   }, []);
 
-  const printerHeight = printerWidth; // PNG is square
+  const printerHeight = printerWidth;
   const slotY = (printerHeight * SLOT_Y_PCT) / 100;
-  // Distance from bottom of printer image up to the slot line — how much we
-  // need to pull the receipt up so its top edge sits at the slot mouth.
   const pullUp = printerHeight - slotY;
 
-  // Receipt renders at its natural 360px width. Use CSS `zoom` (not
-  // transform: scale) so the scaled receipt takes real layout space and
-  // pushes elements below it downward — otherwise it overlaps the
-  // Download / Edit buttons underneath.
   const receiptNaturalWidth = 360;
-  // Match receipt width exactly to the printer's slot width.
   const receiptScale = (printerWidth * (SLOT_WIDTH_PCT / 100)) / receiptNaturalWidth;
 
-  // Deterministic gating: fire onPrintComplete exactly when the feed
-  // animation finishes. Using a timer (not motion's onAnimationComplete)
-  // means interruptions from navigating back mid-print never spuriously
-  // mark the receipt as "printed". If the user leaves the printing
-  // state, the timer is cleared before it can fire.
-  const feedDurationMs = reduce ? 250 : 3200;
+  // Unlock Download exactly when the stepped feed animation ends.
+  const feedDurationMs = reduce ? 250 : FEED_DURATION_MS;
   useEffect(() => {
     if (mode !== "printing") return;
     const t = window.setTimeout(() => {
@@ -77,10 +71,15 @@ export function PrinterStage({
       className="mx-auto w-full"
       style={{ maxWidth: MAX_PRINTER_WIDTH }}
     >
+      {/* Scoped keyframes for the stepped mechanical feed. */}
+      <style>{`
+        @keyframes curio-feed {
+          from { transform: translateY(-100%); }
+          to   { transform: translateY(0); }
+        }
+      `}</style>
+
       <div className="mx-auto flex flex-col items-center" style={{ width: printerWidth }}>
-        {/* Printer image is the sole visual — shown in every phase,
-            including warm-up. Uses a soft drop-shadow so the white body
-            stays visible against the cream page background. */}
         <div
           style={{
             width: printerWidth,
@@ -108,41 +107,7 @@ export function PrinterStage({
           />
         </div>
 
-
-        {/* Warm-up indicator: placed directly beneath the printer image. */}
-        {mode === "idle" ? (
-          <div className="w-full mt-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <span
-                className="text-xs uppercase tracking-widest"
-                style={{ color: "var(--ink-soft)" }}
-              >
-                Warming up printer
-              </span>
-              <span
-                className="text-xs tabular-nums"
-                style={{ color: "var(--ink-soft)" }}
-              >
-                {(warmupDuration / 1000).toFixed(1)}s
-              </span>
-            </div>
-            <div
-              className="h-1 w-full overflow-hidden"
-              style={{ backgroundColor: "var(--border)" }}
-            >
-              <motion.div
-                className="h-full origin-left"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: warmupDuration / 1000, ease: "linear" }}
-                style={{ backgroundColor: "var(--ink)" }}
-              />
-            </div>
-          </div>
-        ) : null}
-
-        {/* Receipt lane: pulled up so its top edge sits at the slot mouth.
-            overflow:hidden clips the animated content above that edge. */}
+        {/* Receipt lane: pulled up so its top edge sits at the slot mouth. */}
         <AnimatePresence initial={false}>
           {mode === "printing" || mode === "printed" ? (
             <motion.div
@@ -162,37 +127,18 @@ export function PrinterStage({
               }}
             >
               <div style={{ zoom: receiptScale, width: receiptNaturalWidth }}>
-                <motion.div
-                  initial={
-                    mode === "printed"
-                      ? { y: 0 }
-                      : reduce
-                        ? { y: 0, opacity: 0 }
-                        : { y: "-100%" }
-                  }
-                  animate={reduce ? { y: 0, opacity: 1 } : { y: 0 }}
-                  transition={{
-                    duration: reduce ? 0.25 : mode === "printed" ? 0 : feedDurationMs / 1000,
-                    ease: reduce ? "easeOut" : [0.22, 1, 0.36, 1],
+                <div
+                  style={{
+                    position: "relative",
+                    ...(mode === "printing" && !reduce
+                      ? {
+                          animation: `curio-feed ${FEED_DURATION_MS}ms steps(${FEED_STEPS}, end) forwards`,
+                        }
+                      : { transform: "translateY(0)" }),
                   }}
-                  style={{ position: "relative" }}
                 >
-                  {mode === "printing" && !reduce ? (
-                    <motion.div
-                      animate={{ y: [0, -0.8, 0.8, -0.6, 0.6, 0] }}
-                      transition={{
-                        duration: 0.18,
-                        repeat: Infinity,
-                        ease: "linear",
-                      }}
-                    >
-                      {children}
-                    </motion.div>
-                  ) : (
-                    children
-                  )}
-                  {/* Crumpled-paper shadow overlay: soft diagonal creases that
-                      sit on top of the receipt while it's feeding out. */}
+                  {children}
+                  {/* Crumpled-paper shadow overlay */}
                   <div
                     aria-hidden
                     style={{
@@ -209,7 +155,7 @@ export function PrinterStage({
                       transition: "opacity 0.4s ease",
                     }}
                   />
-                </motion.div>
+                </div>
               </div>
             </motion.div>
           ) : null}
