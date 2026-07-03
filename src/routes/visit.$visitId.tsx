@@ -510,6 +510,7 @@ function AddArtworkForm({
         emotions,
         photoTakenAt,
         palette,
+        rating,
       });
 
       // reset
@@ -521,6 +522,7 @@ function AddArtworkForm({
       setLingerSec(0);
       setEmotions([]);
       setCustomEmotion("");
+      setRating(0);
       setFile(null);
     } catch (err) {
       console.error(err);
