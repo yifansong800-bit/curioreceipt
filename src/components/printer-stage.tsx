@@ -13,10 +13,12 @@ const SLOT_WIDTH_PCT = 44;
 
 export function PrinterStage({
   mode,
+  warmupDuration = 2000,
   onPrintComplete,
   children,
 }: {
   mode: Mode;
+  warmupDuration?: number;
   onPrintComplete?: () => void;
   children: ReactNode;
 }) {
@@ -114,11 +116,33 @@ export function PrinterStage({
       </AnimatePresence>
 
       {mode === "idle" ? (
-        <div
-          className="text-center mt-3 text-xs uppercase tracking-widest"
-          style={{ color: "var(--ink-soft)" }}
-        >
-          warming up…
+        <div className="mt-4 space-y-2" style={{ width: printerWidth }}>
+          <div className="flex items-center justify-between">
+            <span
+              className="text-xs uppercase tracking-widest"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              Warming up printer
+            </span>
+            <span
+              className="text-xs tabular-nums"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              {(warmupDuration / 1000).toFixed(1)}s
+            </span>
+          </div>
+          <div
+            className="h-1 w-full overflow-hidden"
+            style={{ backgroundColor: "var(--border)" }}
+          >
+            <motion.div
+              className="h-full origin-left"
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: warmupDuration / 1000, ease: "linear" }}
+              style={{ backgroundColor: "var(--ink)" }}
+            />
+          </div>
         </div>
       ) : mode === "printing" ? (
         <div
