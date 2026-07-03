@@ -644,8 +644,13 @@ function AddArtworkForm({
         imagePath = key;
       }
 
+      const lingerMinRaw = lingerMin.trim();
+      const lingerSecRaw = lingerSec.trim();
       const lingerSeconds =
-        Math.max(0, Math.floor(lingerMin)) * 60 + Math.max(0, Math.floor(lingerSec));
+        lingerMinRaw === "" && lingerSecRaw === ""
+          ? -1
+          : Math.max(0, Math.floor(parseInt(lingerMinRaw || "0", 10))) * 60 +
+            Math.max(0, Math.floor(parseInt(lingerSecRaw || "0", 10)));
 
       await onSubmit({
         imagePath,
