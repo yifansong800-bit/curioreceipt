@@ -103,7 +103,7 @@ function Index() {
           className="text-center mt-4 tracking-wide"
           style={{ color: "var(--ink-soft)" }}
         >
-          ******** www.curio.com ********
+          ***** www.curioreceipt.com *****
         </p>
         <p className="text-center mt-6 text-sm" style={{ color: "var(--ink-soft)" }}>
           A thermal receipt for your museum visit.
