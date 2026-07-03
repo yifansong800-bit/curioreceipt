@@ -209,19 +209,34 @@ function VisitPage() {
       const naturalWidth = node.offsetWidth || 360;
       const naturalHeight = node.offsetHeight || node.scrollHeight;
 
+      // Wait for fonts so text isn't captured in a fallback face.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch {
+          /* ignore */
+        }
+      }
+
       // Ensure every <img> inside the receipt (dithered artwork data URLs)
       // is fully decoded before snapshotting. On iOS Safari html-to-image
       // frequently produces a blank capture for images that haven't finished
-      // decoding at snapshot time, which is why artworks came out empty.
+      // decoding at snapshot time.
       const imgs = Array.from(node.querySelectorAll("img"));
       await Promise.all(
-        imgs.map((img) => {
-          if (img.complete && img.naturalWidth > 0) return img.decode().catch(() => {});
-          return new Promise<void>((resolve) => {
-            const done = () => resolve();
-            img.addEventListener("load", done, { once: true });
-            img.addEventListener("error", done, { once: true });
-          });
+        imgs.map(async (img) => {
+          if (!(img.complete && img.naturalWidth > 0)) {
+            await new Promise<void>((resolve) => {
+              const done = () => resolve();
+              img.addEventListener("load", done, { once: true });
+              img.addEventListener("error", done, { once: true });
+            });
+          }
+          try {
+            await img.decode();
+          } catch {
+            /* ignore */
+          }
         }),
       );
 
@@ -236,19 +251,33 @@ function VisitPage() {
         canvasHeight: naturalHeight,
         style: { transform: "none", transformOrigin: "top left" },
       } as const;
-      // iOS Safari: the first html-to-image pass often drops <img> content
-      // when rendering through <foreignObject>. Running the snapshot a few
-      // times in a row primes the cache and yields a fully-populated result.
-      // See https://github.com/bubkoo/html-to-image/issues/361
-      await toJpeg(node, opts);
-      await toJpeg(node, opts);
-      dataUrl = await toJpeg(node, opts);
+
+      // iOS Safari + html-to-image: the first pass often drops <img>
+      // content in the <foreignObject> render. We loop, sampling the
+      // image-grid region of the canvas after each pass; if it's still
+      // almost entirely paper-cream (i.e. artworks didn't render) we
+      // retry. Cap at 5 attempts, then use whatever we've got.
+      const MAX_ATTEMPTS = 5;
+      let canvas: HTMLCanvasElement | null = null;
+      const hasArtworkImages = imgs.length > 0;
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        canvas = await toCanvas(node, opts);
+        if (!hasArtworkImages) break;
+        if (canvasHasInk(canvas)) break;
+        // Give the browser a beat before retrying.
+        await new Promise((r) => setTimeout(r, 120));
+      }
+
+      dataUrl = canvas
+        ? canvas.toDataURL("image/jpeg", 0.95)
+        : await toJpeg(node, opts);
     } finally {
       for (const t of touched) {
         t.el.style.transform = t.transform;
         t.el.style.transformOrigin = t.transformOrigin;
       }
     }
+
 
 
     const res = await fetch(dataUrl);
