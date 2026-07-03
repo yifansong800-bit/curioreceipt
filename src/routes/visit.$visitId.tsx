@@ -202,30 +202,76 @@ function VisitPage() {
           ) : null}
         </div>
 
-        {/* Right: live receipt + download */}
+        {/* Right: printer + receipt */}
         <div className="lg:sticky lg:top-8 self-start">
-          <div ref={receiptRef}>
-            <Receipt
-              visitorName={visit.visitor_name}
-              museum={visit.museum}
-              sessionNumber={visit.session_number}
-              date={visit.created_at}
-              artworks={artworks}
-            />
-          </div>
-          <button
-            onClick={handleDownload}
-            disabled={artworks.length === 0 || downloading}
-            className="mt-6 w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
-            style={{
-              borderColor: "var(--ink)",
-              backgroundColor: "var(--ink)",
-              color: "var(--paper)",
-              fontWeight: 700,
-            }}
+          <PrinterStage
+            mode={stage}
+            onPrintComplete={() => setStage("printed")}
           >
-            {downloading ? "Rendering..." : "Download receipt (PNG)"}
-          </button>
+            <div ref={receiptRef}>
+              <Receipt
+                visitorName={visit.visitor_name}
+                museum={visit.museum}
+                sessionNumber={visit.session_number}
+                date={visit.created_at}
+                artworks={artworks}
+              />
+            </div>
+          </PrinterStage>
+
+          <div className="mx-auto mt-6" style={{ maxWidth: 360 }}>
+            {stage === "compose" ? (
+              <button
+                onClick={() => setStage("printing")}
+                disabled={artworks.length === 0}
+                className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
+                style={{
+                  borderColor: "var(--ink)",
+                  backgroundColor: "var(--ink)",
+                  color: "var(--paper)",
+                  fontWeight: 700,
+                }}
+              >
+                {artworks.length === 0
+                  ? "Add an artwork first"
+                  : "Print receipt →"}
+              </button>
+            ) : null}
+
+            {stage === "printed" ? (
+              <div className="space-y-3">
+                <button
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
+                  style={{
+                    borderColor: "var(--ink)",
+                    backgroundColor: "var(--ink)",
+                    color: "var(--paper)",
+                    fontWeight: 700,
+                  }}
+                >
+                  {downloading ? "Rendering..." : "Download receipt (PNG)"}
+                </button>
+                <div className="flex items-center justify-between text-xs uppercase tracking-widest">
+                  <button
+                    onClick={() => setStage("compose")}
+                    className="underline"
+                    style={{ color: "var(--ink-soft)" }}
+                  >
+                    ← Edit entries
+                  </button>
+                  <button
+                    onClick={() => setStage("printing")}
+                    className="underline"
+                    style={{ color: "var(--ink-soft)" }}
+                  >
+                    ↺ Print again
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>
