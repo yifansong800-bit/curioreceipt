@@ -159,6 +159,8 @@ function Index() {
         </form>
       </div>
 
+      <Footer className="mt-auto" />
+
       <DialogContent className="max-w-[calc(100%-4rem)] sm:max-w-md border text-left" style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}>
         <DialogTitle className="text-lg tracking-tight">About Curio</DialogTitle>
         <div className="space-y-4 text-sm sm:text-base leading-relaxed" style={{ color: "var(--ink)" }}>
