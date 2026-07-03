@@ -55,15 +55,41 @@ export function PrinterStage({
   const receiptNaturalWidth = 360;
   const receiptScale = (printerWidth * (SLOT_WIDTH_PCT / 100)) / receiptNaturalWidth;
 
+  // Gate the receipt behind a two-rAF paint so the CSS keyframe's starting
+  // transform (translateY(-100%)) is fully committed before the receipt
+  // becomes visible. Without this gate the first paint after mount can flash
+  // the receipt at its natural position for a single frame.
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (mode !== "printing" && mode !== "printed") {
+      setArmed(false);
+      return;
+    }
+    if (mode === "printed") {
+      setArmed(true);
+      return;
+    }
+    let raf1 = 0;
+    let raf2 = 0;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setArmed(true));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [mode]);
+
   // Unlock Download exactly when the stepped feed animation ends.
   const feedDurationMs = reduce ? 250 : FEED_DURATION_MS;
   useEffect(() => {
-    if (mode !== "printing") return;
+    if (mode !== "printing" || !armed) return;
     const t = window.setTimeout(() => {
       onPrintComplete?.();
     }, feedDurationMs);
     return () => window.clearTimeout(t);
-  }, [mode, feedDurationMs, onPrintComplete]);
+  }, [mode, armed, feedDurationMs, onPrintComplete]);
+
 
   return (
     <div
