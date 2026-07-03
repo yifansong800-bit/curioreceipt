@@ -488,8 +488,8 @@ function VisitPage() {
                 {stage === "printed" ? (
                   <>
                     <button
-                      onClick={handleDownload}
-                      disabled={downloading || sharing}
+                      onClick={handleSaveToCameraRoll}
+                      disabled={saving || sharing}
                       className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
                       style={{
                         borderColor: "var(--ink)",
@@ -498,11 +498,11 @@ function VisitPage() {
                         fontWeight: 700,
                       }}
                     >
-                      {downloading ? "Rendering..." : "Download receipt (PNG)"}
+                      {saving ? "Rendering..." : isMobile ? "Save to camera roll" : "Download receipt"}
                     </button>
                     <button
                       onClick={handleShare}
-                      disabled={sharing || downloading}
+                      disabled={sharing || saving}
                       className="w-full inline-flex items-center justify-center gap-2 uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
                       style={{
                         borderColor: "var(--ink)",
@@ -514,6 +514,7 @@ function VisitPage() {
                       <Share2 className="h-4 w-4" />
                       {sharing ? "Preparing..." : "Share to Instagram"}
                     </button>
+
                     {shareHint ? (
                       <p
                         className="text-xs text-center"
