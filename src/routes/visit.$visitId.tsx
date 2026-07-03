@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Share2 } from "lucide-react";
 import exifr from "exifr";
-import { toJpeg } from "html-to-image";
+import { toCanvas, toJpeg } from "html-to-image";
 import { extractPalette } from "@/lib/palette";
 import { downscaleImage } from "@/lib/downscale";
 
@@ -209,19 +209,34 @@ function VisitPage() {
       const naturalWidth = node.offsetWidth || 360;
       const naturalHeight = node.offsetHeight || node.scrollHeight;
 
+      // Wait for fonts so text isn't captured in a fallback face.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch {
+          /* ignore */
+        }
+      }
+
       // Ensure every <img> inside the receipt (dithered artwork data URLs)
       // is fully decoded before snapshotting. On iOS Safari html-to-image
       // frequently produces a blank capture for images that haven't finished
-      // decoding at snapshot time, which is why artworks came out empty.
+      // decoding at snapshot time.
       const imgs = Array.from(node.querySelectorAll("img"));
       await Promise.all(
-        imgs.map((img) => {
-          if (img.complete && img.naturalWidth > 0) return img.decode().catch(() => {});
-          return new Promise<void>((resolve) => {
-            const done = () => resolve();
-            img.addEventListener("load", done, { once: true });
-            img.addEventListener("error", done, { once: true });
-          });
+        imgs.map(async (img) => {
+          if (!(img.complete && img.naturalWidth > 0)) {
+            await new Promise<void>((resolve) => {
+              const done = () => resolve();
+              img.addEventListener("load", done, { once: true });
+              img.addEventListener("error", done, { once: true });
+            });
+          }
+          try {
+            await img.decode();
+          } catch {
+            /* ignore */
+          }
         }),
       );
 
@@ -236,19 +251,33 @@ function VisitPage() {
         canvasHeight: naturalHeight,
         style: { transform: "none", transformOrigin: "top left" },
       } as const;
-      // iOS Safari: the first html-to-image pass often drops <img> content
-      // when rendering through <foreignObject>. Running the snapshot a few
-      // times in a row primes the cache and yields a fully-populated result.
-      // See https://github.com/bubkoo/html-to-image/issues/361
-      await toJpeg(node, opts);
-      await toJpeg(node, opts);
-      dataUrl = await toJpeg(node, opts);
+
+      // iOS Safari + html-to-image: the first pass often drops <img>
+      // content in the <foreignObject> render. We loop, sampling the
+      // image-grid region of the canvas after each pass; if it's still
+      // almost entirely paper-cream (i.e. artworks didn't render) we
+      // retry. Cap at 5 attempts, then use whatever we've got.
+      const MAX_ATTEMPTS = 5;
+      let canvas: HTMLCanvasElement | null = null;
+      const hasArtworkImages = imgs.length > 0;
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        canvas = await toCanvas(node, opts);
+        if (!hasArtworkImages) break;
+        if (canvasHasInk(canvas)) break;
+        // Give the browser a beat before retrying.
+        await new Promise((r) => setTimeout(r, 120));
+      }
+
+      dataUrl = canvas
+        ? canvas.toDataURL("image/jpeg", 0.95)
+        : await toJpeg(node, opts);
     } finally {
       for (const t of touched) {
         t.el.style.transform = t.transform;
         t.el.style.transformOrigin = t.transformOrigin;
       }
     }
+
 
 
     const res = await fetch(dataUrl);
@@ -635,7 +664,43 @@ function VisitPage() {
   );
 }
 
+// Sample a canvas to decide whether the receipt's image region actually
+// rendered ink. Blank captures (an iOS Safari html-to-image failure mode)
+// come back as almost pure cream paper across the whole surface; a real
+// receipt has plenty of dark dither pixels. We scan a downsampled grid so
+// this stays fast on mobile.
+function canvasHasInk(canvas: HTMLCanvasElement): boolean {
+  try {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return true;
+    // Focus on the lower ~65% of the receipt where artwork images live —
+    // headers/text alone can produce enough dark pixels to false-pass.
+    const startY = Math.floor(canvas.height * 0.35);
+    const h = canvas.height - startY;
+    const w = canvas.width;
+    if (w === 0 || h === 0) return true;
+    const data = ctx.getImageData(0, startY, w, h).data;
+    let dark = 0;
+    let sampled = 0;
+    // Sample every ~16th pixel.
+    for (let i = 0; i < data.length; i += 4 * 16) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      if (lum < 120) dark++;
+      sampled++;
+    }
+    if (sampled === 0) return true;
+    return dark / sampled > 0.01;
+  } catch {
+    // getImageData can throw on tainted canvases — assume OK so we don't loop.
+    return true;
+  }
+}
+
 function Loading() {
+
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-sm" style={{ color: "var(--ink-soft)" }}>
