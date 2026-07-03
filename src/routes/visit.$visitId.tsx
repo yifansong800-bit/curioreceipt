@@ -51,6 +51,21 @@ const EMOTION_PRESETS = [
   "overwhelmed",
 ];
 
+const MEDIUM_PRESETS = [
+  "oil on canvas",
+  "acrylic",
+  "watercolor",
+  "photograph",
+  "sculpture",
+  "print",
+  "mixed media",
+  "digital",
+  "video",
+  "installation",
+  "drawing",
+  "textile",
+];
+
 function VisitPage() {
   const { visitId } = Route.useParams();
   const navigate = useNavigate();
