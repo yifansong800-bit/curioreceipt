@@ -211,7 +211,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        className="w-full bg-transparent border-b px-0 py-2 text-base outline-none focus:border-b-2"
+        className="w-full bg-transparent border-b px-0 py-2 text-sm sm:text-base outline-none focus:border-b-2"
         style={{
           borderColor: "var(--ink)",
           fontFamily: "var(--font-mono)",
@@ -320,7 +320,7 @@ function MuseumAutocomplete({
         placeholder="e.g. The Art Institute of Chicago"
         maxLength={80}
         autoComplete="off"
-        className="w-full bg-transparent border-b px-0 py-2 text-base outline-none focus:border-b-2"
+        className="w-full bg-transparent border-b px-0 py-2 text-sm sm:text-base outline-none focus:border-b-2"
         style={{
           borderColor: "var(--ink)",
           fontFamily: "var(--font-mono)",
