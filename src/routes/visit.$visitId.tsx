@@ -7,6 +7,7 @@ import { Share2 } from "lucide-react";
 import exifr from "exifr";
 import { toJpeg } from "html-to-image";
 import { extractPalette } from "@/lib/palette";
+import { downscaleImage } from "@/lib/downscale";
 
 
 import { getSessionId } from "@/lib/session";
