@@ -178,6 +178,8 @@ export function PrinterStage({
               objectFit: "contain",
               display: "block",
               zIndex: 1,
+              opacity: mode === "idle" ? 0 : 1,
+              transition: "opacity 0.2s ease",
               userSelect: "none",
               pointerEvents: "none",
             }}
