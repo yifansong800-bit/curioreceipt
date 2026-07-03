@@ -650,13 +650,25 @@ function AddArtworkForm({
         } catch {
           /* palette optional */
         }
-        const ext = file.name.split(".").pop() || "jpg";
-        const key = `${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("artwork-photos")
-          .upload(key, file, { contentType: file.type, upsert: false });
-        if (upErr) throw upErr;
-        imagePath = key;
+        const rawExt = (file.name.split(".").pop() || "jpg").replace(/[^a-zA-Z0-9]/g, "").slice(0, 8) || "jpg";
+        const buf = await file.arrayBuffer();
+        let binary = "";
+        const bytes = new Uint8Array(buf);
+        const chunk = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunk) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+        }
+        const dataBase64 = btoa(binary);
+        const { path } = await uploadFn({
+          data: {
+            sessionId,
+            visitId,
+            contentType: file.type || "image/jpeg",
+            ext: rawExt,
+            dataBase64,
+          },
+        });
+        imagePath = path;
       }
 
       const lingerMinRaw = lingerMin.trim();
