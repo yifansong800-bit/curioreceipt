@@ -605,12 +605,15 @@ function AddArtworkForm({
       >
         <input
           type="file"
-          accept="image/*"
-          capture="environment"
+          accept="image/*,.heic,.heif,image/heic,image/heif"
           className="hidden"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          onChange={handleFileChange}
         />
-        {preview ? (
+        {converting ? (
+          <span className="text-sm" style={{ color: "var(--ink-soft)" }}>
+            Converting photo…
+          </span>
+        ) : preview ? (
           <div
             className="mx-auto flex items-center justify-center w-full"
             style={{ maxWidth: 260, aspectRatio: "1 / 1" }}
