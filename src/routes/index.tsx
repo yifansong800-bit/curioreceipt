@@ -105,7 +105,7 @@ function Index() {
         >
           ***** www.curioreceipt.com *****
         </p>
-        <p className="text-center mt-6 text-sm" style={{ color: "var(--ink-soft)" }}>
+        <p className="text-center mt-6 text-xs sm:text-sm" style={{ color: "var(--ink-soft)" }}>
           A thermal receipt for your museum visit.
           <br />
           Log the works. Print the memory.
