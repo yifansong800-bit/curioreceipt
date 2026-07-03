@@ -171,7 +171,7 @@ function ImageGrid({ artworks }: { artworks: ReceiptArtwork[] }) {
     >
       {artworks.map((a) => (
         <div key={a.id} style={{ textAlign: "center" }}>
-          <DitheredImage src={a.image_url!} width={cellW} />
+          <DitheredImage src={a.image_url!} size={cellW} />
           <div style={{ marginTop: 4 }}>{String(a.position).padStart(2, "0")}</div>
         </div>
       ))}
@@ -179,12 +179,12 @@ function ImageGrid({ artworks }: { artworks: ReceiptArtwork[] }) {
   );
 }
 
-function DitheredImage({ src, width }: { src: string; width: number }) {
+function DitheredImage({ src, size }: { src: string; size: number }) {
   const [out, setOut] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     setOut(null);
-    ditherImage(src, width * 1.2)
+    ditherImage(src, size * 1.2)
       .then((data) => {
         if (!cancelled) setOut(data);
       })
@@ -194,19 +194,29 @@ function DitheredImage({ src, width }: { src: string; width: number }) {
     return () => {
       cancelled = true;
     };
-  }, [src, width]);
+  }, [src, size]);
 
   return (
-    <img
-      src={out ?? src}
-      alt=""
-      crossOrigin="anonymous"
+    <div
       style={{
-        width,
-        height: "auto",
+        width: size,
+        height: size,
+        overflow: "hidden",
         display: "block",
-        imageRendering: "pixelated",
       }}
-    />
+    >
+      <img
+        src={out ?? src}
+        alt=""
+        crossOrigin="anonymous"
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+          imageRendering: "pixelated",
+        }}
+      />
+    </div>
   );
 }

@@ -525,11 +525,16 @@ function AddArtworkForm({
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
         {preview ? (
-          <img
-            src={preview}
-            alt=""
-            className="mx-auto max-h-40 object-contain"
-          />
+          <div
+            className="mx-auto overflow-hidden"
+            style={{ width: 160, height: 160 }}
+          >
+            <img
+              src={preview}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          </div>
         ) : (
           <span className="text-sm" style={{ color: "var(--ink-soft)" }}>
             tap to upload photo
