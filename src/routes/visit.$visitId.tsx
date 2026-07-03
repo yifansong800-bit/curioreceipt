@@ -186,36 +186,38 @@ function VisitPage() {
   }, [view]);
 
   async function renderReceiptBlob(): Promise<{ blob: Blob; filename: string } | null> {
-    const node = document.getElementById("curio-receipt") as HTMLElement | null;
-    if (!node || !visit) return null;
+    const source = document.getElementById("curio-receipt") as HTMLElement | null;
+    if (!source || !visit) return null;
 
-    // The receipt lives inside a `transform: scale(...)` wrapper on the print
-    // view (so it fits under the printer). html-to-image samples the live
-    // rendered size, which on mobile is shrunk by that transform and yields a
-    // tiny/blank capture with broken text wrapping. Temporarily neutralize any
-    // ancestor transforms so the receipt is measured at its natural 360px
-    // layout, snapshot, then restore.
-    const touched: { el: HTMLElement; transform: string; transformOrigin: string }[] = [];
-    let anc: HTMLElement | null = node.parentElement;
-    while (anc && anc !== document.body) {
-      const cs = window.getComputedStyle(anc);
-      if (cs.transform && cs.transform !== "none") {
-        touched.push({
-          el: anc,
-          transform: anc.style.transform,
-          transformOrigin: anc.style.transformOrigin,
-        });
-        anc.style.transform = "none";
-        anc.style.transformOrigin = "top left";
-      }
-      anc = anc.parentElement;
-    }
+    // The on-screen receipt sits inside a `transform: scale(...)` wrapper so
+    // it fits under the printer. Snapshotting the live node forces us to
+    // temporarily strip that transform, which visually cuts the receipt off
+    // for a beat while html-to-image runs. Instead, clone the receipt into
+    // an off-screen container at its natural 360px width and snapshot the
+    // clone — the visible receipt is never mutated.
+    const stage = document.createElement("div");
+    stage.setAttribute("aria-hidden", "true");
+    stage.style.cssText = [
+      "position: fixed",
+      "top: 0",
+      "left: 0",
+      "pointer-events: none",
+      // Keep the clone in-flow enough that fonts/images resolve, but hide it
+      // from the user by pushing it far off-screen.
+      "transform: translate(-10000px, -10000px)",
+      "transform-origin: top left",
+      "z-index: -1",
+      "background: transparent",
+    ].join(";");
+    const node = source.cloneNode(true) as HTMLElement;
+    node.style.transform = "none";
+    node.style.transformOrigin = "top left";
+    node.style.width = "360px";
+    stage.appendChild(node);
+    document.body.appendChild(stage);
 
     let dataUrl: string;
     try {
-      const naturalWidth = node.offsetWidth || 360;
-      const naturalHeight = node.offsetHeight || node.scrollHeight;
-
       // Wait for fonts so text isn't captured in a fallback face.
       if (document.fonts && document.fonts.ready) {
         try {
@@ -225,8 +227,8 @@ function VisitPage() {
         }
       }
 
-      // Ensure every <img> inside the receipt (dithered artwork data URLs)
-      // is fully decoded before snapshotting. On iOS Safari html-to-image
+      // Ensure every <img> inside the clone (dithered artwork data URLs) is
+      // fully decoded before snapshotting. On iOS Safari html-to-image
       // frequently produces a blank capture for images that haven't finished
       // decoding at snapshot time.
       const imgs = Array.from(node.querySelectorAll("img"));
@@ -246,6 +248,9 @@ function VisitPage() {
           }
         }),
       );
+
+      const naturalWidth = node.offsetWidth || 360;
+      const naturalHeight = node.offsetHeight || node.scrollHeight;
 
       const opts = {
         pixelRatio: 2,
@@ -271,13 +276,10 @@ function VisitPage() {
         canvas = await toCanvas(node, opts);
         if (!hasArtworkImages) break;
         if (canvasHasInk(canvas)) break;
-        // Give the browser a beat before retrying.
         await new Promise((r) => setTimeout(r, 120));
       }
 
       if (canvas) {
-        // Composite the captured canvas over a solid paper-cream fill so the
-        // scalloped-edge transparent pixels don't serialize to white in JPEG.
         const flat = document.createElement("canvas");
         flat.width = canvas.width;
         flat.height = canvas.height;
@@ -294,19 +296,15 @@ function VisitPage() {
         dataUrl = await toJpeg(node, opts);
       }
     } finally {
-      for (const t of touched) {
-        t.el.style.transform = t.transform;
-        t.el.style.transformOrigin = t.transformOrigin;
-      }
+      stage.remove();
     }
-
-
 
     const res = await fetch(dataUrl);
     const blob = await res.blob();
     const stamp = new Date().toISOString().slice(0, 10);
     return { blob, filename: `curio-${slugify(visit.museum)}-${stamp}.jpg` };
   }
+
 
   async function handleSaveToCameraRoll() {
     if (!visit) return;
