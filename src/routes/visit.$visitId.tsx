@@ -314,6 +314,7 @@ function VisitPage() {
               <div className="mt-8">
                 <PrinterStage
                   mode={stage}
+                  warmupDuration={PRINTER_WARMUP_MS}
                   onPrintComplete={() => setStage("printed")}
                 >
                   <div ref={receiptRef}>
