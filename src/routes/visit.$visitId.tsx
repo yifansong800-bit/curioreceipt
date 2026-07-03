@@ -670,8 +670,8 @@ function AddArtworkForm({
       setArtist("");
       setYear("");
       setMedium("");
-      setLingerMin(0);
-      setLingerSec(0);
+      setLingerMin("");
+      setLingerSec("");
       setEmotions([]);
       setCustomEmotion("");
       setRating(0);
