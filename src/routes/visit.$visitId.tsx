@@ -533,7 +533,11 @@ function Loading() {
 
 function AddArtworkForm({
   onSubmit,
+  sessionId,
+  visitId,
 }: {
+  sessionId: string;
+  visitId: string;
   onSubmit: (data: {
     imagePath: string | null;
     title: string;
@@ -547,6 +551,7 @@ function AddArtworkForm({
     rating: number;
   }) => Promise<void>;
 }) {
+  const uploadFn = useServerFn(uploadArtworkPhoto);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [year, setYear] = useState("");
