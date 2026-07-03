@@ -204,6 +204,8 @@ export function PrinterStage({
                   />
                 </div>
               </div>
+              </div>
+
 
             </motion.div>
           ) : null}
