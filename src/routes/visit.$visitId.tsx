@@ -352,6 +352,8 @@ function VisitPage() {
                     <Receipt
                       visitorName={visit.visitor_name}
                       museum={visit.museum}
+                      city={visit.city ?? null}
+                      country={visit.country ?? null}
                       sessionNumber={visit.session_number}
                       date={visit.created_at}
                       artworks={artworks}
