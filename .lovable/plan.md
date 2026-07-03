@@ -1,42 +1,57 @@
-## Fix printer image + receipt feed animation
+## Split the flow into Compose → Print
 
-### 1. Regenerate the printer as a transparent bird's-eye PNG
+### Phase 1 — Compose (no printer visible)
 
-Replace `src/assets/printer.jpg` with `src/assets/printer.png`:
+Restructure `src/routes/visit.$visitId.tsx` from the current two-column layout into a **single centered composer**.
 
-- Use `imagegen--generate_image` with `transparent_background: true`, `.png` target.
-- Prompt: top-down / bird's-eye view of a small white thermal receipt printer (matching the reference photo — ridged white plastic body, rectangular paper slot at the front edge, no receipt visible), centered on a solid white background, soft studio lighting, no shadow beneath.
-- Model tier: `premium` (clean product shot, crisp slot edge matters for the mask).
+- Header: visitor name + museum + session number.
+- "Add artwork" form (unchanged: photo, title, artist, medium, emotions).
+- Below the form, a stack of added artwork **cards** — small tile with the dithered thumbnail, title / artist, linger time, delete button. Not a receipt preview.
+- Hard cap: **3 artworks max**. Once 3 are added, the form is replaced by a "3 / 3 artworks added" note. Helper text on the form: "Add up to 3 artworks · 2 more room".
+- Primary CTA at the bottom: **"Ready to print? →"**, disabled until at least 1 artwork exists.
+- No printer, no receipt preview anywhere.
 
-Update the import in `src/components/printer-stage.tsx` from `printer.jpg` → `printer.png`.
+### Phase 2 — Print (clean, efficient reveal)
 
-### 2. Make the receipt appear to feed out of the slot
+Clicking "Ready to print?" swaps the compose view for the print view **in place** — same route, same container. No modal, no scrim, no drop-in animation, no striped desk backdrop.
 
-The current bug: the receipt track sits below the printer image with a negative `marginTop`, so the receipt just slides down behind, then out under, the whole printer rectangle. It never looks like it emerges from the slot.
+Sequence:
 
-Not a GIF — we keep the existing Framer Motion animation but fix the stacking so the paper visually exits the slot:
+1. Compose column fades out (150ms).
+2. Print view fades in (150ms) in the same slot: a small back arrow "← Edit entries" at the top-left, then the centered printer, then the receipt paper-feed animation runs immediately from the slot (existing `PrinterStage` behavior, unchanged).
+3. When the feed finishes, the **Download receipt (PNG)** button appears directly below the receipt, plus a subtle "↺ Print again" text link next to Edit.
 
-```text
-[layer 3] printer image (transparent PNG)     z-index: 3
-[layer 2] receipt (motion.div, animates down) z-index: 2   ← clipped to start at slot Y
-[layer 1] (nothing / page background)         z-index: 1
-```
+That's the whole reveal — a crossfade between two views. No cinematic beats.
 
-Key changes in `src/components/printer-stage.tsx`:
+Reduced-motion: skip the crossfade, snap between views. Print animation already respects `useReducedMotion`.
 
-- Container becomes `position: relative` with a fixed aspect ratio matching the printer PNG.
-- Printer `<img>` is absolutely positioned, `z-index: 3`, `pointer-events: none`.
-- Receipt track is absolutely positioned at the slot's Y coordinate (measured once from the new PNG — roughly `top: 55%` for a bird's-eye printer where the slot is near the front edge), horizontally centered, width ≈ the slot width (~38% of printer width), `z-index: 2`.
-- Animate `translateY` from `0` (receipt fully hidden behind printer above the slot) down to its final resting position, with the stepper-motor jitter kept.
-- Add `overflow: hidden` + a `clip-path` on the receipt wrapper so the top of the receipt is masked above the slot line — this sells "emerging from the slot" instead of "sliding on top of the printer."
-- Extend the outer container's height so the receipt has room to hang below the printer in the `printed` state.
+### Phase 3 — After print
 
-### 3. Keep download working
+- **Download receipt (PNG)** — primary button, unchanged behavior.
+- **← Edit entries** — returns to compose with artworks intact.
+- **↺ Print again** — replays the feed animation.
+- Escape key = Edit entries.
 
-The visible animated receipt is a scaled preview; the hidden full-size `#curio-receipt` node used by `html-to-image` is unchanged, so PNG export still captures the full receipt at full resolution. No changes needed in `src/routes/visit.$visitId.tsx`.
+### Layout / structure changes
 
-### Technical notes
+- Composer becomes a single centered column (max ~640px). `PrinterStage` no longer sits inside it.
+- New component `src/components/artwork-card.tsx` — the stacked tile in the compose list.
+- Route holds a `view: "compose" | "print"` flag driving the crossfade, with the existing `stage: "printing" | "printed"` used inside the print view.
+- The hidden full-size `#curio-receipt` node used by `html-to-image` stays rendered (offscreen) whenever there's ≥1 artwork, so download works from the print view without waiting on layout.
 
-- No new dependencies. No GIF pipeline — Framer Motion + clip-path is smoother, resolution-independent, and matches the reference behavior.
-- Slot coordinates (top %, width %) will be tuned after seeing the generated PNG; expect one small follow-up tweak.
-- `src/assets/printer.jpg` is deleted after the PNG lands.
+### What stays the same
+
+- Data model, server functions, upload, EXIF, dithering, `Receipt`, PNG export.
+- `PrinterStage` — the slot alignment, feed animation, and jitter are all unchanged.
+
+### Order of implementation
+
+1. Composer refactor: single column, artwork-card list, 3-item cap, "Ready to print?" CTA.
+2. Route-level `view` flag + crossfade between compose and print sections.
+3. Wire existing `PrinterStage` into the print view; verify feed + download.
+4. Post-print actions (download / print again / edit).
+5. Reduced-motion + Esc key.
+
+Assumptions unless you say otherwise:
+- **3 is a hard cap.**
+- **Same route, in-place crossfade** (no modal, no new URL).
