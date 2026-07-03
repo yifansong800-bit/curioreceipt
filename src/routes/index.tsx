@@ -54,7 +54,8 @@ function Index() {
     },
   });
 
-  const canSubmit = visitor.trim().length > 0 && museum.trim().length > 0 && !mut.isPending;
+  const opening = mut.isPending || mut.isSuccess;
+  const canSubmit = visitor.trim().length > 0 && museum.trim().length > 0 && !opening;
 
   return (
     <div
@@ -128,7 +129,7 @@ function Index() {
               fontWeight: 700,
             }}
           >
-            {mut.isPending ? "Opening receipt..." : "Begin visit →"}
+            {opening ? "Opening receipt..." : "Begin visit →"}
           </button>
           {mut.isError ? (
             <p className="text-sm" style={{ color: "var(--destructive)" }}>
