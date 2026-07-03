@@ -325,6 +325,7 @@ function VisitPage() {
             title: "My Curio receipt",
             text: `My visit to ${visit.museum} — logged on Curio ✦`,
           });
+          setSaved(true);
           return;
         } catch (err) {
           if ((err as DOMException)?.name === "AbortError") return;
@@ -337,6 +338,7 @@ function VisitPage() {
       link.href = url;
       link.click();
       URL.revokeObjectURL(url);
+      setSaved(true);
     } finally {
       setSaving(false);
     }
