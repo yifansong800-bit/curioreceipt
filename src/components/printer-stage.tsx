@@ -59,7 +59,7 @@ export function PrinterStage({
       {/* Receipt lane: pulled up so its top edge sits at the slot mouth.
           overflow:hidden clips the animated content above that edge. */}
       <AnimatePresence initial={false}>
-        {mode !== "idle" ? (
+        {mode === "printing" || mode === "printed" ? (
           <motion.div
             key="lane"
             initial={{ height: 0, opacity: 1 }}
@@ -75,8 +75,6 @@ export function PrinterStage({
               justifyContent: "center",
             }}
           >
-            {/* `zoom` scales BOTH visual size AND layout box, so the
-                receipt occupies its scaled footprint in flow. */}
             <div style={{ zoom: receiptScale, width: receiptNaturalWidth }}>
               <motion.div
                 initial={
@@ -115,7 +113,14 @@ export function PrinterStage({
         ) : null}
       </AnimatePresence>
 
-      {mode === "printing" ? (
+      {mode === "idle" ? (
+        <div
+          className="text-center mt-3 text-xs uppercase tracking-widest"
+          style={{ color: "var(--ink-soft)" }}
+        >
+          warming up…
+        </div>
+      ) : mode === "printing" ? (
         <div
           className="text-center mt-3 text-xs uppercase tracking-widest"
           style={{ color: "var(--ink-soft)" }}
