@@ -94,7 +94,6 @@ function Index() {
             label="YOUR NAME"
             value={visitor}
             onChange={setVisitor}
-            placeholder="e.g. Alex Rivera"
             maxLength={60}
           />
           <Field
