@@ -11,7 +11,7 @@ import { extractPalette } from "@/lib/palette";
 import { supabase } from "@/integrations/supabase/client";
 import { getSessionId } from "@/lib/session";
 import { getVisit, updateVisitLocation } from "@/lib/visits.functions";
-import { addArtwork, deleteArtwork } from "@/lib/artworks.functions";
+import { addArtwork, deleteArtwork, uploadArtworkPhoto } from "@/lib/artworks.functions";
 import { Receipt, type ReceiptArtwork } from "@/components/receipt";
 import { PrinterStage } from "@/components/printer-stage";
 import { ArtworkCard } from "@/components/artwork-card";
