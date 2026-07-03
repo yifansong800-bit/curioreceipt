@@ -159,7 +159,7 @@ function Index() {
         </form>
       </div>
 
-      <Footer className="mt-auto" />
+      <Footer className="absolute bottom-0" />
 
       <DialogContent className="max-w-[calc(100%-4rem)] sm:max-w-md border text-left" style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}>
         <DialogTitle className="text-lg tracking-tight">About Curio</DialogTitle>
