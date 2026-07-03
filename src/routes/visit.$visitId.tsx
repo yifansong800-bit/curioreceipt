@@ -315,7 +315,9 @@ function VisitPage() {
                 <PrinterStage
                   mode={stage}
                   warmupDuration={PRINTER_WARMUP_MS}
-                  onPrintComplete={() => setStage("printed")}
+                  onPrintComplete={() =>
+                    setStage((s) => (s === "printing" ? "printed" : s))
+                  }
                 >
                   <div ref={receiptRef}>
                     <Receipt
