@@ -169,25 +169,6 @@ async function generateJsonObject<T>(schema: z.ZodType<T>, prompt: string, timeo
     lookup,
     new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
   ]);
-
-  /* try {
-    const gateway = createLovableAiGatewayProvider(key);
-    const { text } = await generateText({
-      model: gateway("google/gemini-3-flash-preview"),
-      temperature: 0,
-      maxOutputTokens: 700,
-      abortSignal: abort.signal,
-      prompt: `${prompt}\n\nReturn ONLY valid JSON. Do not wrap it in markdown.`,
-    });
-    return parseJsonObject(text, schema);
-  } catch (err) {
-    if (!abort.signal.aborted) {
-      console.error("Museum AI lookup failed", err instanceof Error ? err.message : err);
-    }
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  } */
 }
 
 async function resolveMuseumLocationInternal(
