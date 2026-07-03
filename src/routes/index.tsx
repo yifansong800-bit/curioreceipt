@@ -7,7 +7,6 @@ import { Info } from "lucide-react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
