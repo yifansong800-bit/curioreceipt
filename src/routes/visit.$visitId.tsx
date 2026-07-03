@@ -773,6 +773,8 @@ function AddArtworkForm({
       setCustomEmotion("");
       setRating(0);
       setFile(null);
+      setSavedCount((n) => n + 1);
+      setCollapsed(true);
     } catch (err) {
       console.error("[curio] add artwork failed", err);
       const msg = err instanceof Error ? err.message : String(err);
