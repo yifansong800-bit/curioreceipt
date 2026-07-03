@@ -35,16 +35,18 @@ export function ArtworkCard({
               background: gradient,
               filter: "blur(28px)",
               transform: "scale(1.4)",
-              opacity: 0.55,
+              opacity: 0.85,
             }}
           />
           <div
             aria-hidden
             className="absolute inset-0 pointer-events-none"
-            style={{ backgroundColor: "var(--paper)", opacity: 0.55 }}
+            style={{ backgroundColor: "var(--paper)", opacity: 0.25 }}
           />
         </>
       ) : null}
+
+      <div aria-hidden className="film-grain" />
 
       <div className="relative flex items-center gap-3 px-4 py-3">
         <div className="flex-1 min-w-0">
