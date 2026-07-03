@@ -51,7 +51,15 @@ function Index() {
   const canSubmit = visitor.trim().length > 0 && museum.trim().length > 0 && !mut.isPending;
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 py-16">
+    <div
+      className="min-h-screen flex items-center justify-center"
+      style={{
+        paddingLeft: "max(1.25rem, env(safe-area-inset-left))",
+        paddingRight: "max(1.25rem, env(safe-area-inset-right))",
+        paddingTop: "max(2.5rem, env(safe-area-inset-top))",
+        paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))",
+      }}
+    >
       <div className="w-full max-w-md">
         <div
           className="text-center leading-none"
