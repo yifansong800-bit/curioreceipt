@@ -1,115 +1,37 @@
-# Curio — Museum Visit Receipt Generator
+## Goal
 
-Anonymous single-page app to log a museum visit and export it as a thermal-receipt PNG. Matches the attached reference exactly: chunky stencil CURIO wordmark, monospace body on cream paper, zigzag top/bottom edges, dithered black-and-white images.
+Replace the current zigzag/perforated receipt paper with the exact scalloped paper shown in the reference: rounded "teeth" bumps along the top and bottom edges, plus a dotted perforation line just inside each edge, on the cream paper tone.
 
-## Receipt visual spec (locked to reference)
+## Approach
 
-- Paper: warm cream `#e8e4d8` with subtle grain, zigzag/perforated top and bottom edges (SVG mask).
-- Width: 340px on screen, exported at 2x for a crisp PNG.
-- Wordmark "CURIO": chunky pixel/stencil display face — **Rubik Puddles** or **Silkscreen** from Fontsource (final pick tested against the reference), ~56px, centered.
-- Body: **IBM Plex Mono**, 13px, near-black `#171512`, tight line-height.
-- Dividers: dashed `- - - -` rules and `********` asterisk rows exactly as shown.
-- Images: rendered to canvas with a **Floyd–Steinberg dithered halftone** filter (pure JS, no wasm) — same look as the reference. 1 image = full width; 2 images = 2-col; 3+ = wrap. Each captioned `01`, `02`, … centered below.
-- Copy preserved verbatim, including `THANK YOU FOR VISTING!` (typo intact per reference).
+Reproduce the edge in CSS/SVG (not as a raster image) so the receipt scales cleanly at any width, exports crisply to PNG via `html-to-image`, and keeps the paper grain overlay working.
 
-### Exact receipt structure
+### Changes
 
-```
-              CURIO                    ← stencil wordmark
-   ******** www.curio.com ********
-   MUSEUM:  <museum>
-   DATE:    <DD-MON-YYYY H:MMPM>
-   CURATOR: <visitor> (SESH #<nn>)
-   - - - - - - - - - - - - - - - -
-   QTY DESCRIPTION
-   01 *<Title>* (<year>) - <Artist>
-   * LINGER TIME                M:SS
-   * MEDIUM              <MEDIUM CAPS>
-   I WAS...        [chip] [chip]
+1. **`src/styles.css` — rewrite the `receipt-paper` utility**
+   - Remove the current conic-gradient zigzag mask.
+   - Build a scalloped mask using a repeating radial-gradient of small circles ("teeth") along the top and bottom edges. Tooth diameter ~14px, spaced edge-to-edge, so the outline reads as continuous rounded bumps like the reference.
+   - Add a `::before` pseudo-element that draws two horizontal dotted perforation lines (one below the top teeth, one above the bottom teeth) using `border-top: 1.5px dotted` in the ink-soft color, positioned ~10px from each edge.
+   - Keep the cream `--paper` fill and preserve compatibility with the existing `.grain` overlay (grain stays clipped to the scalloped shape because it's a child inside the masked element).
+   - Ensure the mask uses both `-webkit-mask` and `mask` for Safari + Chromium, and that PNG export via `html-to-image` captures the shape (masks render correctly in `toPng`; no extra work needed).
 
-   02 *<Title>* (<year>) - <Artist>
-   …
-   [dithered image grid, captioned 01 02 …]
-   - - - - - - - - - - - - - - - -
-   SUBTOTAL ITEM                    N
-   TOTAL TIME SPENT           H:MM:SS
-   ********************************
-        THANK YOU FOR VISTING!
+2. **`src/components/receipt.tsx` — spacing tweak only**
+   - Bump top/bottom padding from 28/32 to ~40/44 so content clears the new scalloped edge + dotted perf line. No structural or content changes.
+
+### Out of scope
+
+- No changes to routes, server functions, database, dither, or download logic.
+- Not embedding the uploaded PNG as a background image — reproducing it in CSS keeps the receipt responsive and export-crisp.
+
+## Technical detail
+
+Scallop mask sketch (top edge; bottom mirrors it):
+
+```text
+mask =
+  linear-gradient(#000, #000)                     ← body fill, inset by tooth radius top & bottom
+  + radial-gradient(circle 7px at 7px 7px, #000 7px, transparent 7.5px) repeat-x top / 14px 14px
+  + radial-gradient(circle 7px at 7px 7px, #000 7px, transparent 7.5px) repeat-x bottom / 14px 14px
 ```
 
-## User flow
-
-1. **Start screen** (`/`) — CURIO wordmark, "Name" + "Museum visited" + optional "Year (for date shown on receipt)" inputs → creates visit → routes to builder.
-2. **Builder** (`/visit/$visitId`) — split view: left = artwork form + list, right = live receipt preview.
-   - **Add artwork form**: photo upload (`<input type="file" accept="image/*" capture="environment">` — camera roll on mobile, file picker on desktop), Title, Artist, Year, Medium, Linger time (mm:ss stepper, defaults 0:00 and can be started/stopped with a "Start timer" toggle while viewing), Emotion chips.
-   - **Emotion chips**: curated preset row (Moved, Curious, Awed, Confused, Nostalgic, Amused, Unsettled, Peaceful, Inspired, Skeptical, Tender, Touched, In awe) — tap to toggle. `+ Add your own` text input appends custom chips. All chips render on the receipt as `[label]`.
-   - Photo timestamp auto-extracted from EXIF `DateTimeOriginal` (via `exifr`); falls back to upload time.
-   - Edit/delete per row.
-3. **Download** — "Download receipt" button renders the receipt DOM to PNG (`html-to-image`, 2x pixel ratio). Filename: `curio-<museum-slug>-<date>.png`.
-
-## Data model (Lovable Cloud)
-
-Anonymous session id (uuid, `localStorage`, sent with every write).
-
-```
-visits
-  id uuid pk
-  session_id uuid
-  visitor_name text
-  museum text
-  session_number int          -- SESH #NN, monotonic per session_id
-  created_at timestamptz
-
-artworks
-  id uuid pk
-  visit_id uuid fk
-  session_id uuid             -- denormalized for policy checks
-  position int                -- 01, 02, ...
-  image_url text              -- public URL, storage bucket
-  title text
-  artist text
-  year text
-  medium text
-  linger_seconds int
-  emotions text[]             -- preset + custom, unified
-  photo_taken_at timestamptz
-  created_at timestamptz
-```
-
-Storage bucket `artwork-photos` (public read). Original photos are stored as-is; dithering happens client-side at render time so the stored file stays reusable.
-
-RLS: all reads/writes go through server functions using a server publishable client. Policies restrict rows to matching `session_id` passed through the server fn. Service role is never bundled client-side.
-
-## Routes
-
-- `/` — start screen (public)
-- `/visit/$visitId` — builder + preview (public; server fn verifies the caller's session id matches the visit's `session_id`; otherwise 404)
-
-Both `head()` set real Curio title, description, og:title/description, twitter:card. Home ships no og:image; leaf visit route omits og:image (private link).
-
-## Tech
-
-- **Fonts**: `@fontsource/rubik-puddles` (or `@fontsource/silkscreen` — chosen after side-by-side check with the reference) + `@fontsource/ibm-plex-mono`. Loaded via `<link>` in `__root.tsx` head (Fontsource CSS import in `src/main.tsx`-equivalent entry). Registered in `@theme` as `--font-display` and `--font-mono`.
-- **Dithering**: pure-JS Floyd–Steinberg on a canvas, 1-bit output; runs once per image and cached to a data URL. No wasm, Worker-safe.
-- **EXIF**: `exifr` (browser).
-- **PNG export**: `html-to-image` (`toPng`) at `pixelRatio: 2`. Web-fonts embedded via `fontEmbedCSS` so the export includes the stencil + mono glyphs.
-- **State**: TanStack Query. Optimistic add on artwork insert.
-- **Server fns** in `src/lib/visits.functions.ts` and `src/lib/artworks.functions.ts`: `createVisit`, `getVisit`, `addArtwork`, `updateArtwork`, `deleteArtwork`, `createSignedUpload`. Signed upload URLs are minted server-side so the service role stays server-only.
-
-## Design shell (outside the receipt)
-
-Same cream paper background as the receipt for the whole page. Form UI uses IBM Plex Mono at a smaller size, thin 1px borders, no shadows, uppercase field labels — the builder should feel like it's sitting on the same paper as the receipt.
-
-## Build order
-
-1. Enable Lovable Cloud.
-2. Migration: `visits`, `artworks`, grants, RLS, `artwork-photos` bucket (public read).
-3. Install `@fontsource/rubik-puddles`, `@fontsource/silkscreen`, `@fontsource/ibm-plex-mono`, `exifr`, `html-to-image`. Wire fonts and tokens in `styles.css`.
-4. Server fns.
-5. `/` start screen → creates visit → routes.
-6. `/visit/$visitId` builder form + live receipt component (`<Receipt>`).
-7. Floyd–Steinberg dither utility + integration in receipt images.
-8. Zigzag perforation SVG masks + grain overlay.
-9. PNG export & download.
-10. Visual QA against the reference (side-by-side): wordmark, spacing, dashed rules, asterisk row count, chip formatting, dithered look.
-11. Route metadata in `__root.tsx`.
+Perforation lines: absolutely positioned 1.5px dotted borders in `--ink-soft` at ~14px from top and bottom, matching the faint dashed line visible just inside the teeth in the reference.
