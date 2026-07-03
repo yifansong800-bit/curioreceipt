@@ -24,6 +24,7 @@ const artworkFields = z.object({
   lingerSeconds: z.number().int().min(0).max(60 * 60 * 12).default(0),
   emotions: z.array(z.string().trim().min(1).max(40)).max(12).default([]),
   photoTakenAt: z.string().nullable().optional(),
+  palette: z.array(z.string().max(32)).max(6).default([]),
 });
 
 export const addArtwork = createServerFn({ method: "POST" })
@@ -57,6 +58,7 @@ export const addArtwork = createServerFn({ method: "POST" })
         linger_seconds: data.lingerSeconds,
         emotions: data.emotions,
         photo_taken_at: data.photoTakenAt ?? null,
+        palette: data.palette,
       })
       .select("*")
       .single();
