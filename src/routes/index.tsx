@@ -66,16 +66,33 @@ function Index() {
   const canSubmit = visitor.trim().length > 0 && museum.trim().length > 0 && !opening;
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center"
-      style={{
-        paddingLeft: "max(1.25rem, env(safe-area-inset-left))",
-        paddingRight: "max(1.25rem, env(safe-area-inset-right))",
-        paddingTop: "max(2.5rem, env(safe-area-inset-top))",
-        paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))",
-      }}
-    >
-      <div className="w-full max-w-md">
+    <Dialog>
+      <div
+        className="relative min-h-screen flex items-center justify-center"
+        style={{
+          paddingLeft: "max(1.25rem, env(safe-area-inset-left))",
+          paddingRight: "max(1.25rem, env(safe-area-inset-right))",
+          paddingTop: "max(2.5rem, env(safe-area-inset-top))",
+          paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))",
+        }}
+      >
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            aria-label="About Curio"
+            className="absolute z-10 inline-flex items-center justify-center rounded-full border p-2 transition-colors hover:bg-ink hover:text-paper"
+            style={{
+              top: "max(1rem, env(safe-area-inset-top))",
+              right: "max(1rem, env(safe-area-inset-right))",
+              borderColor: "var(--ink)",
+              color: "var(--ink)",
+              backgroundColor: "var(--paper)",
+            }}
+          >
+            <Info className="h-5 w-5" />
+          </button>
+        </DialogTrigger>
+        <div className="w-full max-w-md">
         <div
           className="text-center leading-none"
           style={{
