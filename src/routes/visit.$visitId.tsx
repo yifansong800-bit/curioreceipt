@@ -103,10 +103,16 @@ function VisitPage() {
 
   const [view, setView] = useState<View>("compose");
   const [stage, setStage] = useState<Stage>("idle");
-  const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareHint, setShareHint] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1);
+  }, []);
   const printStageRef = useRef<HTMLDivElement | null>(null);
+
+
   const receiptRef = useRef<HTMLDivElement | null>(null);
 
   const atCap = artworks.length >= MAX_ARTWORKS;
@@ -182,12 +188,29 @@ function VisitPage() {
     return { blob, filename: `curio-${slugify(visit.museum)}-${stamp}.jpg` };
   }
 
-  async function handleDownload() {
+  async function handleSaveToCameraRoll() {
     if (!visit) return;
-    setDownloading(true);
+    setSaving(true);
     try {
       const out = await renderReceiptBlob();
       if (!out) return;
+      const file = new File([out.blob], out.filename, { type: "image/jpeg" });
+      const nav = navigator as Navigator & {
+        canShare?: (data: ShareData) => boolean;
+      };
+      if (nav.canShare?.({ files: [file] })) {
+        try {
+          await nav.share({
+            files: [file],
+            title: "My Curio receipt",
+            text: `My visit to ${visit.museum} — logged on Curio ✦`,
+          });
+          return;
+        } catch (err) {
+          if ((err as DOMException)?.name === "AbortError") return;
+        }
+      }
+      // Fallback for desktop / unsupported devices: trigger a download
       const url = URL.createObjectURL(out.blob);
       const link = document.createElement("a");
       link.download = out.filename;
@@ -195,9 +218,10 @@ function VisitPage() {
       link.click();
       URL.revokeObjectURL(url);
     } finally {
-      setDownloading(false);
+      setSaving(false);
     }
   }
+
 
   async function handleShare() {
     if (!visit) return;
@@ -464,8 +488,8 @@ function VisitPage() {
                 {stage === "printed" ? (
                   <>
                     <button
-                      onClick={handleDownload}
-                      disabled={downloading || sharing}
+                      onClick={handleSaveToCameraRoll}
+                      disabled={saving || sharing}
                       className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
                       style={{
                         borderColor: "var(--ink)",
@@ -474,11 +498,11 @@ function VisitPage() {
                         fontWeight: 700,
                       }}
                     >
-                      {downloading ? "Rendering..." : "Download receipt (PNG)"}
+                      {saving ? "Rendering..." : isMobile ? "Save to camera roll" : "Download receipt"}
                     </button>
                     <button
                       onClick={handleShare}
-                      disabled={sharing || downloading}
+                      disabled={sharing || saving}
                       className="w-full inline-flex items-center justify-center gap-2 uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
                       style={{
                         borderColor: "var(--ink)",
@@ -490,6 +514,7 @@ function VisitPage() {
                       <Share2 className="h-4 w-4" />
                       {sharing ? "Preparing..." : "Share to Instagram"}
                     </button>
+
                     {shareHint ? (
                       <p
                         className="text-xs text-center"
