@@ -653,7 +653,7 @@ function VisitPage() {
                             : "Download receipt"}
                     </button>
                     <button
-                      onClick={handleShare}
+                      onClick={shared ? () => {} : handleShare}
                       disabled={sharing || saving}
                       className="w-full inline-flex items-center justify-center gap-2 uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
                       style={{
@@ -664,7 +664,7 @@ function VisitPage() {
                       }}
                     >
                       <Share2 className="h-4 w-4" />
-                      {sharing ? "Preparing..." : "Share to Instagram"}
+                      {shared ? "Shared to Instagram" : sharing ? "Preparing..." : "Share to Instagram"}
                     </button>
 
                     {shareHint ? (
