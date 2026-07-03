@@ -78,6 +78,7 @@ function VisitPage() {
   const delFn = useServerFn(deleteArtwork);
   const updateFn = useServerFn(updateArtwork);
   const updateLocFn = useServerFn(updateVisitLocation);
+  const uploadFn = useServerFn(uploadArtworkPhoto);
 
   const reduce = useReducedMotion();
 
