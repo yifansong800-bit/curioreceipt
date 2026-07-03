@@ -196,7 +196,7 @@ export function PrinterStage({
             </motion.div>
           ) : null}
         </AnimatePresence>
-
+      </div>
     </div>
   );
 }
