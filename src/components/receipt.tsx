@@ -13,6 +13,7 @@ export type ReceiptArtwork = {
   linger_seconds: number;
   emotions: string[];
   palette?: string[] | null;
+  rating?: number | null;
 };
 
 export type ReceiptProps = {
