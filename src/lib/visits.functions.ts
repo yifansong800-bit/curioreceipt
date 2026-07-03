@@ -112,6 +112,8 @@ export const createVisit = createServerFn({ method: "POST" })
         sessionId: uuid,
         visitorName: z.string().trim().min(1).max(80),
         museum: z.string().trim().min(1).max(120),
+        city: z.string().trim().max(80).nullable().optional(),
+        country: z.string().trim().max(80).nullable().optional(),
       })
       .parse(raw),
   )
@@ -124,7 +126,13 @@ export const createVisit = createServerFn({ method: "POST" })
       .eq("session_id", data.sessionId);
     const sessionNumber = (count ?? 0) + 1;
 
-    const { city, country } = await resolveMuseumLocationInternal(data.museum);
+    let city = data.city ?? null;
+    let country = data.country ?? null;
+    if (!city && !country) {
+      const resolved = await resolveMuseumLocationInternal(data.museum);
+      city = resolved.city;
+      country = resolved.country;
+    }
 
     const { data: row, error } = await supabaseAdmin
       .from("visits")
