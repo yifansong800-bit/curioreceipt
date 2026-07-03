@@ -75,25 +75,40 @@ function normalizeMuseumText(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/[^a-z0-9+]+/g, " ")
     .replace(/^the\s+/, "")
     .trim();
 }
 
+function looseNormalizeMuseumText(value: string) {
+  // Preserves +, &, digits so short symbolic names like "M+", "V&A", "21c" still match.
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function candidatesForMuseum(museum: KnownMuseum) {
-  return [museum.name, ...(museum.aliases ?? [])].map(normalizeMuseumText).filter(Boolean);
+  const names = [museum.name, ...(museum.aliases ?? [])];
+  const normal = names.map(normalizeMuseumText).filter(Boolean);
+  const loose = names.map(looseNormalizeMuseumText).filter(Boolean);
+  return Array.from(new Set([...normal, ...loose]));
 }
 
 function scoreKnownMuseum(query: string, museum: KnownMuseum) {
-  const q = normalizeMuseumText(query);
+  const qNormal = normalizeMuseumText(query);
+  const qLoose = looseNormalizeMuseumText(query);
+  const q = qNormal || qLoose;
   if (!q) return 0;
-  const tokens = q.split(" ").filter(Boolean);
+  const tokens = q.split(/\s+/).filter(Boolean);
   let best = 0;
   for (const candidate of candidatesForMuseum(museum)) {
     if (candidate === q) best = Math.max(best, 100);
     else if (candidate.startsWith(q)) best = Math.max(best, 90);
     else if (candidate.includes(q)) best = Math.max(best, 75);
-    else if (tokens.every((token) => candidate.includes(token))) best = Math.max(best, 55 + tokens.length);
+    else if (tokens.length && tokens.every((token) => candidate.includes(token))) best = Math.max(best, 55 + tokens.length);
   }
   return best;
 }
