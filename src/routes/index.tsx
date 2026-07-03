@@ -163,7 +163,31 @@ function Index() {
           ) : null}
         </form>
       </div>
+
+      <DialogContent className="max-w-md border text-left" style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}>
+        <DialogTitle className="text-lg tracking-tight">About Curio</DialogTitle>
+        <div className="space-y-4 text-sm sm:text-base leading-relaxed" style={{ color: "var(--ink)" }}>
+          <p>
+            Curio helps art lovers and casual visitors log, save, and share memories of their favorite pieces—so they never get lost in your camera roll or Notes app.
+          </p>
+          <p>If you love it, share it. Let's keep our favorite art close.</p>
+          <p style={{ color: "var(--ink-soft)" }}>
+            Built with ♡ by{" "}
+            <a
+              href="https://cassiesong.lovable.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+              style={{ color: "var(--ink)" }}
+            >
+              Cassie
+            </a>{" "}
+            (Northwestern ’29) on Lovable.
+          </p>
+        </div>
+      </DialogContent>
     </div>
+  </Dialog>
   );
 }
 
