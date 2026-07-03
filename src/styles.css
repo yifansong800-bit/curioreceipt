@@ -82,37 +82,67 @@
   }
 }
 
-/* Receipt paper: zigzag top + bottom perforations via a CSS mask so PNG
-   export captures them correctly. */
+/* Receipt paper: scalloped (toothed) top + bottom edges via a CSS mask,
+   with two faint dotted perforation lines just inside the teeth.
+   Reproduces the reference exactly and exports crisply to PNG. */
 @utility receipt-paper {
+  --tooth: 9px;
+  --perf-inset: 8px;
+  --perf-color: color-mix(in oklab, var(--ink) 42%, transparent);
   background-color: var(--color-paper);
-  --zig: 8px;
+  background-image:
+    radial-gradient(circle, var(--perf-color) 0.7px, transparent 1.1px),
+    radial-gradient(circle, var(--perf-color) 0.7px, transparent 1.1px);
+  background-repeat: repeat-x, repeat-x;
+  background-size:
+    5px 2px,
+    5px 2px;
+  background-position:
+    center calc(var(--tooth) + var(--perf-inset)),
+    center calc(100% - var(--tooth) - var(--perf-inset));
+
   -webkit-mask-image:
     linear-gradient(#000, #000),
-    conic-gradient(from -45deg at 50% 100%, #0000 25%, #000 0 75%, #0000 0);
-  -webkit-mask-repeat: no-repeat, repeat-x;
+    radial-gradient(
+      circle at 50% 100%,
+      #000 var(--tooth),
+      #0000 calc(var(--tooth) + 0.6px)
+    ),
+    radial-gradient(
+      circle at 50% 0%,
+      #000 var(--tooth),
+      #0000 calc(var(--tooth) + 0.6px)
+    );
+  -webkit-mask-repeat: no-repeat, repeat-x, repeat-x;
   -webkit-mask-size:
-    100% calc(100% - var(--zig) * 2),
-    calc(var(--zig) * 2) var(--zig);
+    100% calc(100% - var(--tooth) * 2),
+    calc(var(--tooth) * 2) var(--tooth),
+    calc(var(--tooth) * 2) var(--tooth);
   -webkit-mask-position:
     center,
     top,
     bottom;
   mask-image:
     linear-gradient(#000, #000),
-    conic-gradient(from -45deg at 50% 100%, #0000 25%, #000 0 75%, #0000 0),
-    conic-gradient(from 135deg at 50% 0%, #0000 25%, #000 0 75%, #0000 0);
+    radial-gradient(
+      circle at 50% 100%,
+      #000 var(--tooth),
+      #0000 calc(var(--tooth) + 0.6px)
+    ),
+    radial-gradient(
+      circle at 50% 0%,
+      #000 var(--tooth),
+      #0000 calc(var(--tooth) + 0.6px)
+    );
   mask-repeat: no-repeat, repeat-x, repeat-x;
   mask-size:
-    100% calc(100% - var(--zig) * 2),
-    calc(var(--zig) * 2) var(--zig),
-    calc(var(--zig) * 2) var(--zig);
+    100% calc(100% - var(--tooth) * 2),
+    calc(var(--tooth) * 2) var(--tooth),
+    calc(var(--tooth) * 2) var(--tooth);
   mask-position:
     center,
     top,
     bottom;
-  mask-composite: add;
-  -webkit-mask-composite: source-over;
 }
 
 @utility grain {
