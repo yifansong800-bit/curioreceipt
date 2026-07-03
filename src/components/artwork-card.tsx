@@ -4,10 +4,13 @@ import type { ReceiptArtwork } from "@/components/receipt";
 export function ArtworkCard({
   artwork,
   onDelete,
+  onEdit,
 }: {
   artwork: ReceiptArtwork;
   onDelete?: () => void;
+  onEdit?: () => void;
 }) {
+
   const palette = artwork.palette ?? [];
   const hasPalette = palette.length > 0;
   const gradient = hasPalette
