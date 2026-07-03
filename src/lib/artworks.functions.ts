@@ -61,6 +61,7 @@ export const addArtwork = createServerFn({ method: "POST" })
         emotions: data.emotions,
         photo_taken_at: data.photoTakenAt ?? null,
         palette: data.palette,
+        rating: data.rating,
       })
       .select("*")
       .single();
