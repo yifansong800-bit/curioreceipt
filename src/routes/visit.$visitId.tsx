@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import exifr from "exifr";
 import { toPng } from "html-to-image";
+import { extractPalette } from "@/lib/palette";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getSessionId } from "@/lib/session";
@@ -363,6 +364,7 @@ function AddArtworkForm({
     lingerSeconds: number;
     emotions: string[];
     photoTakenAt: string | null;
+    palette: string[];
   }) => Promise<void>;
 }) {
   const [title, setTitle] = useState("");
@@ -407,6 +409,7 @@ function AddArtworkForm({
     try {
       let imagePath: string | null = null;
       let photoTakenAt: string | null = null;
+      let palette: string[] = [];
       if (file) {
         try {
           const meta = await exifr.parse(file, ["DateTimeOriginal"]);
@@ -415,6 +418,11 @@ function AddArtworkForm({
           }
         } catch {
           /* no exif; that's fine */
+        }
+        try {
+          palette = await extractPalette(file, 3);
+        } catch {
+          /* palette optional */
         }
         const ext = file.name.split(".").pop() || "jpg";
         const key = `${crypto.randomUUID()}.${ext}`;
@@ -437,6 +445,7 @@ function AddArtworkForm({
         lingerSeconds,
         emotions,
         photoTakenAt,
+        palette,
       });
 
       // reset

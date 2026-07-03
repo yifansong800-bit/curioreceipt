@@ -8,67 +8,74 @@ export function ArtworkCard({
   artwork: ReceiptArtwork;
   onDelete?: () => void;
 }) {
+  const palette = artwork.palette ?? [];
+  const hasPalette = palette.length > 0;
+  const gradient = hasPalette
+    ? `linear-gradient(135deg, ${
+        palette.length === 1
+          ? `${palette[0]}, ${palette[0]}`
+          : palette.join(", ")
+      })`
+    : undefined;
+
   return (
     <li
-      className="flex items-stretch gap-3 border p-2"
+      className="relative overflow-hidden border"
       style={{ borderColor: "var(--border)" }}
     >
-      <div
-        className="shrink-0 overflow-hidden"
-        style={{
-          width: 64,
-          height: 64,
-          background: "var(--border)",
-        }}
-      >
-        {artwork.image_url ? (
-          <img
-            src={artwork.image_url}
-            alt=""
-            width={64}
-            height={64}
-            loading="lazy"
+      {hasPalette ? (
+        <>
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
             style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              filter: "grayscale(1) contrast(1.2)",
+              background: gradient,
+              filter: "blur(28px)",
+              transform: "scale(1.4)",
+              opacity: 0.55,
             }}
           />
-        ) : null}
-      </div>
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{ backgroundColor: "var(--paper)", opacity: 0.55 }}
+          />
+        </>
+      ) : null}
 
-      <div className="flex-1 min-w-0 flex flex-col justify-center">
-        <div className="flex items-baseline gap-2">
-          <span
-            className="text-xs tabular-nums shrink-0"
+      <div className="relative flex items-center gap-3 px-4 py-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2">
+            <span
+              className="text-xs tabular-nums shrink-0"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              {String(artwork.position).padStart(2, "0")}
+            </span>
+            <span className="truncate text-sm">
+              <span className="italic">{artwork.title || "Untitled"}</span>
+              {artwork.artist ? ` — ${artwork.artist}` : ""}
+            </span>
+          </div>
+          <div
+            className="text-xs mt-1 flex items-center gap-2 truncate"
             style={{ color: "var(--ink-soft)" }}
           >
-            {String(artwork.position).padStart(2, "0")}
-          </span>
-          <span className="truncate text-sm">
-            <span className="italic">{artwork.title || "Untitled"}</span>
-            {artwork.artist ? ` — ${artwork.artist}` : ""}
-          </span>
+            <span>{formatLingerShort(artwork.linger_seconds)}</span>
+            {artwork.medium ? <span>· {artwork.medium}</span> : null}
+          </div>
         </div>
-        <div
-          className="text-xs mt-1 flex items-center gap-2 truncate"
-          style={{ color: "var(--ink-soft)" }}
-        >
-          <span>{formatLingerShort(artwork.linger_seconds)}</span>
-          {artwork.medium ? <span>· {artwork.medium}</span> : null}
-        </div>
-      </div>
 
-      {onDelete ? (
-        <button
-          onClick={onDelete}
-          className="shrink-0 self-center text-xs underline px-1"
-          style={{ color: "var(--ink-soft)" }}
-        >
-          remove
-        </button>
-      ) : null}
+        {onDelete ? (
+          <button
+            onClick={onDelete}
+            className="shrink-0 text-xs underline px-1"
+            style={{ color: "var(--ink-soft)" }}
+          >
+            remove
+          </button>
+        ) : null}
+      </div>
     </li>
   );
 }

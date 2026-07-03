@@ -12,6 +12,7 @@ export type ReceiptArtwork = {
   medium: string;
   linger_seconds: number;
   emotions: string[];
+  palette?: string[] | null;
 };
 
 export type ReceiptProps = {
