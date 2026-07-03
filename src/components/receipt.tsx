@@ -80,7 +80,7 @@ export function Receipt({
         CURIO
       </div>
       <div style={{ textAlign: "center", marginTop: 14, letterSpacing: 1 }}>
-        ******** www.curio.com ********
+        ****** www.curioreceipt.com ******
       </div>
 
       <div style={{ marginTop: 12 }}>
