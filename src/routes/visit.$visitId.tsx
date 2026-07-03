@@ -114,6 +114,14 @@ function VisitPage() {
 
   function goToPrint() {
     if (artworks.length === 0) return;
+    const missing = artworks.filter((a) => a.linger_seconds < 0);
+    if (missing.length > 0) {
+      const noun = missing.length === 1 ? "artwork" : "artworks";
+      const proceed = window.confirm(
+        `You haven't logged linger time for ${missing.length} ${noun}. Print receipt anyway?`
+      );
+      if (!proceed) return;
+    }
     setStage("idle");
     setView("print");
   }
