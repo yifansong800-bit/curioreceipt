@@ -26,8 +26,14 @@ export type ReceiptProps = {
   artworks: ReceiptArtwork[];
 };
 
-const DASH_ROW = "- - - - - - - - - - - - - - - -";
-const STAR_ROW = "********************************";
+const DASH_ROW = "- ".repeat(40).trim();
+const STAR_ROW = "*".repeat(80);
+
+const lineStyle = {
+  whiteSpace: "nowrap" as const,
+  overflow: "hidden" as const,
+  textOverflow: "clip" as const,
+};
 
 export function Receipt({
   visitorName,
@@ -84,7 +90,7 @@ export function Receipt({
         </div>
       </div>
 
-      <div style={{ marginTop: 8 }}>{DASH_ROW}</div>
+      <div style={{ marginTop: 8, ...lineStyle }}>{DASH_ROW}</div>
       <div style={{ marginTop: 6 }}>QTY DESCRIPTION</div>
 
       {artworks.length === 0 ? (
@@ -99,10 +105,10 @@ export function Receipt({
         <ImageGrid artworks={artworks.filter((a) => a.image_url)} />
       )}
 
-      <div style={{ marginTop: 12 }}>{DASH_ROW}</div>
+      <div style={{ marginTop: 12, ...lineStyle }}>{DASH_ROW}</div>
       <Row label="SUBTOTAL ITEM" value={String(artworks.length)} />
       <Row label="TOTAL TIME SPENT" value={formatTotalTime(totalSeconds)} />
-      <div style={{ marginTop: 12 }}>{STAR_ROW}</div>
+      <div style={{ marginTop: 12, ...lineStyle }}>{STAR_ROW}</div>
       <div style={{ textAlign: "center", marginTop: 10, letterSpacing: 1 }}>
         THANK YOU FOR VISTING!
       </div>
