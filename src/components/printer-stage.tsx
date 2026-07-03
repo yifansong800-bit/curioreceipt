@@ -197,15 +197,6 @@ export function PrinterStage({
           ) : null}
         </AnimatePresence>
 
-        {mode === "printing" ? (
-          <div
-            className="text-center mt-3 text-xs uppercase tracking-widest"
-            style={{ color: "var(--ink-soft)" }}
-          >
-            printing…
-          </div>
-        ) : null}
-      </div>
     </div>
   );
 }
