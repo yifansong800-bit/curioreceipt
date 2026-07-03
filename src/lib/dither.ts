@@ -1,6 +1,9 @@
 // Floyd–Steinberg 1-bit dither. Loads an image, downsamples to a target width,
 // converts to grayscale, applies error diffusion, and returns a PNG data URL.
-export async function ditherImage(src: string, targetWidth = 220): Promise<string> {
+export async function ditherImage(
+  src: string,
+  targetWidth = 220,
+): Promise<{ dataUrl: string; width: number; height: number }> {
   const img = await loadImage(src);
   const ratio = img.width > 0 ? targetWidth / img.width : 1;
   const w = Math.max(1, Math.round(img.width * ratio));
