@@ -1,18 +1,22 @@
-## Bug
+Refresh the printer illustration so it feels more considered and matches the receipt's warm, tactile aesthetic — without changing the flow or animation logic.
 
-The museum autocomplete returns empty results for valid queries (e.g. `M+`, `V&A`) and has intermittently 500'd. Root causes in `src/lib/visits.functions.ts`:
+## What changes
 
-1. `normalizeMuseumText("M+")` strips all non-alphanumerics and returns `""`, so `scoreKnownMuseum` bails and local matching yields no hits.
-2. When the AI call throws (bad key, network, provider error), the error currently bubbles up as a 500 instead of a safe empty payload.
-3. `M+` (Hong Kong) and a few other short-name museums (`V&A` alone is aliased but `M+` isn't) aren't in the local dataset.
+Regenerate `src/assets/printer.png` as a bird's-eye render with a more refined industrial-design language:
 
-## Fix
+- Softer, off-white / warm ivory body (subtly tinted toward the receipt's cream `--paper`) so the printer sits in the same visual world as the receipt instead of reading as pure clinical white.
+- Rounded pill-shaped silhouette with a gentle top-shell seam and a slim recessed front panel around the slot, giving it a small, boutique "object" feel (à la Muji / Braun / Teenage Engineering).
+- A darker, precisely drawn slot with a subtle inner lip shadow, sized to keep the current 47% slot width so the receipt still emerges exactly slot-width.
+- One small status indicator dot and one hairline seam — no logos, no text, no clutter.
+- Soft ambient contact shadow beneath, transparent background preserved.
 
-Edit only `src/lib/visits.functions.ts`:
+## What stays the same
 
-- Add symbol-preserving fallback: if `normalizeMuseumText(query)` yields `""`, retry with a looser normalizer that keeps `+`, `&`, and digits so `m+`, `v&a`, `21c` still score.
-- Add missing short-name museums to `knownMuseums` (e.g. `M+` Hong Kong, `21c Museum`, `Mori Art Museum`).
-- Wrap the `suggestMuseums` handler body in `try/catch` returning `{ suggestions: localMuseumSuggestions(query) }` on any thrown error — never surface a 500 to the client.
-- Ensure `generateJsonObject` swallows its own errors (already does) and that `dedupeSuggestions` never throws on malformed AI output.
+- `src/components/printer-stage.tsx` logic, timings, warmup bar, and crumpled-paper receipt overlay.
+- Slot geometry constants (`SLOT_Y_PCT`, `SLOT_WIDTH_PCT`) — the new render targets those same proportions so no code changes are needed. If the regenerated image lands slightly off, nudge only those two constants.
+- Receipt component, download gating, and print flow.
 
-No UI changes. No schema changes.
+## Technical notes
+
+- Single file replaced: `src/assets/printer.png` (transparent PNG, 1024×1024).
+- After regeneration, visually verify the slot sits at ~64% height and ~47% width; adjust the two constants in `printer-stage.tsx` only if needed.
