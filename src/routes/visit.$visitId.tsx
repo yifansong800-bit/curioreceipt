@@ -376,8 +376,9 @@ function VisitPage() {
                           ...payload,
                         },
                       });
-                      qc.invalidateQueries({ queryKey: ["visit", visitId] });
+                      await qc.invalidateQueries({ queryKey: ["visit", visitId] });
                     }}
+
                   />
                 </>
               ) : (
