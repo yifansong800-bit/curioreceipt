@@ -188,12 +188,29 @@ function VisitPage() {
     return { blob, filename: `curio-${slugify(visit.museum)}-${stamp}.jpg` };
   }
 
-  async function handleDownload() {
+  async function handleSaveToCameraRoll() {
     if (!visit) return;
-    setDownloading(true);
+    setSaving(true);
     try {
       const out = await renderReceiptBlob();
       if (!out) return;
+      const file = new File([out.blob], out.filename, { type: "image/jpeg" });
+      const nav = navigator as Navigator & {
+        canShare?: (data: ShareData) => boolean;
+      };
+      if (nav.canShare?.({ files: [file] })) {
+        try {
+          await nav.share({
+            files: [file],
+            title: "My Curio receipt",
+            text: `My visit to ${visit.museum} — logged on Curio ✦`,
+          });
+          return;
+        } catch (err) {
+          if ((err as DOMException)?.name === "AbortError") return;
+        }
+      }
+      // Fallback for desktop / unsupported devices: trigger a download
       const url = URL.createObjectURL(out.blob);
       const link = document.createElement("a");
       link.download = out.filename;
@@ -201,9 +218,10 @@ function VisitPage() {
       link.click();
       URL.revokeObjectURL(url);
     } finally {
-      setDownloading(false);
+      setSaving(false);
     }
   }
+
 
   async function handleShare() {
     if (!visit) return;
