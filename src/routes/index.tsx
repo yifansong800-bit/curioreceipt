@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { createVisit, suggestMuseums } from "@/lib/visits.functions";
 import { getSessionId } from "@/lib/session";
+import { Footer } from "@/components/Footer";
 
 export const Route = createFileRoute("/")({
   head: () => ({
