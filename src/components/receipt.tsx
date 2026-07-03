@@ -105,9 +105,16 @@ export function Receipt({
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-      <span>{label}</span>
-      <span>{value}</span>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: 12,
+      }}
+    >
+      <span style={{ flexShrink: 0 }}>{label}</span>
+      <span style={{ textAlign: "right", minWidth: 0, flex: 1 }}>{value}</span>
     </div>
   );
 }
