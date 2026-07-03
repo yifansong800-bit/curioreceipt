@@ -1,13 +1,19 @@
-// Thermal-receipt dither. Keeps the output monochrome/transparent like ink on
-// paper, but processes at high resolution with local contrast and Atkinson
-// diffusion so artworks stay recognizable instead of turning into coarse dots.
+// Thermal-receipt dither. Renders monochrome ink on transparent paper so the
+// cream receipt background integrates with the artwork. Highlights and light
+// midtones fade into the paper, while darks stay solid for recognizability.
 
 const OUTPUT_SCALE = 2.4;
-const CONTRAST = 1.28;
-const BRIGHTNESS = 7;
-const EDGE_STRENGTH = 0.18;
-const HIGHLIGHT_ALPHA_CUTOFF = 242;
-const INK_ALPHA = 235;
+const CONTRAST = 1.18;
+const BRIGHTNESS = 10;
+const EDGE_STRENGTH = 0.22;
+
+// Anything brighter than this is fully paper (transparent).
+const PAPER_CUTOFF = 210;
+// Anything darker than this is fully ink.
+const INK_CUTOFF = 90;
+// Ink opacity ceiling — slightly translucent so the paper tone shows through.
+const INK_ALPHA_MAX = 225;
+const INK_ALPHA_MIN = 130;
 
 export async function ditherImage(
   src: string,
@@ -30,6 +36,8 @@ export async function ditherImage(
 
   const sourceImage = sctx.getImageData(0, 0, w, h);
   const gray = buildEnhancedGrayscale(sourceImage.data, w, h);
+  // Keep a copy of the pre-diffusion tone to modulate ink alpha per pixel.
+  const tone = new Float32Array(gray);
   atkinsonDiffuse(gray, w, h);
 
   const out = document.createElement("canvas");
@@ -40,20 +48,30 @@ export async function ditherImage(
 
   const output = octx.createImageData(w, h);
   for (let y = 0; y < h; y++) {
-    const band = y % 9 === 0 ? 18 : y % 5 === 0 ? 8 : 0;
     for (let x = 0; x < w; x++) {
       const i = y * w + x;
       const p = i * 4;
       const ink = gray[i] < 128;
-      const paperHighlight = gray[i] > HIGHLIGHT_ALPHA_CUTOFF;
-      const dropout = ((x * 17 + y * 31) % 127 === 0) || (band > 0 && (x + y) % 19 === 0);
+
+      // Fade ink toward transparent as the original tone approaches paper.
+      let alpha = 0;
+      if (ink) {
+        const t = tone[i];
+        if (t >= PAPER_CUTOFF) {
+          alpha = 0;
+        } else {
+          const range = PAPER_CUTOFF - INK_CUTOFF;
+          const norm = Math.max(0, Math.min(1, (PAPER_CUTOFF - t) / range));
+          alpha = INK_ALPHA_MIN + (INK_ALPHA_MAX - INK_ALPHA_MIN) * norm;
+          // Subtle thermal grain — tiny dropouts so ink reads as printed, not painted.
+          if ((x * 17 + y * 31) % 191 === 0) alpha *= 0.4;
+        }
+      }
 
       output.data[p] = 0;
       output.data[p + 1] = 0;
       output.data[p + 2] = 0;
-      output.data[p + 3] = ink && !paperHighlight && !dropout
-        ? Math.max(185, INK_ALPHA - band)
-        : 0;
+      output.data[p + 3] = Math.round(alpha);
     }
   }
 
@@ -101,7 +119,7 @@ function atkinsonDiffuse(gray: Float32Array, w: number, h: number) {
     for (let x = 0; x < w; x++) {
       const i = y * w + x;
       const old = gray[i];
-      const threshold = 126 + (((x * 13 + y * 7) % 11) - 5);
+      const threshold = 128 + (((x * 13 + y * 7) % 11) - 5);
       const next = old < threshold ? 0 : 255;
       const error = old - next;
       gray[i] = next;
