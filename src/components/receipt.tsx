@@ -137,9 +137,16 @@ function ArtworkBlock({ art }: { art: ReceiptArtwork }) {
         label="* MEDIUM"
         value={(art.medium || "—").toUpperCase()}
       />
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-        <span>I WAS...</span>
-        <span style={{ textAlign: "right" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 12,
+        }}
+      >
+        <span style={{ flexShrink: 0 }}>I WAS...</span>
+        <span style={{ textAlign: "right", minWidth: 0, flex: 1 }}>
           {art.emotions.length === 0
             ? "—"
             : art.emotions.map((e) => `[${e}]`).join(" ")}
