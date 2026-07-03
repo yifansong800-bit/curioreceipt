@@ -129,7 +129,7 @@ function Index() {
               fontWeight: 700,
             }}
           >
-            {mut.isPending ? "Opening receipt..." : "Begin visit →"}
+            {opening ? "Opening receipt..." : "Begin visit →"}
           </button>
           {mut.isError ? (
             <p className="text-sm" style={{ color: "var(--destructive)" }}>
