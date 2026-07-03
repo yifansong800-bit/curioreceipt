@@ -106,6 +106,8 @@ function VisitPage() {
 
   const [view, setView] = useState<View>("compose");
   const [stage, setStage] = useState<Stage>("idle");
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   const [sharing, setSharing] = useState(false);
   const [shareHint, setShareHint] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
