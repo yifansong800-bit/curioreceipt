@@ -2,7 +2,14 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Info } from "lucide-react";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { createVisit, suggestMuseums } from "@/lib/visits.functions";
 import { getSessionId } from "@/lib/session";
 
@@ -58,16 +65,30 @@ function Index() {
   const canSubmit = visitor.trim().length > 0 && museum.trim().length > 0 && !opening;
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center"
-      style={{
-        paddingLeft: "max(1.25rem, env(safe-area-inset-left))",
-        paddingRight: "max(1.25rem, env(safe-area-inset-right))",
-        paddingTop: "max(2.5rem, env(safe-area-inset-top))",
-        paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))",
-      }}
-    >
-      <div className="w-full max-w-md">
+    <Dialog>
+      <div
+        className="relative min-h-screen flex items-center justify-center"
+        style={{
+          paddingLeft: "max(1.25rem, env(safe-area-inset-left))",
+          paddingRight: "max(1.25rem, env(safe-area-inset-right))",
+          paddingTop: "max(2.5rem, env(safe-area-inset-top))",
+          paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))",
+        }}
+      >
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            aria-label="About Curio"
+            className="absolute z-10 inline-flex items-center justify-center rounded-full border border-ink bg-paper p-2 text-ink transition-colors hover:bg-ink hover:text-paper"
+            style={{
+              top: "max(1rem, env(safe-area-inset-top))",
+              right: "max(1rem, env(safe-area-inset-right))",
+            }}
+          >
+            <Info className="h-5 w-5" />
+          </button>
+        </DialogTrigger>
+        <div className="w-full max-w-md">
         <div
           className="text-center leading-none"
           style={{
@@ -138,7 +159,31 @@ function Index() {
           ) : null}
         </form>
       </div>
+
+      <DialogContent className="max-w-md border text-left" style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}>
+        <DialogTitle className="text-lg tracking-tight">About Curio</DialogTitle>
+        <div className="space-y-4 text-sm sm:text-base leading-relaxed" style={{ color: "var(--ink)" }}>
+          <p>
+            Curio helps art lovers and casual visitors log, save, and share memories of their favorite pieces—so they never get lost in your camera roll or Notes app.
+          </p>
+          <p>If you love it, share it. Let's keep our favorite art close.</p>
+          <p style={{ color: "var(--ink-soft)" }}>
+            Built with ♡ by{" "}
+            <a
+              href="https://cassiesong.lovable.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+              style={{ color: "var(--ink)" }}
+            >
+              Cassie
+            </a>{" "}
+            (Northwestern ’29) on Lovable.
+          </p>
+        </div>
+      </DialogContent>
     </div>
+  </Dialog>
   );
 }
 
