@@ -48,6 +48,9 @@ export function Receipt({
         paddingLeft: 24,
         paddingRight: 24,
         fontFamily: "var(--font-mono)",
+        overflowWrap: "anywhere",
+        wordBreak: "break-word",
+        hyphens: "auto",
       }}
     >
       <div
@@ -102,9 +105,16 @@ export function Receipt({
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-      <span>{label}</span>
-      <span>{value}</span>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: 12,
+      }}
+    >
+      <span style={{ flexShrink: 0 }}>{label}</span>
+      <span style={{ textAlign: "right", minWidth: 0, flex: 1 }}>{value}</span>
     </div>
   );
 }
@@ -127,9 +137,16 @@ function ArtworkBlock({ art }: { art: ReceiptArtwork }) {
         label="* MEDIUM"
         value={(art.medium || "—").toUpperCase()}
       />
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-        <span>I WAS...</span>
-        <span style={{ textAlign: "right" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 12,
+        }}
+      >
+        <span style={{ flexShrink: 0 }}>I WAS...</span>
+        <span style={{ textAlign: "right", minWidth: 0, flex: 1 }}>
           {art.emotions.length === 0
             ? "—"
             : art.emotions.map((e) => `[${e}]`).join(" ")}
