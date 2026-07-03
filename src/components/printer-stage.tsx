@@ -55,6 +55,12 @@ export function PrinterStage({
   const receiptNaturalWidth = 360;
   const receiptScale = (printerWidth * (SLOT_WIDTH_PCT / 100)) / receiptNaturalWidth;
 
+  // Track whether the printer image has finished loading. On the published
+  // site the CDN-hosted printer PNG can arrive after the receipt is ready,
+  // causing the receipt to visually appear before the printer. We gate the
+  // receipt on this flag so the two always render together.
+  const [printerLoaded, setPrinterLoaded] = useState(false);
+
   // Gate the receipt behind a two-rAF paint so the CSS keyframe's starting
   // transform (translateY(-100%)) is fully committed before the receipt
   // becomes visible. Without this gate the first paint after mount can flash
@@ -62,6 +68,10 @@ export function PrinterStage({
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     if (mode !== "printing" && mode !== "printed") {
+      setArmed(false);
+      return;
+    }
+    if (!printerLoaded) {
       setArmed(false);
       return;
     }
@@ -78,7 +88,7 @@ export function PrinterStage({
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(raf2);
     };
-  }, [mode]);
+  }, [mode, printerLoaded]);
 
   // Unlock Download exactly when the stepped feed animation ends.
   const feedDurationMs = reduce ? 250 : FEED_DURATION_MS;
@@ -130,8 +140,15 @@ export function PrinterStage({
               filter: "drop-shadow(0 18px 28px rgba(53, 46, 35, 0.18))",
             }}
             draggable={false}
+            onLoad={() => setPrinterLoaded(true)}
+            ref={(el) => {
+              // Handle cached images where onLoad may not fire.
+              if (el && el.complete && el.naturalWidth > 0) setPrinterLoaded(true);
+            }}
           />
         </div>
+
+
 
         {/* Receipt lane: pulled up so its top edge sits at the slot mouth. */}
         <AnimatePresence initial={false}>
