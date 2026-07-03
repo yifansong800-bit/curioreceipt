@@ -77,6 +77,14 @@ function VisitPage() {
 
   const receiptRef = useRef<HTMLDivElement | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [stage, setStage] = useState<Stage>("compose");
+
+  // Any edit to the entries drops the user back to compose so the printed
+  // receipt always matches the current data.
+  useEffect(() => {
+    if (stage === "printed") setStage("compose");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [artworks.length]);
 
   async function handleDownload() {
     const node = document.getElementById("curio-receipt") as HTMLElement | null;
