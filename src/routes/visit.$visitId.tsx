@@ -19,7 +19,7 @@ import { slugify } from "@/lib/format";
 type View = "compose" | "print";
 type Stage = "idle" | "printing" | "printed";
 
-const PRINTER_WARMUP_MS = 2000;
+const PRINTER_WARMUP_MS = 1000;
 
 const MAX_ARTWORKS = 3;
 
