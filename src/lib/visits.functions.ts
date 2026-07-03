@@ -135,9 +135,12 @@ function parseJsonObject<T>(text: string, schema: z.ZodType<T>): T | null {
   }
 }
 
-async function generateJsonObject<T>(schema: z.ZodType<T>, prompt: string): Promise<T | null> {
+async function generateJsonObject<T>(schema: z.ZodType<T>, prompt: string, timeoutMs = 2500): Promise<T | null> {
   const key = process.env.LOVABLE_API_KEY;
   if (!key) return null;
+
+  const abort = new AbortController();
+  const timeout = setTimeout(() => abort.abort(), timeoutMs);
 
   try {
     const gateway = createLovableAiGatewayProvider(key);
@@ -145,12 +148,17 @@ async function generateJsonObject<T>(schema: z.ZodType<T>, prompt: string): Prom
       model: gateway("google/gemini-3-flash-preview"),
       temperature: 0,
       maxOutputTokens: 700,
+      abortSignal: abort.signal,
       prompt: `${prompt}\n\nReturn ONLY valid JSON. Do not wrap it in markdown.`,
     });
     return parseJsonObject(text, schema);
   } catch (err) {
-    console.error("Museum AI lookup failed", err instanceof Error ? err.message : err);
+    if (!abort.signal.aborted) {
+      console.error("Museum AI lookup failed", err instanceof Error ? err.message : err);
+    }
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -198,6 +206,7 @@ export const suggestMuseums = createServerFn({ method: "POST" })
         "(e.g. 'New York', 'Paris'); country is the full English country name (e.g. 'United States', 'France'). " +
         "If unsure of a location, set that field to null. Never invent museums that don't exist. " +
         "If nothing plausibly matches, return {\"suggestions\":[]}.",
+      1800,
     );
     return { suggestions: dedupeSuggestions([...local, ...(ai?.suggestions ?? [])]) };
   });
