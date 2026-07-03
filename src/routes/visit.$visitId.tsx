@@ -664,7 +664,43 @@ function VisitPage() {
   );
 }
 
+// Sample a canvas to decide whether the receipt's image region actually
+// rendered ink. Blank captures (an iOS Safari html-to-image failure mode)
+// come back as almost pure cream paper across the whole surface; a real
+// receipt has plenty of dark dither pixels. We scan a downsampled grid so
+// this stays fast on mobile.
+function canvasHasInk(canvas: HTMLCanvasElement): boolean {
+  try {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return true;
+    // Focus on the lower ~65% of the receipt where artwork images live —
+    // headers/text alone can produce enough dark pixels to false-pass.
+    const startY = Math.floor(canvas.height * 0.35);
+    const h = canvas.height - startY;
+    const w = canvas.width;
+    if (w === 0 || h === 0) return true;
+    const data = ctx.getImageData(0, startY, w, h).data;
+    let dark = 0;
+    let sampled = 0;
+    // Sample every ~16th pixel.
+    for (let i = 0; i < data.length; i += 4 * 16) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      if (lum < 120) dark++;
+      sampled++;
+    }
+    if (sampled === 0) return true;
+    return dark / sampled > 0.01;
+  } catch {
+    // getImageData can throw on tainted canvases — assume OK so we don't loop.
+    return true;
+  }
+}
+
 function Loading() {
+
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-sm" style={{ color: "var(--ink-soft)" }}>
