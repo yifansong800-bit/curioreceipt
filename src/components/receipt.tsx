@@ -42,8 +42,8 @@ export function Receipt({
       style={{
         width: 360,
         color: "var(--ink)",
-        paddingTop: 28,
-        paddingBottom: 32,
+        paddingTop: 44,
+        paddingBottom: 48,
         paddingLeft: 24,
         paddingRight: 24,
         fontFamily: "var(--font-mono)",
