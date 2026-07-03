@@ -309,8 +309,8 @@ function VisitPage() {
         className="mx-auto"
         style={{
           maxWidth: 640,
-          paddingLeft: "max(1.25rem, env(safe-area-inset-left))",
-          paddingRight: "max(1.25rem, env(safe-area-inset-right))",
+          paddingLeft: "max(2.5rem, env(safe-area-inset-left))",
+          paddingRight: "max(2.5rem, env(safe-area-inset-right))",
           paddingTop: "max(1.5rem, env(safe-area-inset-top))",
           paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
         }}
