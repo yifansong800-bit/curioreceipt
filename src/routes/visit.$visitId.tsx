@@ -663,38 +663,56 @@ function AddArtworkForm({
       let photoTakenAt: string | null = null;
       let palette: string[] = [];
       if (file) {
+        // Photo-processing steps are best-effort: if any of them fail
+        // (exif, palette, arrayBuffer, base64), fall back to adding the
+        // artwork without an image rather than aborting the whole submit.
         try {
-          const meta = await exifr.parse(file, ["DateTimeOriginal"]);
-          if (meta?.DateTimeOriginal) {
-            photoTakenAt = new Date(meta.DateTimeOriginal).toISOString();
+          try {
+            const meta = await exifr.parse(file, ["DateTimeOriginal"]);
+            if (meta?.DateTimeOriginal) {
+              photoTakenAt = new Date(meta.DateTimeOriginal).toISOString();
+            }
+          } catch {
+            /* no exif; that's fine */
           }
-        } catch {
-          /* no exif; that's fine */
+          try {
+            palette = await extractPalette(file, 3);
+          } catch {
+            /* palette optional */
+          }
+          const rawExt = (file.name.split(".").pop() || "jpg").replace(/[^a-zA-Z0-9]/g, "").slice(0, 8) || "jpg";
+          const buf = await file.arrayBuffer();
+          let binary = "";
+          const bytes = new Uint8Array(buf);
+          const chunk = 0x8000;
+          for (let i = 0; i < bytes.length; i += chunk) {
+            binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+          }
+          const dataBase64 = btoa(binary);
+          const { path } = await uploadFn({
+            data: {
+              sessionId,
+              visitId,
+              contentType: file.type || "image/jpeg",
+              ext: rawExt,
+              dataBase64,
+            },
+          });
+          imagePath = path;
+        } catch (uploadErr) {
+          console.error("[curio] photo upload failed", uploadErr);
+          const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr);
+          const proceed = window.confirm(
+            `Couldn't upload the photo (${msg}). Add this artwork without an image?`,
+          );
+          if (!proceed) {
+            setBusy(false);
+            return;
+          }
+          imagePath = null;
+          palette = [];
+          photoTakenAt = null;
         }
-        try {
-          palette = await extractPalette(file, 3);
-        } catch {
-          /* palette optional */
-        }
-        const rawExt = (file.name.split(".").pop() || "jpg").replace(/[^a-zA-Z0-9]/g, "").slice(0, 8) || "jpg";
-        const buf = await file.arrayBuffer();
-        let binary = "";
-        const bytes = new Uint8Array(buf);
-        const chunk = 0x8000;
-        for (let i = 0; i < bytes.length; i += chunk) {
-          binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-        }
-        const dataBase64 = btoa(binary);
-        const { path } = await uploadFn({
-          data: {
-            sessionId,
-            visitId,
-            contentType: file.type || "image/jpeg",
-            ext: rawExt,
-            dataBase64,
-          },
-        });
-        imagePath = path;
       }
 
       const lingerMinRaw = lingerMin.trim();
@@ -730,12 +748,14 @@ function AddArtworkForm({
       setRating(0);
       setFile(null);
     } catch (err) {
-      console.error(err);
-      alert("Couldn't add artwork. Please try again.");
+      console.error("[curio] add artwork failed", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`Couldn't add artwork: ${msg}`);
     } finally {
       setBusy(false);
     }
   }
+
 
   return (
     <form
