@@ -54,6 +54,57 @@ export const resolveMuseumLocation = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => resolveMuseumLocationInternal(data.museum));
 
+export const suggestMuseums = createServerFn({ method: "POST" })
+  .inputValidator((raw: unknown) =>
+    z.object({ query: z.string().trim().min(2).max(120) }).parse(raw),
+  )
+  .handler(async ({ data }) => {
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) return { suggestions: [] as Array<{ name: string; city: string | null; country: string | null }> };
+    try {
+      const gateway = createLovableAiGatewayProvider(key);
+      const { output } = await generateText({
+        model: gateway("google/gemini-3-flash-preview"),
+        output: Output.object({
+          schema: z.object({
+            suggestions: z
+              .array(
+                z.object({
+                  name: z.string(),
+                  city: z.string().nullable(),
+                  country: z.string().nullable(),
+                }),
+              )
+              .max(6),
+          }),
+        }),
+        prompt:
+          "You autocomplete real, existing museum and art institution names worldwide. " +
+          `User is typing: "${data.query}". ` +
+          "Return up to 6 real museums whose official English name best matches this prefix or fuzzy match. " +
+          "Prefer well-known institutions. Include small/regional museums only if they clearly match. " +
+          "For each: 'name' is the museum's canonical English name; 'city' is the common English city name " +
+          "(e.g. 'New York', 'Paris'); 'country' is the full English country name (e.g. 'United States', 'France'). " +
+          "If unsure of a location, set that field to null. Never invent museums that don't exist. " +
+          "If nothing plausibly matches, return an empty array.",
+      });
+      const list = output?.suggestions ?? [];
+      // dedupe by name+city
+      const seen = new Set<string>();
+      const dedup = list.filter((s) => {
+        const k = `${s.name.toLowerCase()}|${(s.city ?? "").toLowerCase()}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      return { suggestions: dedup };
+    } catch (err) {
+      if (NoObjectGeneratedError.isInstance(err)) return { suggestions: [] };
+      console.error("suggestMuseums failed", err);
+      return { suggestions: [] };
+    }
+  });
+
 export const createVisit = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) =>
     z
