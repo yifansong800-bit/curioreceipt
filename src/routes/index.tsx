@@ -67,10 +67,8 @@ function Index() {
   return (
     <Dialog>
       <div
-        className="relative h-[100dvh] overflow-y-auto flex flex-col items-center justify-center sm:h-auto sm:min-h-screen"
+        className="relative h-[100dvh] overflow-y-auto flex flex-col items-center justify-center pl-[max(2rem,env(safe-area-inset-left))] pr-[max(2rem,env(safe-area-inset-right))] sm:pl-[max(1.75rem,env(safe-area-inset-left))] sm:pr-[max(1.75rem,env(safe-area-inset-right))] sm:h-auto sm:min-h-screen"
         style={{
-          paddingLeft: "max(1.75rem, env(safe-area-inset-left))",
-          paddingRight: "max(1.75rem, env(safe-area-inset-right))",
           paddingTop: "max(1.5rem, env(safe-area-inset-top))",
           paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
         }}
@@ -100,7 +98,7 @@ function Index() {
           CURIO
         </div>
         <p
-          className="text-center mt-4 tracking-wide"
+          className="text-center mt-4 text-sm sm:text-base tracking-wide"
           style={{ color: "var(--ink-soft)" }}
         >
           ***** www.curioreceipt.com *****
@@ -160,7 +158,7 @@ function Index() {
         </form>
       </div>
 
-      <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-md border text-left" style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}>
+      <DialogContent className="max-w-[calc(100%-4rem)] sm:max-w-md border text-left" style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}>
         <DialogTitle className="text-lg tracking-tight">About Curio</DialogTitle>
         <div className="space-y-4 text-sm sm:text-base leading-relaxed" style={{ color: "var(--ink)" }}>
           <p>
