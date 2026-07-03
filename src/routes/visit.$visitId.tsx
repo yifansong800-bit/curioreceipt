@@ -10,7 +10,10 @@ import { getSessionId } from "@/lib/session";
 import { getVisit } from "@/lib/visits.functions";
 import { addArtwork, deleteArtwork } from "@/lib/artworks.functions";
 import { Receipt, type ReceiptArtwork } from "@/components/receipt";
+import { PrinterStage } from "@/components/printer-stage";
 import { formatLingerShort, slugify } from "@/lib/format";
+
+type Stage = "compose" | "printing" | "printed";
 
 export const Route = createFileRoute("/visit/$visitId")({
   head: () => ({
