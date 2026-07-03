@@ -692,6 +692,7 @@ function VisitPage() {
               ) : null}
 
               <button
+                type="button"
                 onClick={goToPrint}
                 disabled={artworks.length === 0}
                 className="mt-10 w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
@@ -700,6 +701,8 @@ function VisitPage() {
                   backgroundColor: "var(--ink)",
                   color: "var(--paper)",
                   fontWeight: 700,
+                  WebkitTapHighlightColor: "transparent",
+                  touchAction: "manipulation",
                 }}
               >
                 {artworks.length === 0
