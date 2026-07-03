@@ -364,6 +364,7 @@ function VisitPage() {
             title: "My Curio receipt",
             text: caption,
           });
+          setShared(true);
           return;
         } catch (err) {
           if ((err as DOMException)?.name === "AbortError") return;
@@ -381,6 +382,7 @@ function VisitPage() {
       } catch {}
       window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
       setShareHint("Saved to your device — drop it into an Instagram Story or Post.");
+      setShared(true);
     } finally {
       setSharing(false);
     }
