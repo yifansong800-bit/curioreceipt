@@ -883,25 +883,22 @@ function Loading() {
 
 function AddArtworkForm({
   onSubmit,
-  sessionId,
-  visitId,
+  sessionId: _sessionId,
+  visitId: _visitId,
 }: {
   sessionId: string;
   visitId: string;
   onSubmit: (data: {
-    imagePath: string | null;
+    file: File | null;
     title: string;
     artist: string;
     year: string;
     medium: string;
     lingerSeconds: number;
     emotions: string[];
-    photoTakenAt: string | null;
-    palette: string[];
     rating: number;
-  }) => Promise<void>;
+  }) => Promise<void> | void;
 }) {
-  const uploadFn = useServerFn(uploadArtworkPhoto);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [year, setYear] = useState("");
