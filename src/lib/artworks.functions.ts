@@ -25,7 +25,9 @@ const artworkFields = z.object({
   emotions: z.array(z.string().trim().min(1).max(40)).max(12).default([]),
   photoTakenAt: z.string().nullable().optional(),
   palette: z.array(z.string().max(32)).max(6).default([]),
+  rating: z.number().int().min(0).max(5).default(0),
 });
+
 
 export const addArtwork = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) =>
@@ -59,6 +61,7 @@ export const addArtwork = createServerFn({ method: "POST" })
         emotions: data.emotions,
         photo_taken_at: data.photoTakenAt ?? null,
         palette: data.palette,
+        rating: data.rating,
       })
       .select("*")
       .single();

@@ -13,6 +13,7 @@ export type ReceiptArtwork = {
   linger_seconds: number;
   emotions: string[];
   palette?: string[] | null;
+  rating?: number | null;
 };
 
 export type ReceiptProps = {
@@ -158,8 +159,17 @@ function ArtworkBlock({ art }: { art: ReceiptArtwork }) {
             : art.emotions.map((e) => `[${e}]`).join(" ")}
         </span>
       </div>
+      <Row
+        label="* RATING"
+        value={renderStars(art.rating ?? 0)}
+      />
     </div>
   );
+}
+
+function renderStars(n: number) {
+  const filled = Math.max(0, Math.min(5, Math.round(n)));
+  return "★".repeat(filled) + "☆".repeat(5 - filled);
 }
 
 function ImageGrid({ artworks }: { artworks: ReceiptArtwork[] }) {
