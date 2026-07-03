@@ -8,10 +8,10 @@ import exifr from "exifr";
 import { toPng } from "html-to-image";
 import { extractPalette } from "@/lib/palette";
 
-import { supabase } from "@/integrations/supabase/client";
+
 import { getSessionId } from "@/lib/session";
 import { getVisit, updateVisitLocation } from "@/lib/visits.functions";
-import { addArtwork, deleteArtwork } from "@/lib/artworks.functions";
+import { addArtwork, deleteArtwork, uploadArtworkPhoto } from "@/lib/artworks.functions";
 import { Receipt, type ReceiptArtwork } from "@/components/receipt";
 import { PrinterStage } from "@/components/printer-stage";
 import { ArtworkCard } from "@/components/artwork-card";
@@ -341,6 +341,8 @@ function VisitPage() {
                     {remaining === 1 ? "spot" : "spots"} left
                   </div>
                   <AddArtworkForm
+                    sessionId={sessionId}
+                    visitId={visitId}
                     onSubmit={async (payload) => {
                       await addFn({
                         data: {
@@ -533,7 +535,11 @@ function Loading() {
 
 function AddArtworkForm({
   onSubmit,
+  sessionId,
+  visitId,
 }: {
+  sessionId: string;
+  visitId: string;
   onSubmit: (data: {
     imagePath: string | null;
     title: string;
@@ -547,6 +553,7 @@ function AddArtworkForm({
     rating: number;
   }) => Promise<void>;
 }) {
+  const uploadFn = useServerFn(uploadArtworkPhoto);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [year, setYear] = useState("");
@@ -643,13 +650,25 @@ function AddArtworkForm({
         } catch {
           /* palette optional */
         }
-        const ext = file.name.split(".").pop() || "jpg";
-        const key = `${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("artwork-photos")
-          .upload(key, file, { contentType: file.type, upsert: false });
-        if (upErr) throw upErr;
-        imagePath = key;
+        const rawExt = (file.name.split(".").pop() || "jpg").replace(/[^a-zA-Z0-9]/g, "").slice(0, 8) || "jpg";
+        const buf = await file.arrayBuffer();
+        let binary = "";
+        const bytes = new Uint8Array(buf);
+        const chunk = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunk) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+        }
+        const dataBase64 = btoa(binary);
+        const { path } = await uploadFn({
+          data: {
+            sessionId,
+            visitId,
+            contentType: file.type || "image/jpeg",
+            ext: rawExt,
+            dataBase64,
+          },
+        });
+        imagePath = path;
       }
 
       const lingerMinRaw = lingerMin.trim();

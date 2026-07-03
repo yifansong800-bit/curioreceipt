@@ -86,3 +86,44 @@ export const deleteArtwork = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/heic",
+  "image/heif",
+]);
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024; // 15MB
+
+export const uploadArtworkPhoto = createServerFn({ method: "POST" })
+  .inputValidator((raw: unknown) =>
+    z
+      .object({
+        sessionId: uuid,
+        visitId: uuid,
+        contentType: z.string().max(100),
+        ext: z.string().regex(/^[a-zA-Z0-9]{1,8}$/),
+        dataBase64: z.string().max(Math.ceil((MAX_UPLOAD_BYTES * 4) / 3) + 32),
+      })
+      .parse(raw),
+  )
+  .handler(async ({ data }) => {
+    await assertOwns(data.sessionId, data.visitId);
+    if (!ALLOWED_IMAGE_TYPES.has(data.contentType.toLowerCase())) {
+      throw new Error("Unsupported image type");
+    }
+    const bytes = Buffer.from(data.dataBase64, "base64");
+    if (bytes.byteLength === 0 || bytes.byteLength > MAX_UPLOAD_BYTES) {
+      throw new Error("Invalid file size");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const key = `${data.visitId}/${crypto.randomUUID()}.${data.ext.toLowerCase()}`;
+    const { error } = await supabaseAdmin.storage
+      .from("artwork-photos")
+      .upload(key, bytes, { contentType: data.contentType, upsert: false });
+    if (error) throw new Error(error.message);
+    return { path: key };
+  });
