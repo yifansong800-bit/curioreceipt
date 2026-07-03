@@ -103,6 +103,7 @@ function VisitPage() {
   const [view, setView] = useState<View>("compose");
   const [stage, setStage] = useState<Stage>("idle");
   const [downloading, setDownloading] = useState(false);
+  const printStageRef = useRef<HTMLDivElement | null>(null);
   const receiptRef = useRef<HTMLDivElement | null>(null);
 
   const atCap = artworks.length >= MAX_ARTWORKS;
@@ -129,6 +130,21 @@ function VisitPage() {
     const t = window.setTimeout(() => setStage("printing"), PRINTER_WARMUP_MS);
     return () => window.clearTimeout(t);
   }, [view, stage]);
+
+  // Keep the printer itself in view during warm-up. Without this, the browser
+  // can preserve the compose screen's scroll position and show only the
+  // progress bar underneath the printer on long mobile visits.
+  useEffect(() => {
+    if (view !== "print" || stage !== "idle") return;
+    const frame = window.requestAnimationFrame(() => {
+      printStageRef.current?.scrollIntoView({
+        block: "start",
+        inline: "nearest",
+        behavior: reduce ? "auto" : "smooth",
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [view, stage, reduce]);
 
   // Escape returns to compose from the print view.
   useEffect(() => {
@@ -355,7 +371,7 @@ function VisitPage() {
                 )}
               </div>
 
-              <div className="mt-8">
+              <div ref={printStageRef} className="mt-8 scroll-mt-6">
                 <PrinterStage
                   mode={stage}
                   warmupDuration={PRINTER_WARMUP_MS}
