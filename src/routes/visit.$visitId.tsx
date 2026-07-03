@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { Share2 } from "lucide-react";
 import exifr from "exifr";
 import { toPng } from "html-to-image";
 import { extractPalette } from "@/lib/palette";
