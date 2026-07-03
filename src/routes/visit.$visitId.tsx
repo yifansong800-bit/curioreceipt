@@ -784,7 +784,7 @@ function AddArtworkForm({
             min={0}
             max={59}
             value={lingerSec}
-            onChange={(e) => setLingerSec(Number(e.target.value) || 0)}
+            onChange={(e) => setLingerSec(e.target.value)}
             className="w-16 bg-transparent border-b py-1 outline-none tabular-nums"
             style={{ borderColor: "var(--ink)" }}
           />
