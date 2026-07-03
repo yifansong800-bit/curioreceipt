@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "CURIO" },
+      { name: "description", content: "Curio Receipt Maker generates custom museum visit receipts with artwork details and photos." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "CURIO" },
+      { property: "og:description", content: "Curio Receipt Maker generates custom museum visit receipts with artwork details and photos." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "CURIO" },
+      { name: "twitter:description", content: "Curio Receipt Maker generates custom museum visit receipts with artwork details and photos." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/edbf9372-1892-4444-ac3d-e18a264792a5/id-preview-b008775e--f4dec416-f58a-4052-b28c-03e6bc204623.lovable.app-1783074659517.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/edbf9372-1892-4444-ac3d-e18a264792a5/id-preview-b008775e--f4dec416-f58a-4052-b28c-03e6bc204623.lovable.app-1783074659517.png" },
     ],
     links: [
       {
