@@ -834,6 +834,51 @@ function VisitPage() {
         </AnimatePresence>
       </div>
     </div>
+    {confirmMissing !== null ? (
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        style={{
+          background: "rgba(0,0,0,0.4)",
+          paddingLeft: "max(1rem, env(safe-area-inset-left))",
+          paddingRight: "max(1rem, env(safe-area-inset-right))",
+        }}
+        onClick={() => setConfirmMissing(null)}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-sm p-6"
+          style={{ backgroundColor: "var(--paper)", color: "var(--ink)", border: "1px solid var(--ink)" }}
+        >
+          <div className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--ink-soft)" }}>
+            Missing linger time
+          </div>
+          <p className="text-sm leading-relaxed">
+            You haven't logged linger time for {confirmMissing}{" "}
+            {confirmMissing === 1 ? "artwork" : "artworks"}. Print receipt anyway?
+          </p>
+          <div className="mt-6 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirmMissing(null)}
+              className="flex-1 uppercase tracking-widest text-xs py-2 border"
+              style={{ borderColor: "var(--ink)", color: "var(--ink)", backgroundColor: "transparent" }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={proceedToPrint}
+              className="flex-1 uppercase tracking-widest text-xs py-2 border"
+              style={{ borderColor: "var(--ink)", backgroundColor: "var(--ink)", color: "var(--paper)", fontWeight: 700 }}
+            >
+              Print anyway
+            </button>
+          </div>
+        </div>
+      </div>
+    ) : null}
     <Footer />
   </>
   );
