@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import exifr from "exifr";
 import { toPng } from "html-to-image";
 
@@ -11,9 +12,13 @@ import { getVisit } from "@/lib/visits.functions";
 import { addArtwork, deleteArtwork } from "@/lib/artworks.functions";
 import { Receipt, type ReceiptArtwork } from "@/components/receipt";
 import { PrinterStage } from "@/components/printer-stage";
-import { formatLingerShort, slugify } from "@/lib/format";
+import { ArtworkCard } from "@/components/artwork-card";
+import { slugify } from "@/lib/format";
 
-type Stage = "compose" | "printing" | "printed";
+type View = "compose" | "print";
+type Stage = "printing" | "printed";
+
+const MAX_ARTWORKS = 3;
 
 export const Route = createFileRoute("/visit/$visitId")({
   head: () => ({
@@ -50,6 +55,7 @@ function VisitPage() {
   const getFn = useServerFn(getVisit);
   const addFn = useServerFn(addArtwork);
   const delFn = useServerFn(deleteArtwork);
+  const reduce = useReducedMotion();
 
   const [sessionId, setSessionId] = useState<string>("");
   useEffect(() => {
@@ -75,16 +81,34 @@ function VisitPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["visit", visitId] }),
   });
 
-  const receiptRef = useRef<HTMLDivElement | null>(null);
+  const [view, setView] = useState<View>("compose");
+  const [stage, setStage] = useState<Stage>("printing");
   const [downloading, setDownloading] = useState(false);
-  const [stage, setStage] = useState<Stage>("compose");
+  const receiptRef = useRef<HTMLDivElement | null>(null);
 
-  // Any edit to the entries drops the user back to compose so the printed
-  // receipt always matches the current data.
+  const atCap = artworks.length >= MAX_ARTWORKS;
+  const remaining = Math.max(0, MAX_ARTWORKS - artworks.length);
+
+  function goToPrint() {
+    if (artworks.length === 0) return;
+    setStage("printing");
+    setView("print");
+  }
+
+  function goToCompose() {
+    setView("compose");
+    setStage("printing");
+  }
+
+  // Escape returns to compose from the print view.
   useEffect(() => {
-    if (stage === "printed") setStage("compose");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [artworks.length]);
+    if (view !== "print") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") goToCompose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [view]);
 
   async function handleDownload() {
     const node = document.getElementById("curio-receipt") as HTMLElement | null;
@@ -129,102 +153,104 @@ function VisitPage() {
     );
   }
 
+  const fadeDuration = reduce ? 0 : 0.15;
+
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-6xl px-6 py-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_520px]">
-        {/* Left: form + list */}
-        <div>
-          <div className="flex items-center justify-between">
-            <Link to="/" className="text-xs uppercase tracking-widest underline">
-              ← New visit
-            </Link>
-            <span className="text-xs uppercase tracking-widest" style={{ color: "var(--ink-soft)" }}>
-              SESH #{String(visit.session_number).padStart(2, "0")}
-            </span>
-          </div>
+      <div className="mx-auto px-6 py-8" style={{ maxWidth: 640 }}>
+        <AnimatePresence mode="wait" initial={false}>
+          {view === "compose" ? (
+            <motion.div
+              key="compose"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: fadeDuration }}
+            >
+              <div className="flex items-center justify-between">
+                <Link to="/" className="text-xs uppercase tracking-widest underline">
+                  ← New visit
+                </Link>
+                <span
+                  className="text-xs uppercase tracking-widest"
+                  style={{ color: "var(--ink-soft)" }}
+                >
+                  SESH #{String(visit.session_number).padStart(2, "0")}
+                </span>
+              </div>
 
-          <h1
-            className="mt-6"
-            style={{ fontFamily: "var(--font-display)", fontSize: 40, letterSpacing: 2 }}
-          >
-            {visit.museum}
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
-            Curated by {visit.visitor_name}
-          </p>
+              <h1
+                className="mt-6"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: 40,
+                  letterSpacing: 2,
+                }}
+              >
+                {visit.museum}
+              </h1>
+              <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+                Curated by {visit.visitor_name}
+              </p>
 
-          <AddArtworkForm
-            onSubmit={async (payload) => {
-              await addFn({
-                data: {
-                  sessionId,
-                  visitId,
-                  ...payload,
-                },
-              });
-              qc.invalidateQueries({ queryKey: ["visit", visitId] });
-            }}
-          />
-
-          {artworks.length > 0 ? (
-            <div className="mt-10">
-              <h2 className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--ink-soft)" }}>
-                Entries
-              </h2>
-              <ul className="space-y-2">
-                {artworks.map((a) => (
-                  <li
-                    key={a.id}
-                    className="flex items-center gap-3 border px-3 py-2"
-                    style={{ borderColor: "var(--border)" }}
+              {!atCap ? (
+                <>
+                  <div
+                    className="mt-8 text-xs uppercase tracking-widest"
+                    style={{ color: "var(--ink-soft)" }}
                   >
-                    <span className="text-xs tabular-nums" style={{ color: "var(--ink-soft)" }}>
-                      {String(a.position).padStart(2, "0")}
-                    </span>
-                    <span className="flex-1 truncate text-sm">
-                      <span className="italic">{a.title || "Untitled"}</span>
-                      {a.artist ? ` — ${a.artist}` : ""}
-                    </span>
-                    <span className="text-xs" style={{ color: "var(--ink-soft)" }}>
-                      {formatLingerShort(a.linger_seconds)}
-                    </span>
-                    <button
-                      onClick={() => deleteMut.mutate(a.id)}
-                      className="text-xs underline"
-                      style={{ color: "var(--ink-soft)" }}
-                    >
-                      remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
+                    Add up to {MAX_ARTWORKS} artworks · {remaining} more{" "}
+                    {remaining === 1 ? "spot" : "spots"} left
+                  </div>
+                  <AddArtworkForm
+                    onSubmit={async (payload) => {
+                      await addFn({
+                        data: {
+                          sessionId,
+                          visitId,
+                          ...payload,
+                        },
+                      });
+                      qc.invalidateQueries({ queryKey: ["visit", visitId] });
+                    }}
+                  />
+                </>
+              ) : (
+                <div
+                  className="mt-8 border px-4 py-3 text-xs uppercase tracking-widest text-center"
+                  style={{
+                    borderColor: "var(--border)",
+                    color: "var(--ink-soft)",
+                  }}
+                >
+                  {MAX_ARTWORKS} / {MAX_ARTWORKS} artworks added
+                </div>
+              )}
 
-        {/* Right: printer + receipt */}
-        <div className="lg:sticky lg:top-8 self-start">
-          <PrinterStage
-            mode={stage === "compose" ? "idle" : stage}
-            onPrintComplete={() => setStage("printed")}
-          >
-            <div ref={receiptRef}>
-              <Receipt
-                visitorName={visit.visitor_name}
-                museum={visit.museum}
-                sessionNumber={visit.session_number}
-                date={visit.created_at}
-                artworks={artworks}
-              />
-            </div>
-          </PrinterStage>
+              {artworks.length > 0 ? (
+                <div className="mt-10">
+                  <h2
+                    className="text-xs uppercase tracking-widest mb-3"
+                    style={{ color: "var(--ink-soft)" }}
+                  >
+                    Your entries
+                  </h2>
+                  <ul className="space-y-2">
+                    {artworks.map((a) => (
+                      <ArtworkCard
+                        key={a.id}
+                        artwork={a}
+                        onDelete={() => deleteMut.mutate(a.id)}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
-          <div className="mx-auto mt-6" style={{ maxWidth: 360 }}>
-            {stage === "compose" ? (
               <button
-                onClick={() => setStage("printing")}
+                onClick={goToPrint}
                 disabled={artworks.length === 0}
-                className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
+                className="mt-10 w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
                 style={{
                   borderColor: "var(--ink)",
                   backgroundColor: "var(--ink)",
@@ -234,45 +260,80 @@ function VisitPage() {
               >
                 {artworks.length === 0
                   ? "Add an artwork first"
-                  : "Print receipt →"}
+                  : "Ready to print? →"}
               </button>
-            ) : null}
-
-            {stage === "printed" ? (
-              <div className="space-y-3">
+            </motion.div>
+          ) : (
+            <motion.div
+              key="print"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: fadeDuration }}
+            >
+              <div className="flex items-center justify-between">
                 <button
-                  onClick={handleDownload}
-                  disabled={downloading}
-                  className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
-                  style={{
-                    borderColor: "var(--ink)",
-                    backgroundColor: "var(--ink)",
-                    color: "var(--paper)",
-                    fontWeight: 700,
-                  }}
+                  onClick={goToCompose}
+                  className="text-xs uppercase tracking-widest underline"
+                  style={{ color: "var(--ink-soft)" }}
                 >
-                  {downloading ? "Rendering..." : "Download receipt (PNG)"}
+                  ← Edit entries
                 </button>
-                <div className="flex items-center justify-between text-xs uppercase tracking-widest">
-                  <button
-                    onClick={() => setStage("compose")}
-                    className="underline"
-                    style={{ color: "var(--ink-soft)" }}
-                  >
-                    ← Edit entries
-                  </button>
+                {stage === "printed" ? (
                   <button
                     onClick={() => setStage("printing")}
-                    className="underline"
+                    className="text-xs uppercase tracking-widest underline"
                     style={{ color: "var(--ink-soft)" }}
                   >
                     ↺ Print again
                   </button>
-                </div>
+                ) : (
+                  <span
+                    className="text-xs uppercase tracking-widest"
+                    style={{ color: "var(--ink-soft)" }}
+                  >
+                    SESH #{String(visit.session_number).padStart(2, "0")}
+                  </span>
+                )}
               </div>
-            ) : null}
-          </div>
-        </div>
+
+              <div className="mt-8">
+                <PrinterStage
+                  mode={stage}
+                  onPrintComplete={() => setStage("printed")}
+                >
+                  <div ref={receiptRef}>
+                    <Receipt
+                      visitorName={visit.visitor_name}
+                      museum={visit.museum}
+                      sessionNumber={visit.session_number}
+                      date={visit.created_at}
+                      artworks={artworks}
+                    />
+                  </div>
+                </PrinterStage>
+              </div>
+
+              <div className="mx-auto mt-6" style={{ maxWidth: 360 }}>
+                {stage === "printed" ? (
+                  <button
+                    onClick={handleDownload}
+                    disabled={downloading}
+                    className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
+                    style={{
+                      borderColor: "var(--ink)",
+                      backgroundColor: "var(--ink)",
+                      color: "var(--paper)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {downloading ? "Rendering..." : "Download receipt (PNG)"}
+                  </button>
+                ) : null}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -287,6 +348,8 @@ function Loading() {
     </div>
   );
 }
+
+
 
 function AddArtworkForm({
   onSubmit,
