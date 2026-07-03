@@ -146,7 +146,7 @@ function ArtworkBlock({ art }: { art: ReceiptArtwork }) {
       </div>
       <Row
         label="* LINGER TIME"
-        value={formatLingerShort(art.linger_seconds || 0)}
+        value={formatLingerShort(art.linger_seconds)}
       />
       <Row
         label="* MEDIUM"
