@@ -45,6 +45,12 @@ const knownMuseums: KnownMuseum[] = [
   { name: "National Gallery of Victoria", city: "Melbourne", country: "Australia", aliases: ["ngv"] },
   { name: "Frida Kahlo Museum", city: "Mexico City", country: "Mexico", aliases: ["casa azul", "blue house museum"] },
   { name: "Museo Nacional de Antropología", city: "Mexico City", country: "Mexico", aliases: ["national museum of anthropology mexico", "museo nacional de antropologia"] },
+  { name: "M+", city: "Hong Kong", country: "Hong Kong", aliases: ["m plus", "m+ museum", "m plus museum", "west kowloon m+"] },
+  { name: "Mori Art Museum", city: "Tokyo", country: "Japan", aliases: ["mori museum"] },
+  { name: "teamLab Planets", city: "Tokyo", country: "Japan", aliases: ["teamlab planets tokyo", "team lab planets"] },
+  { name: "teamLab Borderless", city: "Tokyo", country: "Japan", aliases: ["teamlab borderless", "team lab borderless"] },
+  { name: "21c Museum Hotel", city: "Louisville", country: "United States", aliases: ["21c museum", "21c"] },
+  { name: "Hirshhorn Museum and Sculpture Garden", city: "Washington", country: "United States", aliases: ["hirshhorn", "the hirshhorn"] },
 ];
 
 const museumSuggestionSchema = z.object({
