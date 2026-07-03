@@ -67,7 +67,7 @@ function Index() {
   return (
     <Dialog>
       <div
-        className="relative min-h-screen flex items-center justify-center"
+        className="relative h-[100dvh] overflow-y-auto flex flex-col items-center justify-start sm:h-auto sm:min-h-screen sm:justify-center"
         style={{
           paddingLeft: "max(1.75rem, env(safe-area-inset-left))",
           paddingRight: "max(1.75rem, env(safe-area-inset-right))",
