@@ -206,7 +206,7 @@ function VisitPage() {
     try {
       const out = await renderReceiptBlob();
       if (!out) return;
-      const file = new File([out.blob], out.filename, { type: "image/png" });
+      const file = new File([out.blob], out.filename, { type: "image/jpeg" });
       const caption = `My visit to ${visit.museum} — logged on Curio ✦`;
       const nav = navigator as Navigator & {
         canShare?: (data: ShareData) => boolean;
