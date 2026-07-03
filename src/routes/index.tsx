@@ -181,6 +181,15 @@ function Index() {
             </a>{" "}
             (Northwestern ’29) on Lovable.
           </p>
+          <p>
+            <Link
+              to="/privacy"
+              className="text-[10px] uppercase tracking-widest underline"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              Privacy Policy
+            </Link>
+          </p>
         </div>
       </DialogContent>
     </div>
