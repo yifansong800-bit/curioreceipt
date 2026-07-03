@@ -149,6 +149,8 @@ function VisitPage() {
 
   function reprint() {
     setStage("idle");
+    setSaved(false);
+    setShared(false);
   }
 
   // Warm-up: show only the printer for a moment, then start feeding.
