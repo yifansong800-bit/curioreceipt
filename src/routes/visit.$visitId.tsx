@@ -136,6 +136,8 @@ function VisitPage() {
       );
       if (!proceed) return;
     }
+    setSaved(false);
+    setShared(false);
     setStage("idle");
     setView("print");
   }
