@@ -1,57 +1,30 @@
-## Split the flow into Compose → Print
+## Change
 
-### Phase 1 — Compose (no printer visible)
+Replace the thumbnail-on-the-left layout of the entry rows in the composer with a full-width row whose background is a soft, blurred gradient sampled from the uploaded artwork's dominant colors.
 
-Restructure `src/routes/visit.$visitId.tsx` from the current two-column layout into a **single centered composer**.
+## Implementation
 
-- Header: visitor name + museum + session number.
-- "Add artwork" form (unchanged: photo, title, artist, medium, emotions).
-- Below the form, a stack of added artwork **cards** — small tile with the dithered thumbnail, title / artist, linger time, delete button. Not a receipt preview.
-- Hard cap: **3 artworks max**. Once 3 are added, the form is replaced by a "3 / 3 artworks added" note. Helper text on the form: "Add up to 3 artworks · 2 more room".
-- Primary CTA at the bottom: **"Ready to print? →"**, disabled until at least 1 artwork exists.
-- No printer, no receipt preview anywhere.
+**1. Extract dominant colors on upload** (`src/routes/visit.$visitId.tsx` add-artwork handler)
+- After the image is read for EXIF/preview, sample it on a tiny offscreen canvas (e.g. 32×32) and pick 2–3 dominant colors via a simple bucketed frequency count (no new dependency).
+- Store the resulting palette (array of `rgb()` strings) alongside the artwork in local state so the row can render immediately. Persist it as part of the artwork record (new optional `palette: string[]` column on `artworks`, nullable) so it survives reloads.
 
-### Phase 2 — Print (clean, efficient reveal)
+**2. Migration**
+- Add `palette text[]` (nullable) to `public.artworks`. No RLS/grant changes needed.
+- Update `artworks.functions.ts` create/list to pass through `palette`.
 
-Clicking "Ready to print?" swaps the compose view for the print view **in place** — same route, same container. No modal, no scrim, no drop-in animation, no striped desk backdrop.
+**3. Row component** (`src/components/artwork-card.tsx`)
+- Remove the `<img>` thumbnail.
+- Root row becomes `relative overflow-hidden` with:
+  - a background layer: `linear-gradient(135deg, c1, c2, c3)` using the palette, `filter: blur(24px)` and `opacity: 0.55`, scaled slightly (`scale(1.15)`) so blur edges don't show.
+  - a subtle paper-tinted overlay (`bg-[--paper]/55`) so IBM Plex Mono text stays readable on any palette.
+- Text content (`01 Gun — Liu Ye`, `0:00 · Oil o Canvas`, `remove`) stays in the same monospace styling; just no image column, full-width padding.
+- Fallback when palette is missing: keep current neutral border only (no background).
 
-Sequence:
+**4. No changes to**
+- The printed receipt itself (still shows dithered images).
+- Emotion chips, EXIF, upload logic, printer stage.
 
-1. Compose column fades out (150ms).
-2. Print view fades in (150ms) in the same slot: a small back arrow "← Edit entries" at the top-left, then the centered printer, then the receipt paper-feed animation runs immediately from the slot (existing `PrinterStage` behavior, unchanged).
-3. When the feed finishes, the **Download receipt (PNG)** button appears directly below the receipt, plus a subtle "↺ Print again" text link next to Edit.
+## Technical notes
 
-That's the whole reveal — a crossfade between two views. No cinematic beats.
-
-Reduced-motion: skip the crossfade, snap between views. Print animation already respects `useReducedMotion`.
-
-### Phase 3 — After print
-
-- **Download receipt (PNG)** — primary button, unchanged behavior.
-- **← Edit entries** — returns to compose with artworks intact.
-- **↺ Print again** — replays the feed animation.
-- Escape key = Edit entries.
-
-### Layout / structure changes
-
-- Composer becomes a single centered column (max ~640px). `PrinterStage` no longer sits inside it.
-- New component `src/components/artwork-card.tsx` — the stacked tile in the compose list.
-- Route holds a `view: "compose" | "print"` flag driving the crossfade, with the existing `stage: "printing" | "printed"` used inside the print view.
-- The hidden full-size `#curio-receipt` node used by `html-to-image` stays rendered (offscreen) whenever there's ≥1 artwork, so download works from the print view without waiting on layout.
-
-### What stays the same
-
-- Data model, server functions, upload, EXIF, dithering, `Receipt`, PNG export.
-- `PrinterStage` — the slot alignment, feed animation, and jitter are all unchanged.
-
-### Order of implementation
-
-1. Composer refactor: single column, artwork-card list, 3-item cap, "Ready to print?" CTA.
-2. Route-level `view` flag + crossfade between compose and print sections.
-3. Wire existing `PrinterStage` into the print view; verify feed + download.
-4. Post-print actions (download / print again / edit).
-5. Reduced-motion + Esc key.
-
-Assumptions unless you say otherwise:
-- **3 is a hard cap.**
-- **Same route, in-place crossfade** (no modal, no new URL).
+- Color sampling uses `<canvas>` `getImageData` on a downscaled draw of the uploaded File via `createImageBitmap`; runs client-side once at add-time. Quantize each channel to 5 bits, count buckets, take top 3, skip near-white/near-black to avoid muddy gradients.
+- Palette persistence is best-effort — if the DB write fails to include it (older row), the row simply renders without the blurred background.
