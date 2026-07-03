@@ -112,6 +112,8 @@ function VisitPage() {
   const [sharing, setSharing] = useState(false);
   const [shareHint, setShareHint] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [shared, setShared] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1);
@@ -134,6 +136,8 @@ function VisitPage() {
       );
       if (!proceed) return;
     }
+    setSaved(false);
+    setShared(false);
     setStage("idle");
     setView("print");
   }
@@ -145,6 +149,8 @@ function VisitPage() {
 
   function reprint() {
     setStage("idle");
+    setSaved(false);
+    setShared(false);
   }
 
   // Warm-up: show only the printer for a moment, then start feeding.
@@ -319,6 +325,7 @@ function VisitPage() {
             title: "My Curio receipt",
             text: `My visit to ${visit.museum} — logged on Curio ✦`,
           });
+          setSaved(true);
           return;
         } catch (err) {
           if ((err as DOMException)?.name === "AbortError") return;
@@ -331,6 +338,7 @@ function VisitPage() {
       link.href = url;
       link.click();
       URL.revokeObjectURL(url);
+      setSaved(true);
     } finally {
       setSaving(false);
     }
@@ -356,6 +364,7 @@ function VisitPage() {
             title: "My Curio receipt",
             text: caption,
           });
+          setShared(true);
           return;
         } catch (err) {
           if ((err as DOMException)?.name === "AbortError") return;
@@ -373,6 +382,7 @@ function VisitPage() {
       } catch {}
       window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
       setShareHint("Saved to your device — drop it into an Instagram Story or Post.");
+      setShared(true);
     } finally {
       setSharing(false);
     }
@@ -622,7 +632,7 @@ function VisitPage() {
                 {stage === "printed" ? (
                   <>
                     <button
-                      onClick={handleSaveToCameraRoll}
+                      onClick={saved ? () => {} : handleSaveToCameraRoll}
                       disabled={saving || sharing}
                       className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
                       style={{
@@ -632,10 +642,18 @@ function VisitPage() {
                         fontWeight: 700,
                       }}
                     >
-                      {saving ? "Rendering..." : isMobile ? "Save to camera roll" : "Download receipt"}
+                      {saved
+                        ? isMobile
+                          ? "Saved to camera roll"
+                          : "Downloaded receipt"
+                        : saving
+                          ? "Rendering..."
+                          : isMobile
+                            ? "Save to camera roll"
+                            : "Download receipt"}
                     </button>
                     <button
-                      onClick={handleShare}
+                      onClick={shared ? () => {} : handleShare}
                       disabled={sharing || saving}
                       className="w-full inline-flex items-center justify-center gap-2 uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
                       style={{
@@ -646,7 +664,7 @@ function VisitPage() {
                       }}
                     >
                       <Share2 className="h-4 w-4" />
-                      {sharing ? "Preparing..." : "Share to Instagram"}
+                      {shared ? "Shared to Instagram" : sharing ? "Preparing..." : "Share to Instagram"}
                     </button>
 
                     {shareHint ? (
