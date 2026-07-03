@@ -1,0 +1,1 @@
+ALTER TABLE public.artworks ADD COLUMN IF NOT EXISTS palette text[] NOT NULL DEFAULT '{}';
