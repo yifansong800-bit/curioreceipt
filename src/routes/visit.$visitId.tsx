@@ -617,6 +617,8 @@ function AddArtworkForm({
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [savedCount, setSavedCount] = useState(0);
 
   useEffect(() => {
     if (!file) {
