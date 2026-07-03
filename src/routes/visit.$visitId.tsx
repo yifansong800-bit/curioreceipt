@@ -413,17 +413,18 @@ function VisitPage() {
   const fadeDuration = reduce ? 0 : 0.15;
 
   return (
-    <div className="min-h-screen">
-      <div
-        className="mx-auto"
-        style={{
-          maxWidth: 640,
-          paddingLeft: "max(2.5rem, env(safe-area-inset-left))",
-          paddingRight: "max(2.5rem, env(safe-area-inset-right))",
-          paddingTop: "max(1.5rem, env(safe-area-inset-top))",
-          paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
-        }}
-      >
+    <>
+      <div className="min-h-screen">
+        <div
+          className="mx-auto"
+          style={{
+            maxWidth: 640,
+            paddingLeft: "max(2.5rem, env(safe-area-inset-left))",
+            paddingRight: "max(2.5rem, env(safe-area-inset-right))",
+            paddingTop: "max(1.5rem, env(safe-area-inset-top))",
+            paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
+          }}
+        >
         <AnimatePresence mode="wait" initial={false}>
           {view === "compose" ? (
             <motion.div
