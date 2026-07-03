@@ -201,3 +201,60 @@ export function PrinterStage({
     </div>
   );
 }
+
+/**
+ * Renders the receipt at its natural width (so text wraps identically to
+ * desktop and html-to-image can snapshot at full resolution) but visually
+ * scaled down to fit the printer slot on smaller screens.
+ *
+ * Uses `transform: scale()` with `transform-origin: top left` so the layout
+ * box stays 360px wide internally, while a wrapper reserves the correct
+ * scaled footprint (width + height) so the printer + receipt stay centered
+ * and no content overflows the slot.
+ */
+function ScaledReceipt({
+  naturalWidth,
+  scale,
+  children,
+}: {
+  naturalWidth: number;
+  scale: number;
+  children: ReactNode;
+}) {
+  const innerRef = useRef<HTMLDivElement | null>(null);
+  const [naturalHeight, setNaturalHeight] = useState(0);
+  useLayoutEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+    const measure = () => setNaturalHeight(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div
+      style={{
+        width: naturalWidth * scale,
+        height: naturalHeight * scale,
+        position: "relative",
+        overflow: "visible",
+      }}
+    >
+      <div
+        ref={innerRef}
+        style={{
+          width: naturalWidth,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+          position: "absolute",
+          top: 0,
+          left: 0,
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
