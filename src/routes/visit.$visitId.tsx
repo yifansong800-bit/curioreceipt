@@ -109,6 +109,7 @@ function VisitPage() {
   const [view, setView] = useState<View>("compose");
   const [stage, setStage] = useState<Stage>("idle");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmMissing, setConfirmMissing] = useState<number | null>(null);
 
   const [sharing, setSharing] = useState(false);
   const [shareHint, setShareHint] = useState<string | null>(null);
@@ -131,12 +132,14 @@ function VisitPage() {
     if (artworks.length === 0) return;
     const missing = artworks.filter((a) => a.linger_seconds < 0);
     if (missing.length > 0) {
-      const noun = missing.length === 1 ? "artwork" : "artworks";
-      const proceed = window.confirm(
-        `You haven't logged linger time for ${missing.length} ${noun}. Print receipt anyway?`
-      );
-      if (!proceed) return;
+      setConfirmMissing(missing.length);
+      return;
     }
+    proceedToPrint();
+  }
+
+  function proceedToPrint() {
+    setConfirmMissing(null);
     setSaved(false);
     setShared(false);
     setStage("idle");
@@ -689,6 +692,7 @@ function VisitPage() {
               ) : null}
 
               <button
+                type="button"
                 onClick={goToPrint}
                 disabled={artworks.length === 0}
                 className="mt-10 w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
@@ -697,6 +701,8 @@ function VisitPage() {
                   backgroundColor: "var(--ink)",
                   color: "var(--paper)",
                   fontWeight: 700,
+                  WebkitTapHighlightColor: "transparent",
+                  touchAction: "manipulation",
                 }}
               >
                 {artworks.length === 0
@@ -828,6 +834,51 @@ function VisitPage() {
         </AnimatePresence>
       </div>
     </div>
+    {confirmMissing !== null ? (
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        style={{
+          background: "rgba(0,0,0,0.4)",
+          paddingLeft: "max(1rem, env(safe-area-inset-left))",
+          paddingRight: "max(1rem, env(safe-area-inset-right))",
+        }}
+        onClick={() => setConfirmMissing(null)}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-sm p-6"
+          style={{ backgroundColor: "var(--paper)", color: "var(--ink)", border: "1px solid var(--ink)" }}
+        >
+          <div className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--ink-soft)" }}>
+            Missing linger time
+          </div>
+          <p className="text-sm leading-relaxed">
+            You haven't logged linger time for {confirmMissing}{" "}
+            {confirmMissing === 1 ? "artwork" : "artworks"}. Print receipt anyway?
+          </p>
+          <div className="mt-6 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirmMissing(null)}
+              className="flex-1 uppercase tracking-widest text-xs py-2 border"
+              style={{ borderColor: "var(--ink)", color: "var(--ink)", backgroundColor: "transparent" }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={proceedToPrint}
+              className="flex-1 uppercase tracking-widest text-xs py-2 border"
+              style={{ borderColor: "var(--ink)", backgroundColor: "var(--ink)", color: "var(--paper)", fontWeight: 700 }}
+            >
+              Print anyway
+            </button>
+          </div>
+        </div>
+      </div>
+    ) : null}
     <Footer />
   </>
   );
@@ -992,9 +1043,7 @@ function AddArtworkForm({
           Math.max(0, Math.floor(parseInt(lingerSecRaw || "0", 10)));
 
     // Fire-and-forget: parent inserts an optimistic row immediately and
-    // handles the photo upload + server insert in the background. That
-    // lets us reset the form right away so the entry appears in the
-    // list without waiting for the network round-trip.
+    // handles the photo upload + server insert in the background.
     try {
       onSubmit({
         file,
@@ -1014,7 +1063,7 @@ function AddArtworkForm({
       return;
     }
 
-    // reset immediately
+    // reset immediately so the form is ready for the next entry
     setTitle("");
     setArtist("");
     setYear("");
@@ -1027,7 +1076,10 @@ function AddArtworkForm({
     setFile(null);
     setSavedCount((n) => n + 1);
     setUploadClosed(true);
-    setBusy(false);
+
+    // Keep the "adding..." label visible briefly so the action feels
+    // acknowledged even though the row appears optimistically.
+    window.setTimeout(() => setBusy(false), 800);
   }
 
 
