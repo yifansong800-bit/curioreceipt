@@ -18,6 +18,8 @@ export type ReceiptArtwork = {
 export type ReceiptProps = {
   visitorName: string;
   museum: string;
+  city?: string | null;
+  country?: string | null;
   sessionNumber: number;
   date: string | Date;
   artworks: ReceiptArtwork[];
@@ -29,12 +31,15 @@ const STAR_ROW = "********************************";
 export function Receipt({
   visitorName,
   museum,
+  city,
+  country,
   sessionNumber,
   date,
   artworks,
 }: ReceiptProps) {
   const totalSeconds = artworks.reduce((sum, a) => sum + (a.linger_seconds || 0), 0);
   const sess = String(sessionNumber).padStart(2, "0");
+  const location = [city, country].filter(Boolean).join(", ").toUpperCase();
 
   return (
     <div
@@ -71,6 +76,7 @@ export function Receipt({
 
       <div style={{ marginTop: 12 }}>
         <div>MUSEUM: {museum || "—"}</div>
+        {location ? <div>LOCATION: {location}</div> : null}
         <div>DATE: {formatReceiptDate(date)}</div>
         <div>
           CURATOR: {(visitorName || "—").toUpperCase()} (SESH #{sess})

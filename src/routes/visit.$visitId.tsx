@@ -9,7 +9,7 @@ import { extractPalette } from "@/lib/palette";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getSessionId } from "@/lib/session";
-import { getVisit } from "@/lib/visits.functions";
+import { getVisit, updateVisitLocation } from "@/lib/visits.functions";
 import { addArtwork, deleteArtwork } from "@/lib/artworks.functions";
 import { Receipt, type ReceiptArtwork } from "@/components/receipt";
 import { PrinterStage } from "@/components/printer-stage";
@@ -58,6 +58,7 @@ function VisitPage() {
   const getFn = useServerFn(getVisit);
   const addFn = useServerFn(addArtwork);
   const delFn = useServerFn(deleteArtwork);
+  const updateLocFn = useServerFn(updateVisitLocation);
   const reduce = useReducedMotion();
 
   const [sessionId, setSessionId] = useState<string>("");
@@ -224,6 +225,16 @@ function VisitPage() {
               <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
                 Curated by {visit.visitor_name}
               </p>
+              <LocationEditor
+                city={visit.city ?? null}
+                country={visit.country ?? null}
+                onSave={async (city, country) => {
+                  await updateLocFn({
+                    data: { sessionId, visitId, city, country },
+                  });
+                  qc.invalidateQueries({ queryKey: ["visit", visitId] });
+                }}
+              />
 
               {!atCap ? (
                 <>
@@ -341,6 +352,8 @@ function VisitPage() {
                     <Receipt
                       visitorName={visit.visitor_name}
                       museum={visit.museum}
+                      city={visit.city ?? null}
+                      country={visit.country ?? null}
                       sessionNumber={visit.session_number}
                       date={visit.created_at}
                       artworks={artworks}
@@ -684,5 +697,97 @@ function MiniField({
         style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}
       />
     </label>
+  );
+}
+
+function LocationEditor({
+  city,
+  country,
+  onSave,
+}: {
+  city: string | null;
+  country: string | null;
+  onSave: (city: string | null, country: string | null) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [cityDraft, setCityDraft] = useState(city ?? "");
+  const [countryDraft, setCountryDraft] = useState(country ?? "");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setCityDraft(city ?? "");
+    setCountryDraft(country ?? "");
+  }, [city, country]);
+
+  const display = [city, country].filter(Boolean).join(", ");
+
+  async function save() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await onSave(cityDraft.trim() || null, countryDraft.trim() || null);
+      setEditing(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!editing) {
+    return (
+      <div
+        className="mt-1 text-xs uppercase tracking-widest flex items-center gap-2 flex-wrap"
+        style={{ color: "var(--ink-soft)" }}
+      >
+        <span>{display || "Location unknown"}</span>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="underline"
+        >
+          {display ? "edit" : "add location"}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 flex flex-wrap items-end gap-2">
+      <input
+        value={cityDraft}
+        onChange={(e) => setCityDraft(e.target.value)}
+        placeholder="City"
+        maxLength={80}
+        className="bg-transparent border-b py-1 outline-none text-sm"
+        style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)", minWidth: 100 }}
+      />
+      <input
+        value={countryDraft}
+        onChange={(e) => setCountryDraft(e.target.value)}
+        placeholder="Country"
+        maxLength={80}
+        className="bg-transparent border-b py-1 outline-none text-sm"
+        style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)", minWidth: 100 }}
+      />
+      <button
+        type="button"
+        onClick={save}
+        disabled={busy}
+        className="text-xs uppercase tracking-widest underline disabled:opacity-40"
+      >
+        {busy ? "saving…" : "save"}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setCityDraft(city ?? "");
+          setCountryDraft(country ?? "");
+          setEditing(false);
+        }}
+        className="text-xs uppercase tracking-widest underline"
+        style={{ color: "var(--ink-soft)" }}
+      >
+        cancel
+      </button>
+    </div>
   );
 }
