@@ -48,7 +48,7 @@ export function ArtworkCard({
 
       <div aria-hidden className="film-grain" />
 
-      <div className="relative flex items-center gap-3 px-4 py-3">
+      <div className="relative z-10 flex items-center gap-3 px-4 py-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2">
             <span
