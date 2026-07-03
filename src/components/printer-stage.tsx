@@ -5,11 +5,10 @@ import printerImg from "@/assets/printer.png";
 
 type Mode = "idle" | "printing" | "printed";
 
-// Measured from the generated bird's-eye printer PNG (1024x1024).
-// Slot mouth (the dark gap) sits ~66% down the image.
-const SLOT_Y_PCT = 66;
-// Slot mouth width relative to the printer image width.
-const SLOT_WIDTH_PCT = 33;
+// Measured from the printer PNG (1024x1024). Slot is the horizontal
+// silver output opening; the receipt should feed out from its top edge.
+const SLOT_Y_PCT = 60;
+const SLOT_WIDTH_PCT = 62;
 
 const MAX_PRINTER_WIDTH = 460;
 
