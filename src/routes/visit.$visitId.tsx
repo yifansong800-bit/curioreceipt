@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Share2 } from "lucide-react";
 import exifr from "exifr";
-import { toPng } from "html-to-image";
+import { toJpeg } from "html-to-image";
 import { extractPalette } from "@/lib/palette";
 
 
@@ -170,15 +170,16 @@ function VisitPage() {
   async function renderReceiptBlob(): Promise<{ blob: Blob; filename: string } | null> {
     const node = document.getElementById("curio-receipt") as HTMLElement | null;
     if (!node || !visit) return null;
-    const dataUrl = await toPng(node, {
+    const dataUrl = await toJpeg(node, {
       pixelRatio: 2,
       cacheBust: true,
-      backgroundColor: "transparent",
+      backgroundColor: "#f5ead5",
+      quality: 0.95,
     });
     const res = await fetch(dataUrl);
     const blob = await res.blob();
     const stamp = new Date().toISOString().slice(0, 10);
-    return { blob, filename: `curio-${slugify(visit.museum)}-${stamp}.png` };
+    return { blob, filename: `curio-${slugify(visit.museum)}-${stamp}.jpg` };
   }
 
   async function handleDownload() {
