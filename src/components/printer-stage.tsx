@@ -72,60 +72,63 @@ export function PrinterStage({
           pointerEvents: "none",
         }}
       >
-        <AnimatePresence initial={false}>
-          {mode !== "idle" ? (
-            <motion.div
-              key="track"
-              initial={{ maxHeight: 0 }}
-              animate={{ maxHeight: 2400 }}
-              exit={{ maxHeight: 0, opacity: 0 }}
-              transition={{
-                duration: reduce ? 0.2 : mode === "printed" ? 0 : 3.2,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-              style={{ overflow: "hidden" }}
-            >
+        <div
+          style={{
+            transform: `scale(${receiptScale})`,
+            transformOrigin: "top center",
+            width: receiptNaturalWidth,
+          }}
+        >
+          <AnimatePresence initial={false}>
+            {mode !== "idle" ? (
               <motion.div
-                initial={
-                  mode === "printed"
-                    ? { y: 0 }
-                    : reduce
-                      ? { y: 0, opacity: 0 }
-                      : { y: "-100%" }
-                }
-                animate={reduce ? { y: 0, opacity: 1 } : { y: 0 }}
+                key="track"
+                initial={{ maxHeight: 0 }}
+                animate={{ maxHeight: 2400 }}
+                exit={{ maxHeight: 0, opacity: 0 }}
                 transition={{
                   duration: reduce ? 0.2 : mode === "printed" ? 0 : 3.2,
-                  ease: reduce ? "easeOut" : [0.22, 1, 0.36, 1],
+                  ease: [0.22, 1, 0.36, 1],
                 }}
-                onAnimationComplete={() => {
-                  if (mode === "printing") onPrintComplete?.();
-                }}
-                style={{
-                  transformOrigin: "top center",
-                  transform: `scale(${receiptScale})`,
-                  width: receiptNaturalWidth,
-                }}
+                style={{ overflow: "hidden" }}
               >
-                {/* Tiny stepper-motor jitter while printing */}
-                {mode === "printing" && !reduce ? (
-                  <motion.div
-                    animate={{ y: [0, -0.8, 0.8, -0.6, 0.6, 0] }}
-                    transition={{
-                      duration: 0.18,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                  >
-                    {children}
-                  </motion.div>
-                ) : (
-                  children
-                )}
+                <motion.div
+                  initial={
+                    mode === "printed"
+                      ? { y: 0 }
+                      : reduce
+                        ? { y: 0, opacity: 0 }
+                        : { y: "-100%" }
+                  }
+                  animate={reduce ? { y: 0, opacity: 1 } : { y: 0 }}
+                  transition={{
+                    duration: reduce ? 0.2 : mode === "printed" ? 0 : 3.2,
+                    ease: reduce ? "easeOut" : [0.22, 1, 0.36, 1],
+                  }}
+                  onAnimationComplete={() => {
+                    if (mode === "printing") onPrintComplete?.();
+                  }}
+                >
+                  {mode === "printing" && !reduce ? (
+                    <motion.div
+                      animate={{ y: [0, -0.8, 0.8, -0.6, 0.6, 0] }}
+                      transition={{
+                        duration: 0.18,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
+                    >
+                      {children}
+                    </motion.div>
+                  ) : (
+                    children
+                  )}
+                </motion.div>
               </motion.div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+            ) : null}
+          </AnimatePresence>
+        </div>
+
       </div>
 
       {mode === "printing" ? (
