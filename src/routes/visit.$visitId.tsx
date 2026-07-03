@@ -131,7 +131,7 @@ function VisitPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-6xl px-6 py-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="mx-auto max-w-6xl px-6 py-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_520px]">
         {/* Left: form + list */}
         <div>
           <div className="flex items-center justify-between">
