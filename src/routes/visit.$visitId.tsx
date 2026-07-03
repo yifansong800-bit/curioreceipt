@@ -58,6 +58,7 @@ function VisitPage() {
   const getFn = useServerFn(getVisit);
   const addFn = useServerFn(addArtwork);
   const delFn = useServerFn(deleteArtwork);
+  const updateLocFn = useServerFn(updateVisitLocation);
   const reduce = useReducedMotion();
 
   const [sessionId, setSessionId] = useState<string>("");
