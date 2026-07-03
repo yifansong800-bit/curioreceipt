@@ -18,6 +18,8 @@ export type ReceiptArtwork = {
 export type ReceiptProps = {
   visitorName: string;
   museum: string;
+  city?: string | null;
+  country?: string | null;
   sessionNumber: number;
   date: string | Date;
   artworks: ReceiptArtwork[];
