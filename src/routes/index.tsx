@@ -54,7 +54,8 @@ function Index() {
     },
   });
 
-  const canSubmit = visitor.trim().length > 0 && museum.trim().length > 0 && !mut.isPending;
+  const opening = mut.isPending || mut.isSuccess;
+  const canSubmit = visitor.trim().length > 0 && museum.trim().length > 0 && !opening;
 
   return (
     <div
