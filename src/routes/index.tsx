@@ -94,14 +94,14 @@ function Index() {
             label="YOUR NAME"
             value={visitor}
             onChange={setVisitor}
-            placeholder="e.g. CASSIE S."
+            placeholder="e.g. Alex Rivera"
             maxLength={60}
           />
           <Field
             label="MUSEUM VISITED"
             value={museum}
             onChange={setMuseum}
-            placeholder="e.g. M+ Hong Kong"
+            placeholder="e.g. The Art Institute of Chicago"
             maxLength={80}
           />
           <button
