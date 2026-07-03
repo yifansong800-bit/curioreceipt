@@ -15,9 +15,9 @@ async function resolveMuseumLocationInternal(
 
   try {
     const gateway = createLovableAiGatewayProvider(key);
-    const { experimental_output } = await generateText({
+    const { output } = await generateText({
       model: gateway("google/gemini-3-flash-preview"),
-      experimental_output: Output.object({
+      output: Output.object({
         schema: z.object({
           confident: z.boolean(),
           city: z.string().nullable(),
@@ -33,7 +33,7 @@ async function resolveMuseumLocationInternal(
         "If you are not confident this is a real, uniquely identifiable museum, " +
         "set confident=false and city=null and country=null. Never guess.",
     });
-    const out = experimental_output;
+    const out = output;
     if (!out?.confident) return { city: null, country: null };
     return {
       city: out.city?.trim() || null,
