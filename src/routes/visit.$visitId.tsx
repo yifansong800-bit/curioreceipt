@@ -427,6 +427,7 @@ function AddArtworkForm({
     emotions: string[];
     photoTakenAt: string | null;
     palette: string[];
+    rating: number;
   }) => Promise<void>;
 }) {
   const [title, setTitle] = useState("");
@@ -437,6 +438,7 @@ function AddArtworkForm({
   const [lingerSec, setLingerSec] = useState<number>(0);
   const [emotions, setEmotions] = useState<string[]>([]);
   const [customEmotion, setCustomEmotion] = useState("");
+  const [rating, setRating] = useState<number>(0);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
