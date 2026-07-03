@@ -152,7 +152,19 @@ export function PrinterStage({
                 width: "100%",
               }}
             >
-              <div style={{ zoom: receiptScale, width: receiptNaturalWidth }}>
+              <div
+                style={{
+                  width: receiptNaturalWidth * receiptScale,
+                  height: "auto",
+                }}
+              >
+              <div
+                style={{
+                  width: receiptNaturalWidth,
+                  transform: `scale(${receiptScale})`,
+                  transformOrigin: "top center",
+                }}
+              >
                 <div
                   style={{
                     position: "relative",
@@ -192,6 +204,8 @@ export function PrinterStage({
                   />
                 </div>
               </div>
+              </div>
+
 
             </motion.div>
           ) : null}
