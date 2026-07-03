@@ -226,21 +226,26 @@ export const suggestMuseums = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const local = localMuseumSuggestions(data.query);
-    if (local.length > 0) return { suggestions: local };
+    try {
+      if (local.length > 0) return { suggestions: local };
 
-    const ai = await generateJsonObject(
-      museumSuggestionsSchema,
-      "You autocomplete real, existing museum and art institution names worldwide. " +
-        `User is typing: "${data.query}". ` +
-        "Return a JSON object with one key, suggestions, containing up to 6 real museums whose official English name best matches this prefix or fuzzy match. " +
-        "Prefer well-known institutions. Include small/regional museums only if they clearly match. " +
-        "For each suggestion: name is the museum's canonical English name; city is the common English city name " +
-        "(e.g. 'New York', 'Paris'); country is the full English country name (e.g. 'United States', 'France'). " +
-        "If unsure of a location, set that field to null. Never invent museums that don't exist. " +
-        "If nothing plausibly matches, return {\"suggestions\":[]}.",
-      1800,
-    );
-    return { suggestions: dedupeSuggestions([...local, ...(ai?.suggestions ?? [])]) };
+      const ai = await generateJsonObject(
+        museumSuggestionsSchema,
+        "You autocomplete real, existing museum and art institution names worldwide. " +
+          `User is typing: "${data.query}". ` +
+          "Return a JSON object with one key, suggestions, containing up to 6 real museums whose official English name best matches this prefix or fuzzy match. " +
+          "Prefer well-known institutions. Include small/regional museums only if they clearly match. " +
+          "For each suggestion: name is the museum's canonical English name; city is the common English city name " +
+          "(e.g. 'New York', 'Paris'); country is the full English country name (e.g. 'United States', 'France'). " +
+          "If unsure of a location, set that field to null. Never invent museums that don't exist. " +
+          "If nothing plausibly matches, return {\"suggestions\":[]}.",
+        1800,
+      );
+      return { suggestions: dedupeSuggestions([...local, ...(ai?.suggestions ?? [])]) };
+    } catch (err) {
+      console.error("suggestMuseums failed", err instanceof Error ? err.message : err);
+      return { suggestions: local };
+    }
   });
 
 export const createVisit = createServerFn({ method: "POST" })
