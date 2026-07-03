@@ -13,7 +13,7 @@ export async function ditherImage(
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
-  if (!ctx) return src;
+  if (!ctx) return { dataUrl: src, width: targetWidth, height: targetWidth };
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(img, 0, 0, w, h);
 
