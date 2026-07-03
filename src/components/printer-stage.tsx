@@ -6,10 +6,10 @@ import printerImg from "@/assets/printer.png";
 type Mode = "idle" | "printing" | "printed";
 
 // Measured from the generated bird's-eye printer PNG (1024x1024).
-// Slot mouth (the dark gap) sits ~64% down the image.
-const SLOT_Y_PCT = 64;
+// Slot mouth (the dark gap) sits ~66% down the image.
+const SLOT_Y_PCT = 66;
 // Slot mouth width relative to the printer image width.
-const SLOT_WIDTH_PCT = 47;
+const SLOT_WIDTH_PCT = 33;
 
 const MAX_PRINTER_WIDTH = 460;
 
