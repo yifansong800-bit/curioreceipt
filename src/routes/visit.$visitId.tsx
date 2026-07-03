@@ -225,6 +225,16 @@ function VisitPage() {
               <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
                 Curated by {visit.visitor_name}
               </p>
+              <LocationEditor
+                city={visit.city ?? null}
+                country={visit.country ?? null}
+                onSave={async (city, country) => {
+                  await updateLocFn({
+                    data: { sessionId, visitId, city, country },
+                  });
+                  qc.invalidateQueries({ queryKey: ["visit", visitId] });
+                }}
+              />
 
               {!atCap ? (
                 <>
