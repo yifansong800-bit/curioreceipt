@@ -681,8 +681,8 @@ function AddArtworkForm({
           } catch {
             /* palette optional */
           }
-          const rawExt = (file.name.split(".").pop() || "jpg").replace(/[^a-zA-Z0-9]/g, "").slice(0, 8) || "jpg";
-          const buf = await file.arrayBuffer();
+          const downscaled = await downscaleImage(file, 2000, 0.85);
+          const buf = await downscaled.arrayBuffer();
           let binary = "";
           const bytes = new Uint8Array(buf);
           const chunk = 0x8000;
@@ -694,8 +694,8 @@ function AddArtworkForm({
             data: {
               sessionId,
               visitId,
-              contentType: file.type || "image/jpeg",
-              ext: rawExt,
+              contentType: "image/jpeg",
+              ext: "jpg",
               dataBase64,
             },
           });
