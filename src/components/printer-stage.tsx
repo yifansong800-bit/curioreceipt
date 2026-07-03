@@ -5,7 +5,7 @@
 // the receipt with the printer's output slot.
 // ============================================================
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import printerImg from "@/assets/printer.png";
 
@@ -152,27 +152,14 @@ export function PrinterStage({
                 width: "100%",
               }}
             >
-              <div
-                style={{
-                  width: receiptNaturalWidth * receiptScale,
-                  height: "auto",
-                }}
-              >
-              <div
-                style={{
-                  width: receiptNaturalWidth,
-                  transform: `scale(${receiptScale})`,
-                  transformOrigin: "top center",
-                }}
+              <ScaledReceipt
+                naturalWidth={receiptNaturalWidth}
+                scale={receiptScale}
               >
                 <div
                   style={{
                     position: "relative",
                     willChange: "transform",
-                    // Default hidden above the slot; the CSS animation reveals
-                    // it step-by-step once `armed` is true. Keeping this base
-                    // transform means even if the animation attach is delayed
-                    // by a frame, nothing flashes at translateY(0).
                     transform: mode === "printed" ? "translateY(0)" : "translateY(-100%)",
                     visibility: armed ? "visible" : "hidden",
                     ...(mode === "printing" && armed && !reduce
@@ -203,8 +190,8 @@ export function PrinterStage({
                     }}
                   />
                 </div>
-              </div>
-              </div>
+              </ScaledReceipt>
+
 
 
             </motion.div>
@@ -214,3 +201,60 @@ export function PrinterStage({
     </div>
   );
 }
+
+/**
+ * Renders the receipt at its natural width (so text wraps identically to
+ * desktop and html-to-image can snapshot at full resolution) but visually
+ * scaled down to fit the printer slot on smaller screens.
+ *
+ * Uses `transform: scale()` with `transform-origin: top left` so the layout
+ * box stays 360px wide internally, while a wrapper reserves the correct
+ * scaled footprint (width + height) so the printer + receipt stay centered
+ * and no content overflows the slot.
+ */
+function ScaledReceipt({
+  naturalWidth,
+  scale,
+  children,
+}: {
+  naturalWidth: number;
+  scale: number;
+  children: ReactNode;
+}) {
+  const innerRef = useRef<HTMLDivElement | null>(null);
+  const [naturalHeight, setNaturalHeight] = useState(0);
+  useLayoutEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+    const measure = () => setNaturalHeight(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div
+      style={{
+        width: naturalWidth * scale,
+        height: naturalHeight * scale,
+        position: "relative",
+        overflow: "visible",
+      }}
+    >
+      <div
+        ref={innerRef}
+        style={{
+          width: naturalWidth,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+          position: "absolute",
+          top: 0,
+          left: 0,
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
