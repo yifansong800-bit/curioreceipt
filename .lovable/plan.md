@@ -1,34 +1,40 @@
-# Share receipt to Instagram
+## Plan: Circular halftone for receipt artwork
 
-## The honest constraint
+Replace the Floyd–Steinberg 1-bit dither in `src/lib/dither.ts` with a **circular dot halftone** renderer, then wire it into `src/components/receipt.tsx` (which already calls `ditherImage`).
 
-Instagram has no public web API that lets a website post directly to a user's feed or story from the browser. No third-party site can do it — not even with an API key. What we *can* do is hand the receipt PNG to the Instagram app in one tap, and let the user pick Story / Post / DM there.
+### Algorithm (in `src/lib/dither.ts`)
 
-Two realistic paths, combined into one button:
+1. Load image to an offscreen canvas at a scale that keeps the receipt-width resolution (~420px wide, preserving aspect ratio as today).
+2. Build a luminance map: `L = 0.299R + 0.587G + 0.114B` per pixel, normalized 0–1.
+3. Overlay a **cell grid** of size `CELL = 4px` (tunable) across the image.
+4. For each cell:
+   - Average luminance of the pixels inside.
+   - If `avgL > 0.80` → **skip** (leave transparent so cream paper shows).
+   - Else compute density `d = 1 - avgL` (clamped), map to dot radius: `r = (CELL / 2) * sqrt(d)` (sqrt keeps perceived density linear).
+   - Draw a solid black filled circle at the cell center on a **transparent** canvas.
+5. Export as PNG data URL with alpha (not JPEG) so the paper shows through the highlights.
 
-1. **Mobile (phone/tablet):** use the browser's built-in **Web Share API** with the PNG as a file attachment. Instagram appears in the native share sheet → tap it → IG opens with the image preloaded, ready to post to Story, Feed, or Reels. This is the same flow apps like Notion and Figma use. Works on iOS Safari 15+ and Android Chrome.
-2. **Desktop / unsupported browsers:** Instagram web can't accept an image upload from another site, so we fall back to: **download the PNG + copy a caption + open instagram.com** in a new tab with a small tooltip explaining "IG doesn't allow direct posting from desktop — your receipt is saved, drag it into Instagram."
+### Output contract
 
-## What changes in the UI
+- Return `{ url, width, height }` as today — `receipt.tsx` needs no signature change.
+- Keep the existing size-bucketing memoization in `DitheredImage` so re-renders don't flicker.
+- Because output now has transparency, ensure the `<img>` in `receipt.tsx` has no background — it already sits on the cream paper.
 
-On the final "receipt is printed" screen, next to the existing **Download** button, add a **Share** button (Instagram glyph + "Share"). The button is only enabled once the print animation finishes, same gating as Download.
+### JPEG export compatibility
 
-Tap behavior:
-- If `navigator.canShare({ files: [pngFile] })` is true → call `navigator.share(...)` with the PNG file, a short title ("My Curio receipt"), and a suggested caption. The OS share sheet appears; user picks Instagram.
-- Else → download the PNG (reuse the existing export path) and open `https://www.instagram.com/` in a new tab, with a toast: "Saved to your device — drop it into an Instagram Story or Post."
+`html-to-image.toJpeg` in `visit.$visitId.tsx` already flattens onto `#f5ead5`, so transparent halftone dots will composite cleanly onto the cream background in the downloaded receipt.
 
-No account linking, no OAuth, no secrets, no backend work. Nothing about the receipt design, animation, or data model changes.
+### Tunables (top of `dither.ts`)
 
-## Technical section
+```ts
+const CELL = 4;              // grid size in px — smaller = finer dots
+const HIGHLIGHT_CUTOFF = 0.80; // luminance above this → blank
+const GAMMA = 0.5;           // sqrt curve for radius mapping
+```
 
-- Reuse `html-to-image`'s `toBlob()` on the same receipt node used for PNG export, then wrap the blob in a `File` (`new File([blob], 'curio-receipt.png', { type: 'image/png' })`).
-- Feature-detect with `navigator.canShare?.({ files: [file] })` — this is the correct check; `navigator.share` alone doesn't guarantee file support (desktop Safari has share without files).
-- Suggested caption string: `"My visit to {museum} — logged on Curio ✦"`. User can edit inside Instagram.
-- Add the button in `src/routes/visit.$visitId.tsx` (or wherever the current Download button lives — will confirm on implementation) alongside the Download control, matching its style. Icon: `Share2` from `lucide-react` (already in the project via shadcn).
-- No new dependencies. No env vars. No Supabase changes.
+### Files touched
 
-## Out of scope (worth calling out)
+- `src/lib/dither.ts` — rewrite core loop; keep exported function name/signature.
+- `src/components/receipt.tsx` — no logic change; verify `<img>` has transparent background.
 
-- **Auto-posting to a user's Instagram feed:** not possible from a website. Requires the Instagram Graph API, which only works for Business/Creator accounts that have gone through Meta's app review — not viable for anonymous v1 users.
-- **Pre-filling Instagram Stories with stickers:** only native iOS/Android apps can use IG's Stories deep-link (`instagram-stories://share`). A mobile web page can't trigger it reliably across iOS Safari.
-- **Desktop direct-to-IG:** Instagram web upload doesn't accept programmatic file drops from another origin — the download-and-redirect fallback is the ceiling there.
+No DB, server, or asset changes.
