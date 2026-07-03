@@ -38,7 +38,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-display: "Silkscreen", ui-monospace, monospace;
+  --font-display: "Rock 3D", "Silkscreen", ui-monospace, monospace;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
