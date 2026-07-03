@@ -632,7 +632,7 @@ function VisitPage() {
                 {stage === "printed" ? (
                   <>
                     <button
-                      onClick={handleSaveToCameraRoll}
+                      onClick={saved ? () => {} : handleSaveToCameraRoll}
                       disabled={saving || sharing}
                       className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
                       style={{
@@ -642,7 +642,15 @@ function VisitPage() {
                         fontWeight: 700,
                       }}
                     >
-                      {saving ? "Rendering..." : isMobile ? "Save to camera roll" : "Download receipt"}
+                      {saved
+                        ? isMobile
+                          ? "Saved to camera roll"
+                          : "Downloaded receipt"
+                        : saving
+                          ? "Rendering..."
+                          : isMobile
+                            ? "Save to camera roll"
+                            : "Download receipt"}
                     </button>
                     <button
                       onClick={handleShare}
