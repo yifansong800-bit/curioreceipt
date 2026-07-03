@@ -1,22 +1,21 @@
-Refresh the printer illustration so it feels more considered and matches the receipt's warm, tactile aesthetic — without changing the flow or animation logic.
+## Changes to `src/components/printer-stage.tsx`
 
-## What changes
+**Lock printer asset & sizes (no future drift)**
+- Add a comment banner at top: "DO NOT MODIFY — printer asset, SLOT_Y_PCT, SLOT_WIDTH_PCT are locked."
+- Freeze constants: `SLOT_Y_PCT = 60`, `SLOT_WIDTH_PCT = 62`, printer PNG = `src/assets/printer.png`.
 
-Regenerate `src/assets/printer.png` as a bird's-eye render with a more refined industrial-design language:
+**Remove warm-up progress bar**
+- Delete the `warmup` phase UI (progress bar + "warming up" text).
+- Keep the 2s delay — but during it, render only the printer (no bar, no label).
+- Phase state becomes: `idle` (2s printer-only) → `printing` (receipt emerges) → `done` (download enabled).
 
-- Softer, off-white / warm ivory body (subtly tinted toward the receipt's cream `--paper`) so the printer sits in the same visual world as the receipt instead of reading as pure clinical white.
-- Rounded pill-shaped silhouette with a gentle top-shell seam and a slim recessed front panel around the slot, giving it a small, boutique "object" feel (à la Muji / Braun / Teenage Engineering).
-- A darker, precisely drawn slot with a subtle inner lip shadow, sized to keep the current 47% slot width so the receipt still emerges exactly slot-width.
-- One small status indicator dot and one hairline seam — no logos, no text, no clutter.
-- Soft ambient contact shadow beneath, transparent background preserved.
+**Slower, incremental "1 inch at a time" print motion**
+- Replace the current sliding keyframes with a stepped reveal.
+- Total print duration: ~8s (vs current 4s).
+- Use ~8–10 discrete steps, each advancing the receipt ~1 inch (≈96px at base scale), with a short pause between steps to mimic mechanical feed (step easing, not smooth linear).
+- Implementation: framer-motion `animate` with `times` array and `ease: "steps"` per segment, OR CSS `steps()` timing function on a translateY keyframe. Each step: quick push (~150ms) + hold (~700ms).
 
-## What stays the same
+**Download button gating**
+- Unchanged behavior: unlocks exactly when the stepped animation's total duration elapses (`setTimeout` matches new 8s duration + 2s warmup delay).
 
-- `src/components/printer-stage.tsx` logic, timings, warmup bar, and crumpled-paper receipt overlay.
-- Slot geometry constants (`SLOT_Y_PCT`, `SLOT_WIDTH_PCT`) — the new render targets those same proportions so no code changes are needed. If the regenerated image lands slightly off, nudge only those two constants.
-- Receipt component, download gating, and print flow.
-
-## Technical notes
-
-- Single file replaced: `src/assets/printer.png` (transparent PNG, 1024×1024).
-- After regeneration, visually verify the slot sits at ~64% height and ~47% width; adjust the two constants in `printer-stage.tsx` only if needed.
+No changes to receipt look, crumple overlay, printer PNG, slot geometry, or any other file.
