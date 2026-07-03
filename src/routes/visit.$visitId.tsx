@@ -679,6 +679,7 @@ function VisitPage() {
       </div>
     </div>
     <Footer />
+  </>
   );
 }
 
