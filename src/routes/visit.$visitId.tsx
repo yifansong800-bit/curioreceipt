@@ -8,7 +8,7 @@ import exifr from "exifr";
 import { toPng } from "html-to-image";
 import { extractPalette } from "@/lib/palette";
 
-import { supabase } from "@/integrations/supabase/client";
+
 import { getSessionId } from "@/lib/session";
 import { getVisit, updateVisitLocation } from "@/lib/visits.functions";
 import { addArtwork, deleteArtwork, uploadArtworkPhoto } from "@/lib/artworks.functions";
