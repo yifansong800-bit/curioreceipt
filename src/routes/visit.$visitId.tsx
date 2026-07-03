@@ -579,11 +579,39 @@ function AddArtworkForm({
         <MiniField label="ARTIST" value={artist} onChange={setArtist} placeholder="Fang Lijun" />
         <MiniField label="YEAR" value={year} onChange={setYear} placeholder="2003" />
       </div>
-      <MiniField label="MEDIUM" value={medium} onChange={setMedium} placeholder="oil on canvas" />
+      <div>
+        <MiniField label="MEDIUM" value={medium} onChange={setMedium} placeholder="oil on canvas" />
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {MEDIUM_PRESETS.map((m) => {
+            const on = medium.trim().toLowerCase() === m;
+            return (
+              <button
+                type="button"
+                key={m}
+                onClick={() => setMedium(on ? "" : m)}
+                className="px-2 py-1 text-xs border"
+                style={{
+                  borderColor: "var(--ink)",
+                  backgroundColor: on ? "var(--ink)" : "transparent",
+                  color: on ? "var(--paper)" : "var(--ink)",
+                }}
+              >
+                [{m}]
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div>
-        <div className="text-xs uppercase tracking-widest mb-1" style={{ color: "var(--ink-soft)" }}>
-          LINGER TIME
+        <div
+          className="text-xs uppercase tracking-widest mb-1 flex items-baseline gap-2 flex-wrap"
+          style={{ color: "var(--ink-soft)" }}
+        >
+          <span>LINGER TIME</span>
+          <span style={{ textTransform: "none", letterSpacing: 0, fontStyle: "italic" }}>
+            you can estimate this!
+          </span>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <input
@@ -608,6 +636,40 @@ function AddArtworkForm({
           <span>sec</span>
         </div>
       </div>
+
+      <div>
+        <div className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--ink-soft)" }}>
+          RATING
+        </div>
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((n) => {
+            const on = rating >= n;
+            return (
+              <button
+                type="button"
+                key={n}
+                onClick={() => setRating(rating === n ? 0 : n)}
+                aria-label={`${n} star${n === 1 ? "" : "s"}`}
+                className="text-2xl leading-none px-1"
+                style={{ color: on ? "var(--ink)" : "var(--ink-soft)", opacity: on ? 1 : 0.5 }}
+              >
+                {on ? "★" : "☆"}
+              </button>
+            );
+          })}
+          {rating > 0 ? (
+            <button
+              type="button"
+              onClick={() => setRating(0)}
+              className="ml-2 text-xs uppercase tracking-widest underline"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              clear
+            </button>
+          ) : null}
+        </div>
+      </div>
+
 
       <div>
         <div className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--ink-soft)" }}>
