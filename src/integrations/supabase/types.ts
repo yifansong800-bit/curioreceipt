@@ -26,6 +26,7 @@ export type Database = {
           palette: string[]
           photo_taken_at: string | null
           position: number
+          rating: number
           session_id: string
           title: string
           visit_id: string
@@ -42,6 +43,7 @@ export type Database = {
           palette?: string[]
           photo_taken_at?: string | null
           position?: number
+          rating?: number
           session_id: string
           title?: string
           visit_id: string
@@ -58,6 +60,7 @@ export type Database = {
           palette?: string[]
           photo_taken_at?: string | null
           position?: number
+          rating?: number
           session_id?: string
           title?: string
           visit_id?: string

@@ -1,0 +1,1 @@
+ALTER TABLE public.artworks ADD COLUMN rating smallint NOT NULL DEFAULT 0;
