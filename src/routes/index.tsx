@@ -98,7 +98,7 @@ function Index() {
           CURIO
         </div>
         <p
-          className="text-center mt-4 tracking-wide"
+          className="text-center mt-4 text-sm sm:text-base tracking-wide"
           style={{ color: "var(--ink-soft)" }}
         >
           ***** www.curioreceipt.com *****
