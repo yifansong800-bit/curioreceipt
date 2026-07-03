@@ -164,7 +164,7 @@ function Index() {
         <DialogTitle className="text-lg tracking-tight">About Curio</DialogTitle>
         <div className="space-y-4 text-sm sm:text-base leading-relaxed" style={{ color: "var(--ink)" }}>
           <p>
-            Curio helps art lovers and casual visitors log, save, and share memories of their favorite pieces—so they never get lost in your camera roll or Notes app.
+            Curio helps art lovers and casual visitors log, save, and share memories of their favorite pieces — so they never get lost in a camera roll or Notes app.
           </p>
           <p>If you love it, share it. Let's keep our favorite art close.</p>
           <p style={{ color: "var(--ink-soft)" }}>
