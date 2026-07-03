@@ -76,6 +76,7 @@ export function Receipt({
 
       <div style={{ marginTop: 12 }}>
         <div>MUSEUM: {museum || "—"}</div>
+        {location ? <div>LOCATION: {location}</div> : null}
         <div>DATE: {formatReceiptDate(date)}</div>
         <div>
           CURATOR: {(visitorName || "—").toUpperCase()} (SESH #{sess})
