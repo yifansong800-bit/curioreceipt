@@ -48,6 +48,9 @@ export function Receipt({
         paddingLeft: 24,
         paddingRight: 24,
         fontFamily: "var(--font-mono)",
+        overflowWrap: "anywhere",
+        wordBreak: "break-word",
+        hyphens: "auto",
       }}
     >
       <div
