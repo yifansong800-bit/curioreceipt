@@ -15,10 +15,44 @@ const INK_CUTOFF = 90;
 const INK_ALPHA_MAX = 225;
 const INK_ALPHA_MIN = 130;
 
+type DitherResult = { dataUrl: string; width: number; height: number };
+// Module-level cache: identical src+targetWidth returns instantly (sync via
+// getCachedDither). Prevents the receipt from showing empty image slots
+// during the print animation while dithering runs asynchronously.
+const ditherCache = new Map<string, DitherResult>();
+const ditherInflight = new Map<string, Promise<DitherResult>>();
+
+function cacheKey(src: string, targetWidth: number) {
+  return `${src}|${targetWidth}`;
+}
+
+export function getCachedDither(src: string, targetWidth = 220): DitherResult | null {
+  return ditherCache.get(cacheKey(src, targetWidth)) ?? null;
+}
+
 export async function ditherImage(
   src: string,
   targetWidth = 220,
-): Promise<{ dataUrl: string; width: number; height: number }> {
+): Promise<DitherResult> {
+  const key = cacheKey(src, targetWidth);
+  const cached = ditherCache.get(key);
+  if (cached) return cached;
+  const inflight = ditherInflight.get(key);
+  if (inflight) return inflight;
+  const p = (async () => {
+    const result = await ditherImageUncached(src, targetWidth);
+    ditherCache.set(key, result);
+    ditherInflight.delete(key);
+    return result;
+  })();
+  ditherInflight.set(key, p);
+  return p;
+}
+
+async function ditherImageUncached(
+  src: string,
+  targetWidth: number,
+): Promise<DitherResult> {
   const img = await loadImage(src);
   const outputWidth = Math.max(1, Math.round(targetWidth * OUTPUT_SCALE));
   const ratio = img.width > 0 ? outputWidth / img.width : 1;
