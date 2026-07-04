@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ditherImage } from "@/lib/dither";
+import { ditherImage, getCachedDither } from "@/lib/dither";
 import { formatLingerShort, formatReceiptDate, formatTotalTime } from "@/lib/format";
 
 export type ReceiptArtwork = {
@@ -204,20 +204,28 @@ function ImageGrid({ artworks }: { artworks: ReceiptArtwork[] }) {
 }
 
 function DitheredImage({ src, size }: { src: string; size: number }) {
-  const [out, setOut] = useState<string | null>(null);
-  const [aspectRatio, setAspectRatio] = useState<number>(1);
-
   // Quantize size to avoid re-dithering on tiny sub-pixel changes from
   // ResizeObserver / zoom scaling during the print animation — which
   // was causing brief flashes back to the original (non-dithered) image.
   const bucketed = Math.max(32, Math.round(size / 8) * 8);
+  const target = bucketed * 1.45;
+
+  // Seed from the module-level cache synchronously so the image is present
+  // on the very first paint of the print animation on mobile. Without this,
+  // the async dither could resolve mid-feed and the receipt showed empty
+  // slots until it finished.
+  const initial = getCachedDither(src, target);
+  const [out, setOut] = useState<string | null>(initial?.dataUrl ?? null);
+  const [aspectRatio, setAspectRatio] = useState<number>(
+    initial && initial.height > 0 ? initial.width / initial.height : 1,
+  );
 
   useEffect(() => {
     let cancelled = false;
     // Do NOT clear `out` here — keep the previous dithered frame on screen
     // while the new one computes so the receipt never flashes back to the
     // original color image mid-print.
-    ditherImage(src, bucketed * 1.45)
+    ditherImage(src, target)
       .then((result) => {
         if (!cancelled) {
           setOut(result.dataUrl);
@@ -233,7 +241,7 @@ function DitheredImage({ src, size }: { src: string; size: number }) {
     return () => {
       cancelled = true;
     };
-  }, [src, bucketed]);
+  }, [src, target]);
 
   const displayHeight = Math.max(1, Math.round(size / aspectRatio));
 
