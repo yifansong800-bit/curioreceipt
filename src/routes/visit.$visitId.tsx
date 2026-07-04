@@ -158,11 +158,34 @@ function VisitPage() {
   }
 
   // Warm-up: show only the printer for a moment, then start feeding.
+  // Also pre-dither all artwork images so they appear on the very first
+  // frame of the feed animation — otherwise mobile could show empty image
+  // slots until the async dither resolved mid-print.
   useEffect(() => {
     if (view !== "print" || stage !== "idle") return;
-    const t = window.setTimeout(() => setStage("printing"), PRINTER_WARMUP_MS);
-    return () => window.clearTimeout(t);
-  }, [view, stage]);
+    let cancelled = false;
+    const withImages = artworks.filter((a) => a.image_url);
+    const cols = withImages.length === 1 ? 1 : 2;
+    const cellW = cols === 1 ? 280 : 140;
+    const bucketed = Math.max(32, Math.round(cellW / 8) * 8);
+    const target = bucketed * 1.45;
+    const warmup = Promise.all(
+      withImages.map((a) =>
+        import("@/lib/dither").then(({ ditherImage }) =>
+          ditherImage(a.image_url!, target).catch(() => null),
+        ),
+      ),
+    );
+    const minDelay = new Promise<void>((r) => window.setTimeout(r, PRINTER_WARMUP_MS));
+    // Cap the wait so a slow/broken image can't block the print forever.
+    const maxDelay = new Promise<void>((r) => window.setTimeout(r, 4000));
+    Promise.race([Promise.all([warmup, minDelay]), maxDelay]).then(() => {
+      if (!cancelled) setStage("printing");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [view, stage, artworks]);
 
   // Keep the printer itself in view during warm-up. Without this, the browser
   // can preserve the compose screen's scroll position and show only the
