@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ditherImage } from "@/lib/dither";
+import { ditherImage, getCachedDither } from "@/lib/dither";
 import { formatLingerShort, formatReceiptDate, formatTotalTime } from "@/lib/format";
 
 export type ReceiptArtwork = {
