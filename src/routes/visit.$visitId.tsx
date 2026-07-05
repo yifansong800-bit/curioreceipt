@@ -93,6 +93,17 @@ function VisitPage() {
     queryFn: async () => getFn({ data: { visitId, sessionId } }),
   });
 
+  // Remember the visitor's name so they don't have to re-enter it when
+  // logging another museum in the same browser session.
+  useEffect(() => {
+    const name = visitQuery.data && "visitor_name" in visitQuery.data ? visitQuery.data.visitor_name : null;
+    if (name) {
+      try {
+        localStorage.setItem("curio:visitor", name);
+      } catch {}
+    }
+  }, [visitQuery.data]);
+
   const visit = visitQuery.data;
   const artworks: ReceiptArtwork[] = useMemo(
     () =>
