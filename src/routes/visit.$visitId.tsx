@@ -769,7 +769,6 @@ function VisitPage() {
                     </button>
                     <Link
                       to="/"
-                      search={{ another: 1 }}
                       className="block w-full text-center uppercase tracking-widest text-sm py-3 border"
                       style={{
                         borderColor: "var(--ink)",
