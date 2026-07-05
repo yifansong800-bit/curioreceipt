@@ -134,13 +134,29 @@ function Index() {
             if (canSubmit) mut.mutate();
           }}
         >
-          <Field
-            label="YOUR NAME"
-            value={visitor}
-            onChange={setVisitor}
-            placeholder="Michael Scott"
-            maxLength={60}
-          />
+          {showNameField ? (
+            <Field
+              label="YOUR NAME"
+              value={visitor}
+              onChange={setVisitor}
+              placeholder="Michael Scott"
+              maxLength={60}
+            />
+          ) : (
+            <div
+              className="text-xs uppercase tracking-widest flex items-center gap-2 flex-wrap"
+              style={{ color: "var(--ink-soft)", fontFamily: "var(--font-mono)" }}
+            >
+              <span>VISITING AS {(rememberedVisitor ?? "").toUpperCase()}</span>
+              <button
+                type="button"
+                onClick={() => setEditingName(true)}
+                className="underline"
+              >
+                not you?
+              </button>
+            </div>
+          )}
           <MuseumAutocomplete
             value={museum}
             onChange={(v) => {
