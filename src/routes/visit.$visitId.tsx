@@ -1044,6 +1044,19 @@ function AddArtworkForm({
   return (
     <form
       onSubmit={handleSubmit}
+      onKeyDown={(e) => {
+        // Prevent Enter from submitting the whole form — users must
+        // click the "add to receipt" button so they don't accidentally
+        // save an empty artwork.
+        const target = e.target as HTMLElement;
+        if (
+          e.key === "Enter" &&
+          target.tagName !== "TEXTAREA" &&
+          !(target instanceof HTMLButtonElement)
+        ) {
+          e.preventDefault();
+        }
+      }}
       className="mt-8 border p-4 space-y-4"
       style={{ borderColor: "var(--border)" }}
     >
