@@ -748,7 +748,7 @@ function VisitPage() {
                   <>
                     <button
                       onClick={saved ? () => {} : handleSaveToCameraRoll}
-                      disabled={saving || sharing}
+                      disabled={saving}
                       className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
                       style={{
                         borderColor: "var(--ink)",
@@ -767,31 +767,9 @@ function VisitPage() {
                             ? "Save to camera roll"
                             : "Download receipt"}
                     </button>
-                    <button
-                      onClick={shared ? () => {} : handleShare}
-                      disabled={sharing || saving}
-                      className="w-full inline-flex items-center justify-center gap-2 uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
-                      style={{
-                        borderColor: "var(--ink)",
-                        backgroundColor: "var(--paper)",
-                        color: "var(--ink)",
-                        fontWeight: 700,
-                      }}
-                    >
-                      <Share2 className="h-4 w-4" />
-                      {shared ? "Shared to Instagram" : sharing ? "Preparing..." : "Share to Instagram"}
-                    </button>
-
-                    {shareHint ? (
-                      <p
-                        className="text-xs text-center"
-                        style={{ color: "var(--ink-soft)" }}
-                      >
-                        {shareHint}
-                      </p>
-                    ) : null}
                     <Link
                       to="/"
+                      search={{ another: 1 }}
                       className="block w-full text-center uppercase tracking-widest text-sm py-3 border"
                       style={{
                         borderColor: "var(--ink)",
