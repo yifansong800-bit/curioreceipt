@@ -288,8 +288,9 @@ function VisitPage() {
       const opts = {
         pixelRatio: 2,
         cacheBust: true,
-        backgroundColor: "#f5ead5",
-        quality: 0.95,
+        // Transparent background — only the receipt paper (with its own
+        // cream fill + scalloped edges) shows in the exported image.
+        backgroundColor: undefined,
         width: naturalWidth,
         height: naturalHeight,
         canvasWidth: naturalWidth,
@@ -313,20 +314,10 @@ function VisitPage() {
       }
 
       if (canvas) {
-        const flat = document.createElement("canvas");
-        flat.width = canvas.width;
-        flat.height = canvas.height;
-        const fctx = flat.getContext("2d");
-        if (fctx) {
-          fctx.fillStyle = "#f5ead5";
-          fctx.fillRect(0, 0, flat.width, flat.height);
-          fctx.drawImage(canvas, 0, 0);
-          dataUrl = flat.toDataURL("image/jpeg", 0.95);
-        } else {
-          dataUrl = canvas.toDataURL("image/jpeg", 0.95);
-        }
+        dataUrl = canvas.toDataURL("image/png");
       } else {
-        dataUrl = await toJpeg(node, opts);
+        const { toPng } = await import("html-to-image");
+        dataUrl = await toPng(node, opts);
       }
     } finally {
       stage.remove();
@@ -335,7 +326,7 @@ function VisitPage() {
     const res = await fetch(dataUrl);
     const blob = await res.blob();
     const stamp = new Date().toISOString().slice(0, 10);
-    return { blob, filename: `curio-${slugify(visit.museum)}-${stamp}.jpg` };
+    return { blob, filename: `curio-${slugify(visit.museum)}-${stamp}.png` };
   }
 
 
