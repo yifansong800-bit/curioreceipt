@@ -138,7 +138,6 @@ function VisitPage() {
   function proceedToPrint() {
     setConfirmMissing(null);
     setSaved(false);
-    setShared(false);
     setStage("idle");
     setView("print");
   }
@@ -151,7 +150,6 @@ function VisitPage() {
   function reprint() {
     setStage("idle");
     setSaved(false);
-    setShared(false);
   }
 
   // Warm-up: show only the printer for a moment, then start feeding.
