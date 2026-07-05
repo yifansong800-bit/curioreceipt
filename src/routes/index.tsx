@@ -43,14 +43,30 @@ function Index() {
   const [visitor, setVisitor] = useState("");
   const [museum, setMuseum] = useState("");
   const [picked, setPicked] = useState<Suggestion | null>(null);
+  const [rememberedVisitor, setRememberedVisitor] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("curio:visitor");
+      if (stored && stored.trim()) {
+        setRememberedVisitor(stored);
+        setVisitor(stored);
+      }
+    } catch {}
+  }, []);
 
   const mut = useMutation({
     mutationFn: async () => {
       const sessionId = getSessionId();
+      const name = visitor.trim();
+      try {
+        localStorage.setItem("curio:visitor", name);
+      } catch {}
       return createFn({
         data: {
           sessionId,
-          visitorName: visitor.trim(),
+          visitorName: name,
           museum: museum.trim(),
           city: picked?.city ?? null,
           country: picked?.country ?? null,
@@ -64,6 +80,7 @@ function Index() {
 
   const opening = mut.isPending || mut.isSuccess;
   const canSubmit = visitor.trim().length > 0 && museum.trim().length > 0 && !opening;
+  const showNameField = !rememberedVisitor || editingName;
 
   return (
     <Dialog>
@@ -117,13 +134,29 @@ function Index() {
             if (canSubmit) mut.mutate();
           }}
         >
-          <Field
-            label="YOUR NAME"
-            value={visitor}
-            onChange={setVisitor}
-            placeholder="Michael Scott"
-            maxLength={60}
-          />
+          {showNameField ? (
+            <Field
+              label="YOUR NAME"
+              value={visitor}
+              onChange={setVisitor}
+              placeholder="Michael Scott"
+              maxLength={60}
+            />
+          ) : (
+            <div
+              className="text-xs uppercase tracking-widest flex items-center gap-2 flex-wrap"
+              style={{ color: "var(--ink-soft)", fontFamily: "var(--font-mono)" }}
+            >
+              <span>VISITING AS {(rememberedVisitor ?? "").toUpperCase()}</span>
+              <button
+                type="button"
+                onClick={() => setEditingName(true)}
+                className="underline"
+              >
+                not you?
+              </button>
+            </div>
+          )}
           <MuseumAutocomplete
             value={museum}
             onChange={(v) => {

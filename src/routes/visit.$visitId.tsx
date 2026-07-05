@@ -3,9 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Share2 } from "lucide-react";
+
 import exifr from "exifr";
-import { toCanvas, toJpeg } from "html-to-image";
+import { toCanvas } from "html-to-image";
 import { extractPalette } from "@/lib/palette";
 import { downscaleImage } from "@/lib/downscale";
 
@@ -93,6 +93,17 @@ function VisitPage() {
     queryFn: async () => getFn({ data: { visitId, sessionId } }),
   });
 
+  // Remember the visitor's name so they don't have to re-enter it when
+  // logging another museum in the same browser session.
+  useEffect(() => {
+    const name = visitQuery.data && "visitor_name" in visitQuery.data ? visitQuery.data.visitor_name : null;
+    if (name) {
+      try {
+        localStorage.setItem("curio:visitor", name);
+      } catch {}
+    }
+  }, [visitQuery.data]);
+
   const visit = visitQuery.data;
   const artworks: ReceiptArtwork[] = useMemo(
     () =>
@@ -111,11 +122,8 @@ function VisitPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [confirmMissing, setConfirmMissing] = useState<number | null>(null);
 
-  const [sharing, setSharing] = useState(false);
-  const [shareHint, setShareHint] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [shared, setShared] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1);
@@ -141,7 +149,6 @@ function VisitPage() {
   function proceedToPrint() {
     setConfirmMissing(null);
     setSaved(false);
-    setShared(false);
     setStage("idle");
     setView("print");
   }
@@ -154,7 +161,6 @@ function VisitPage() {
   function reprint() {
     setStage("idle");
     setSaved(false);
-    setShared(false);
   }
 
   // Warm-up: show only the printer for a moment, then start feeding.
@@ -282,8 +288,9 @@ function VisitPage() {
       const opts = {
         pixelRatio: 2,
         cacheBust: true,
-        backgroundColor: "#f5ead5",
-        quality: 0.95,
+        // Transparent background — only the receipt paper (with its own
+        // cream fill + scalloped edges) shows in the exported image.
+        backgroundColor: undefined,
         width: naturalWidth,
         height: naturalHeight,
         canvasWidth: naturalWidth,
@@ -307,20 +314,10 @@ function VisitPage() {
       }
 
       if (canvas) {
-        const flat = document.createElement("canvas");
-        flat.width = canvas.width;
-        flat.height = canvas.height;
-        const fctx = flat.getContext("2d");
-        if (fctx) {
-          fctx.fillStyle = "#f5ead5";
-          fctx.fillRect(0, 0, flat.width, flat.height);
-          fctx.drawImage(canvas, 0, 0);
-          dataUrl = flat.toDataURL("image/jpeg", 0.95);
-        } else {
-          dataUrl = canvas.toDataURL("image/jpeg", 0.95);
-        }
+        dataUrl = canvas.toDataURL("image/png");
       } else {
-        dataUrl = await toJpeg(node, opts);
+        const { toPng } = await import("html-to-image");
+        dataUrl = await toPng(node, opts);
       }
     } finally {
       stage.remove();
@@ -329,7 +326,7 @@ function VisitPage() {
     const res = await fetch(dataUrl);
     const blob = await res.blob();
     const stamp = new Date().toISOString().slice(0, 10);
-    return { blob, filename: `curio-${slugify(visit.museum)}-${stamp}.jpg` };
+    return { blob, filename: `curio-${slugify(visit.museum)}-${stamp}.png` };
   }
 
 
@@ -339,7 +336,7 @@ function VisitPage() {
     try {
       const out = await renderReceiptBlob();
       if (!out) return;
-      const file = new File([out.blob], out.filename, { type: "image/jpeg" });
+      const file = new File([out.blob], out.filename, { type: "image/png" });
       const nav = navigator as Navigator & {
         canShare?: (data: ShareData) => boolean;
       };
@@ -370,48 +367,7 @@ function VisitPage() {
   }
 
 
-  async function handleShare() {
-    if (!visit) return;
-    setSharing(true);
-    setShareHint(null);
-    try {
-      const out = await renderReceiptBlob();
-      if (!out) return;
-      const file = new File([out.blob], out.filename, { type: "image/jpeg" });
-      const caption = `My visit to ${visit.museum} — logged on Curio ✦`;
-      const nav = navigator as Navigator & {
-        canShare?: (data: ShareData) => boolean;
-      };
-      if (nav.canShare?.({ files: [file] })) {
-        try {
-          await nav.share({
-            files: [file],
-            title: "My Curio receipt",
-            text: caption,
-          });
-          setShared(true);
-          return;
-        } catch (err) {
-          if ((err as DOMException)?.name === "AbortError") return;
-        }
-      }
-      // Fallback: download + open Instagram
-      const url = URL.createObjectURL(out.blob);
-      const link = document.createElement("a");
-      link.download = out.filename;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
-      try {
-        await navigator.clipboard?.writeText(caption);
-      } catch {}
-      window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
-      setShareHint("Saved to your device — drop it into an Instagram Story or Post.");
-      setShared(true);
-    } finally {
-      setSharing(false);
-    }
-  }
+
 
 
   if (visitQuery.isLoading || !sessionId) {
@@ -794,7 +750,7 @@ function VisitPage() {
                   <>
                     <button
                       onClick={saved ? () => {} : handleSaveToCameraRoll}
-                      disabled={saving || sharing}
+                      disabled={saving}
                       className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
                       style={{
                         borderColor: "var(--ink)",
@@ -813,29 +769,6 @@ function VisitPage() {
                             ? "Save to camera roll"
                             : "Download receipt"}
                     </button>
-                    <button
-                      onClick={shared ? () => {} : handleShare}
-                      disabled={sharing || saving}
-                      className="w-full inline-flex items-center justify-center gap-2 uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
-                      style={{
-                        borderColor: "var(--ink)",
-                        backgroundColor: "var(--paper)",
-                        color: "var(--ink)",
-                        fontWeight: 700,
-                      }}
-                    >
-                      <Share2 className="h-4 w-4" />
-                      {shared ? "Shared to Instagram" : sharing ? "Preparing..." : "Share to Instagram"}
-                    </button>
-
-                    {shareHint ? (
-                      <p
-                        className="text-xs text-center"
-                        style={{ color: "var(--ink-soft)" }}
-                      >
-                        {shareHint}
-                      </p>
-                    ) : null}
                     <Link
                       to="/"
                       className="block w-full text-center uppercase tracking-widest text-sm py-3 border"
@@ -1111,6 +1044,19 @@ function AddArtworkForm({
   return (
     <form
       onSubmit={handleSubmit}
+      onKeyDown={(e) => {
+        // Prevent Enter from submitting the whole form — users must
+        // click the "add to receipt" button so they don't accidentally
+        // save an empty artwork.
+        const target = e.target as HTMLElement;
+        if (
+          e.key === "Enter" &&
+          target.tagName !== "TEXTAREA" &&
+          !(target instanceof HTMLButtonElement)
+        ) {
+          e.preventDefault();
+        }
+      }}
       className="mt-8 border p-4 space-y-4"
       style={{ borderColor: "var(--border)" }}
     >
