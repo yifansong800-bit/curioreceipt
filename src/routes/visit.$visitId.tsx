@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import exifr from "exifr";
-import { toCanvas, toJpeg } from "html-to-image";
+import { toCanvas } from "html-to-image";
 import { extractPalette } from "@/lib/palette";
 import { downscaleImage } from "@/lib/downscale";
 
