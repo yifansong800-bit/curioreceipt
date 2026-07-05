@@ -365,48 +365,7 @@ function VisitPage() {
   }
 
 
-  async function handleShare() {
-    if (!visit) return;
-    setSharing(true);
-    setShareHint(null);
-    try {
-      const out = await renderReceiptBlob();
-      if (!out) return;
-      const file = new File([out.blob], out.filename, { type: "image/jpeg" });
-      const caption = `My visit to ${visit.museum} — logged on Curio ✦`;
-      const nav = navigator as Navigator & {
-        canShare?: (data: ShareData) => boolean;
-      };
-      if (nav.canShare?.({ files: [file] })) {
-        try {
-          await nav.share({
-            files: [file],
-            title: "My Curio receipt",
-            text: caption,
-          });
-          setShared(true);
-          return;
-        } catch (err) {
-          if ((err as DOMException)?.name === "AbortError") return;
-        }
-      }
-      // Fallback: download + open Instagram
-      const url = URL.createObjectURL(out.blob);
-      const link = document.createElement("a");
-      link.download = out.filename;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
-      try {
-        await navigator.clipboard?.writeText(caption);
-      } catch {}
-      window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
-      setShareHint("Saved to your device — drop it into an Instagram Story or Post.");
-      setShared(true);
-    } finally {
-      setSharing(false);
-    }
-  }
+
 
 
   if (visitQuery.isLoading || !sessionId) {
