@@ -260,33 +260,39 @@ function VisitPage() {
         }
       }
 
-      // Ensure every <img> inside the clone (dithered artwork data URLs) is
-      // fully decoded before snapshotting. On iOS Safari html-to-image
-      // frequently produces a blank capture for images that haven't finished
-      // decoding at snapshot time.
+      // iOS Safari + html-to-image often drops <img> content inside the
+      // <foreignObject> SVG render — the downloaded receipt comes back with
+      // the image slots blank while text renders fine. To make the artwork
+      // capture deterministic across every device, we:
+      //   1. record each <img>'s position + src within the clone
+      //   2. remove the <img>s from the clone before snapshotting layout
+      //   3. composite the dithered images onto the resulting canvas manually
+      //      via drawImage — this can't fail the way foreignObject does.
+      const nodeRect = node.getBoundingClientRect();
       const imgs = Array.from(node.querySelectorAll("img"));
-      await Promise.all(
-        imgs.map(async (img) => {
-          if (!(img.complete && img.naturalWidth > 0)) {
-            await new Promise<void>((resolve) => {
-              const done = () => resolve();
-              img.addEventListener("load", done, { once: true });
-              img.addEventListener("error", done, { once: true });
-            });
-          }
-          try {
-            await img.decode();
-          } catch {
-            /* ignore */
-          }
-        }),
-      );
+      const imgPlacements = imgs
+        .map((img) => {
+          const r = img.getBoundingClientRect();
+          const src = img.getAttribute("src") || "";
+          if (!src || r.width === 0 || r.height === 0) return null;
+          return {
+            src,
+            x: r.left - nodeRect.left,
+            y: r.top - nodeRect.top,
+            w: r.width,
+            h: r.height,
+          };
+        })
+        .filter((p): p is NonNullable<typeof p> => p !== null);
+      // Strip the imgs from the clone; we'll draw them in ourselves.
+      imgs.forEach((img) => img.parentElement?.removeChild(img));
 
       const naturalWidth = node.offsetWidth || 360;
       const naturalHeight = node.offsetHeight || node.scrollHeight;
 
+      const pixelRatio = 2;
       const opts = {
-        pixelRatio: 2,
+        pixelRatio,
         cacheBust: true,
         // Transparent background — only the receipt paper (with its own
         // cream fill + scalloped edges) shows in the exported image.
@@ -298,27 +304,42 @@ function VisitPage() {
         style: { transform: "none", transformOrigin: "top left" },
       } as const;
 
-      // iOS Safari + html-to-image: the first pass often drops <img>
-      // content in the <foreignObject> render. We loop, sampling the
-      // image-grid region of the canvas after each pass; if it's still
-      // almost entirely paper-cream (i.e. artworks didn't render) we
-      // retry. Cap at 5 attempts, then use whatever we've got.
-      const MAX_ATTEMPTS = 5;
-      let canvas: HTMLCanvasElement | null = null;
-      const hasArtworkImages = imgs.length > 0;
-      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-        canvas = await toCanvas(node, opts);
-        if (!hasArtworkImages) break;
-        if (canvasHasInk(canvas)) break;
-        await new Promise((r) => setTimeout(r, 120));
+      const canvas: HTMLCanvasElement = await toCanvas(node, opts);
+
+      // Composite the artwork images onto the snapshot canvas.
+      if (imgPlacements.length > 0) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          const loaded = await Promise.all(
+            imgPlacements.map(
+              (p) =>
+                new Promise<{ p: typeof p; img: HTMLImageElement | null }>((resolve) => {
+                  const im = new Image();
+                  im.onload = () => resolve({ p, img: im });
+                  im.onerror = () => resolve({ p, img: null });
+                  im.src = p.src;
+                }),
+            ),
+          );
+          for (const { p, img } of loaded) {
+            if (!img) continue;
+            try {
+              await img.decode();
+            } catch {
+              /* ignore */
+            }
+            ctx.drawImage(
+              img,
+              Math.round(p.x * pixelRatio),
+              Math.round(p.y * pixelRatio),
+              Math.round(p.w * pixelRatio),
+              Math.round(p.h * pixelRatio),
+            );
+          }
+        }
       }
 
-      if (canvas) {
-        dataUrl = canvas.toDataURL("image/png");
-      } else {
-        const { toPng } = await import("html-to-image");
-        dataUrl = await toPng(node, opts);
-      }
+      dataUrl = canvas.toDataURL("image/png");
     } finally {
       stage.remove();
     }
