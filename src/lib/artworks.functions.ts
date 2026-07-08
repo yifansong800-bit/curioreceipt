@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { generateText } from "ai";
+import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
 const uuid = z.string().uuid();
 
@@ -165,4 +167,97 @@ export const uploadArtworkPhoto = createServerFn({ method: "POST" })
       .upload(key, bytes, { contentType: data.contentType, upsert: false });
     if (error) throw new Error(error.message);
     return { path: key };
+  });
+
+const identifySchema = z.object({
+  confident: z.boolean(),
+  title: z.string().nullable(),
+  artist: z.string().nullable(),
+  year: z.string().nullable(),
+  medium: z.string().nullable(),
+});
+
+const IDENTIFY_ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_IDENTIFY_BASE64 = Math.ceil((4 * 1024 * 1024 * 4) / 3) + 32;
+
+function parseIdentifyJson(text: string) {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
+  const src = fenced ?? text;
+  const s = src.indexOf("{");
+  const e = src.lastIndexOf("}");
+  if (s === -1 || e === -1 || e <= s) return null;
+  try {
+    return identifySchema.parse(JSON.parse(src.slice(s, e + 1)));
+  } catch {
+    return null;
+  }
+}
+
+export const identifyArtwork = createServerFn({ method: "POST" })
+  .inputValidator((raw: unknown) =>
+    z
+      .object({
+        imageBase64: z.string().min(16).max(MAX_IDENTIFY_BASE64),
+        mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+        museum: z.string().trim().max(160).optional(),
+        city: z.string().trim().max(120).nullable().optional(),
+        country: z.string().trim().max(120).nullable().optional(),
+      })
+      .parse(raw),
+  )
+  .handler(async ({ data }) => {
+    const empty = { confident: false, title: null, artist: null, year: null, medium: null };
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) return empty;
+    if (!IDENTIFY_ALLOWED_MIME.has(data.mimeType)) return empty;
+
+    const context = [
+      data.museum ? `Museum: ${data.museum}` : null,
+      data.city ? `City: ${data.city}` : null,
+      data.country ? `Country: ${data.country}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+    const prompt =
+      "You identify famous, publicly-known artworks from a photograph. " +
+      (context ? `Context — ${context}. ` : "") +
+      'Return ONLY a JSON object with keys confident (boolean), title, artist, year, medium — each a string or null. ' +
+      'Use the artwork\'s creation year (e.g. "1889", "c. 1503", "1912–1913"). ' +
+      "If you are not confident this is a specific real, publicly-known artwork, " +
+      "set confident=false and every other field to null. Never guess.";
+
+    const abort = new AbortController();
+    const timeout = setTimeout(() => abort.abort(), 8000);
+    try {
+      const gateway = createLovableAiGatewayProvider(key);
+      const { text } = await generateText({
+        model: gateway("google/gemini-3-flash-preview"),
+        temperature: 0,
+        maxOutputTokens: 300,
+        abortSignal: abort.signal,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              {
+                type: "image",
+                image: `data:${data.mimeType};base64,${data.imageBase64}`,
+              },
+            ],
+          },
+        ],
+      });
+      const parsed = parseIdentifyJson(text);
+      if (!parsed || !parsed.confident) return empty;
+      return parsed;
+    } catch (err) {
+      if (!abort.signal.aborted) {
+        console.error("identifyArtwork failed", err instanceof Error ? err.message : err);
+      }
+      return empty;
+    } finally {
+      clearTimeout(timeout);
+    }
   });

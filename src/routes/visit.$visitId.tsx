@@ -12,7 +12,7 @@ import { downscaleImage } from "@/lib/downscale";
 
 import { getSessionId } from "@/lib/session";
 import { getVisit, updateVisitLocation } from "@/lib/visits.functions";
-import { addArtwork, deleteArtwork, updateArtwork, uploadArtworkPhoto } from "@/lib/artworks.functions";
+import { addArtwork, deleteArtwork, updateArtwork, uploadArtworkPhoto, identifyArtwork } from "@/lib/artworks.functions";
 import { Receipt, type ReceiptArtwork } from "@/components/receipt";
 import { PrinterStage } from "@/components/printer-stage";
 import { ArtworkCard } from "@/components/artwork-card";
@@ -495,6 +495,9 @@ function VisitPage() {
                   <AddArtworkForm
                     sessionId={sessionId}
                     visitId={visitId}
+                    museum={visit.museum}
+                    city={visit.city ?? null}
+                    country={visit.country ?? null}
                     onSubmit={async (payload) => {
                       const tempId = `temp-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
 
@@ -913,9 +916,15 @@ function AddArtworkForm({
   onSubmit,
   sessionId: _sessionId,
   visitId: _visitId,
+  museum,
+  city,
+  country,
 }: {
   sessionId: string;
   visitId: string;
+  museum: string;
+  city: string | null;
+  country: string | null;
   onSubmit: (data: {
     file: File | null;
     title: string;
@@ -944,6 +953,75 @@ function AddArtworkForm({
   const [uploadClosed, setUploadClosed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const identifyFn = useServerFn(identifyArtwork);
+  const [identifying, setIdentifying] = useState(false);
+  const [identifyHint, setIdentifyHint] = useState<string | null>(null);
+  const identifyAbortRef = useRef<AbortController | null>(null);
+  const titleRef = useRef(title);
+  const artistRef = useRef(artist);
+  const yearRef = useRef(year);
+  const mediumRef = useRef(medium);
+  useEffect(() => { titleRef.current = title; }, [title]);
+  useEffect(() => { artistRef.current = artist; }, [artist]);
+  useEffect(() => { yearRef.current = year; }, [year]);
+  useEffect(() => { mediumRef.current = medium; }, [medium]);
+
+  async function handleIdentify() {
+    if (!file || identifying) return;
+    identifyAbortRef.current?.abort();
+    const abort = new AbortController();
+    identifyAbortRef.current = abort;
+    setIdentifying(true);
+    setIdentifyHint(null);
+    try {
+      const downscaled = await downscaleImage(file, 1024, 0.85);
+      if (abort.signal.aborted) return;
+      const buf = await downscaled.arrayBuffer();
+      let binary = "";
+      const bytes = new Uint8Array(buf);
+      for (let i = 0; i < bytes.length; i += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      }
+      const imageBase64 = btoa(binary);
+      if (abort.signal.aborted) return;
+      const result = await identifyFn({
+        data: {
+          imageBase64,
+          mimeType: "image/jpeg",
+          museum,
+          city,
+          country,
+        },
+      });
+      if (abort.signal.aborted) return;
+      if (!result?.confident) {
+        setIdentifyHint("Couldn't identify — enter details manually.");
+        window.setTimeout(() => setIdentifyHint(null), 4000);
+        return;
+      }
+      let filledAny = false;
+      if (result.title && !titleRef.current.trim()) { setTitle(result.title); filledAny = true; }
+      if (result.artist && !artistRef.current.trim()) { setArtist(result.artist); filledAny = true; }
+      if (result.year && !yearRef.current.trim()) { setYear(result.year); filledAny = true; }
+      if (result.medium && !mediumRef.current.trim()) { setMedium(result.medium); filledAny = true; }
+      setIdentifyHint(
+        filledAny
+          ? "Filled from photo — edit anything."
+          : "Nothing new to fill — details already entered.",
+      );
+      window.setTimeout(() => setIdentifyHint(null), 4000);
+    } catch (err) {
+      if (!abort.signal.aborted) {
+        console.error("identify artwork failed", err);
+        setIdentifyHint("Couldn't identify right now — try again.");
+        window.setTimeout(() => setIdentifyHint(null), 4000);
+      }
+    } finally {
+      if (identifyAbortRef.current === abort) identifyAbortRef.current = null;
+      setIdentifying(false);
+    }
+  }
+
   useEffect(() => {
     if (!file) {
       setPreview(null);
@@ -955,6 +1033,8 @@ function AddArtworkForm({
   }, [file]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    identifyAbortRef.current?.abort();
+    setIdentifyHint(null);
     const picked = e.target.files?.[0];
     e.target.value = ""; // allow re-picking the same file
     if (!picked) return;
@@ -1051,6 +1131,8 @@ function AddArtworkForm({
     setCustomEmotion("");
     setRating(0);
     setFile(null);
+    identifyAbortRef.current?.abort();
+    setIdentifyHint(null);
     setSavedCount((n) => n + 1);
     setUploadClosed(true);
 
@@ -1142,6 +1224,30 @@ function AddArtworkForm({
           )}
         </button>
       )}
+
+      {file && preview ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs" style={{ color: "var(--ink-soft)" }}>
+            Can't remember the details?
+          </span>
+          <button
+            type="button"
+            onClick={handleIdentify}
+            disabled={identifying}
+            className="text-xs uppercase tracking-widest px-2 py-1 border disabled:opacity-50"
+            style={{ borderColor: "var(--ink)" }}
+          >
+            {identifying ? "Identifying…" : "✦ Identify artwork"}
+          </button>
+          {identifyHint ? (
+            <span className="text-xs" style={{ color: "var(--ink-soft)" }}>
+              {identifyHint}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+
 
 
       <MiniField label="TITLE" value={title} onChange={setTitle} placeholder="SARS" />
