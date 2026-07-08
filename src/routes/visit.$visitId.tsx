@@ -953,6 +953,75 @@ function AddArtworkForm({
   const [uploadClosed, setUploadClosed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const identifyFn = useServerFn(identifyArtwork);
+  const [identifying, setIdentifying] = useState(false);
+  const [identifyHint, setIdentifyHint] = useState<string | null>(null);
+  const identifyAbortRef = useRef<AbortController | null>(null);
+  const titleRef = useRef(title);
+  const artistRef = useRef(artist);
+  const yearRef = useRef(year);
+  const mediumRef = useRef(medium);
+  useEffect(() => { titleRef.current = title; }, [title]);
+  useEffect(() => { artistRef.current = artist; }, [artist]);
+  useEffect(() => { yearRef.current = year; }, [year]);
+  useEffect(() => { mediumRef.current = medium; }, [medium]);
+
+  async function handleIdentify() {
+    if (!file || identifying) return;
+    identifyAbortRef.current?.abort();
+    const abort = new AbortController();
+    identifyAbortRef.current = abort;
+    setIdentifying(true);
+    setIdentifyHint(null);
+    try {
+      const downscaled = await downscaleImage(file, 1024, 0.85);
+      if (abort.signal.aborted) return;
+      const buf = await downscaled.arrayBuffer();
+      let binary = "";
+      const bytes = new Uint8Array(buf);
+      for (let i = 0; i < bytes.length; i += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      }
+      const imageBase64 = btoa(binary);
+      if (abort.signal.aborted) return;
+      const result = await identifyFn({
+        data: {
+          imageBase64,
+          mimeType: "image/jpeg",
+          museum,
+          city,
+          country,
+        },
+      });
+      if (abort.signal.aborted) return;
+      if (!result?.confident) {
+        setIdentifyHint("Couldn't identify — enter details manually.");
+        window.setTimeout(() => setIdentifyHint(null), 4000);
+        return;
+      }
+      let filledAny = false;
+      if (result.title && !titleRef.current.trim()) { setTitle(result.title); filledAny = true; }
+      if (result.artist && !artistRef.current.trim()) { setArtist(result.artist); filledAny = true; }
+      if (result.year && !yearRef.current.trim()) { setYear(result.year); filledAny = true; }
+      if (result.medium && !mediumRef.current.trim()) { setMedium(result.medium); filledAny = true; }
+      setIdentifyHint(
+        filledAny
+          ? "Filled from photo — edit anything."
+          : "Nothing new to fill — details already entered.",
+      );
+      window.setTimeout(() => setIdentifyHint(null), 4000);
+    } catch (err) {
+      if (!abort.signal.aborted) {
+        console.error("identify artwork failed", err);
+        setIdentifyHint("Couldn't identify right now — try again.");
+        window.setTimeout(() => setIdentifyHint(null), 4000);
+      }
+    } finally {
+      if (identifyAbortRef.current === abort) identifyAbortRef.current = null;
+      setIdentifying(false);
+    }
+  }
+
   useEffect(() => {
     if (!file) {
       setPreview(null);
