@@ -916,9 +916,15 @@ function AddArtworkForm({
   onSubmit,
   sessionId: _sessionId,
   visitId: _visitId,
+  museum,
+  city,
+  country,
 }: {
   sessionId: string;
   visitId: string;
+  museum: string;
+  city: string | null;
+  country: string | null;
   onSubmit: (data: {
     file: File | null;
     title: string;
