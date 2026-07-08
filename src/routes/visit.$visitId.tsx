@@ -1033,6 +1033,8 @@ function AddArtworkForm({
   }, [file]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    identifyAbortRef.current?.abort();
+    setIdentifyHint(null);
     const picked = e.target.files?.[0];
     e.target.value = ""; // allow re-picking the same file
     if (!picked) return;
