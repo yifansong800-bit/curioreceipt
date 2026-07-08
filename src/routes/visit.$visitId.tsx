@@ -495,6 +495,9 @@ function VisitPage() {
                   <AddArtworkForm
                     sessionId={sessionId}
                     visitId={visitId}
+                    museum={visit.museum}
+                    city={visit.city ?? null}
+                    country={visit.country ?? null}
                     onSubmit={async (payload) => {
                       const tempId = `temp-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
 
