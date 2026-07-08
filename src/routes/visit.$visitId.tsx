@@ -1131,6 +1131,8 @@ function AddArtworkForm({
     setCustomEmotion("");
     setRating(0);
     setFile(null);
+    identifyAbortRef.current?.abort();
+    setIdentifyHint(null);
     setSavedCount((n) => n + 1);
     setUploadClosed(true);
 
