@@ -1221,6 +1221,30 @@ function AddArtworkForm({
         </button>
       )}
 
+      {file && preview ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs" style={{ color: "var(--ink-soft)" }}>
+            Can't remember the details?
+          </span>
+          <button
+            type="button"
+            onClick={handleIdentify}
+            disabled={identifying}
+            className="text-xs uppercase tracking-widest px-2 py-1 border disabled:opacity-50"
+            style={{ borderColor: "var(--ink)" }}
+          >
+            {identifying ? "Identifying…" : "✦ Identify artwork"}
+          </button>
+          {identifyHint ? (
+            <span className="text-xs" style={{ color: "var(--ink-soft)" }}>
+              {identifyHint}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+
+
 
       <MiniField label="TITLE" value={title} onChange={setTitle} placeholder="SARS" />
       <div className="grid grid-cols-[1fr_100px] gap-3">
