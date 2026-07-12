@@ -5,11 +5,14 @@ export function ArtworkCard({
   artwork,
   onDelete,
   onEdit,
+  identifyFailed,
 }: {
   artwork: ReceiptArtwork;
   onDelete?: () => void;
   onEdit?: () => void;
+  identifyFailed?: boolean;
 }) {
+
 
   const palette = artwork.palette ?? [];
   const hasPalette = palette.length > 0;
