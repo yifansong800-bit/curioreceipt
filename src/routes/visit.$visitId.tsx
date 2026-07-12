@@ -1943,3 +1943,96 @@ function EditArtworkForm({
   );
 }
 
+
+function MultiPhotoPicker({
+  remaining,
+  onPick,
+  warning,
+}: {
+  remaining: number;
+  onPick: (files: File[]) => void;
+  warning: string | null;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [converting, setConverting] = useState(false);
+
+  async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (picked.length === 0) return;
+
+    setConverting(true);
+    try {
+      const converted: File[] = [];
+      for (const p of picked) {
+        const name = p.name.toLowerCase();
+        const isHeic =
+          p.type === "image/heic" ||
+          p.type === "image/heif" ||
+          name.endsWith(".heic") ||
+          name.endsWith(".heif");
+        if (isHeic) {
+          try {
+            const { default: heic2any } = await import("heic2any");
+            const c = await heic2any({
+              blob: p,
+              toType: "image/jpeg",
+              quality: 0.9,
+            });
+            const blob = Array.isArray(c) ? c[0] : c;
+            const jpgName = p.name.replace(/\.(heic|heif)$/i, "") + ".jpg";
+            converted.push(new File([blob], jpgName, { type: "image/jpeg" }));
+          } catch (err) {
+            console.error("HEIC conversion failed", err);
+          }
+        } else {
+          converted.push(p);
+        }
+      }
+      if (converted.length > 0) onPick(converted);
+    } finally {
+      setConverting(false);
+    }
+  }
+
+  return (
+    <div className="mt-4">
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*,.heic,.heif,image/heic,image/heif"
+        multiple
+        className="hidden"
+        onChange={handleChange}
+      />
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={converting}
+        className="w-full block border-2 border-dashed p-6 text-center disabled:opacity-60"
+        style={{
+          borderColor: "var(--border)",
+          WebkitTapHighlightColor: "transparent",
+          touchAction: "manipulation",
+        }}
+      >
+        <div className="text-sm" style={{ color: "var(--ink)" }}>
+          {converting ? "Converting photos…" : "✦ Tap to select artwork photos"}
+        </div>
+        <div className="text-xs mt-2" style={{ color: "var(--ink-soft)" }}>
+          {remaining === 1
+            ? "Pick 1 photo — we'll auto-identify the piece"
+            : `Pick up to ${remaining} photos — we'll auto-identify each piece`}
+        </div>
+      </button>
+      {warning ? (
+        <div
+          className="mt-2 text-xs text-center"
+          style={{ color: "var(--ink-soft)" }}
+        >
+          {warning}
+        </div>
+      ) : null}
+    </div>
+  );
+}
