@@ -46,7 +46,10 @@ export const addArtwork = createServerFn({ method: "POST" })
       .from("artworks")
       .select("id", { count: "exact", head: true })
       .eq("visit_id", data.visitId);
-    const position = (count ?? 0) + 1;
+    const current = count ?? 0;
+    if (current >= 2) throw new Error("Artwork limit reached");
+    const position = current + 1;
+
 
     const { data: row, error } = await supabaseAdmin
       .from("artworks")

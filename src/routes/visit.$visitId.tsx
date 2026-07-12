@@ -24,7 +24,7 @@ type Stage = "idle" | "printing" | "printed";
 
 const PRINTER_WARMUP_MS = 1000;
 
-const MAX_ARTWORKS = 3;
+const MAX_ARTWORKS = 2;
 
 export const Route = createFileRoute("/visit/$visitId")({
   head: () => ({
@@ -121,6 +121,35 @@ function VisitPage() {
   const [stage, setStage] = useState<Stage>("idle");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [confirmMissing, setConfirmMissing] = useState<number | null>(null);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [identifyFailedIds, setIdentifyFailedIds] = useState<Set<string>>(new Set());
+  const [pickerWarning, setPickerWarning] = useState<string | null>(null);
+  const identifyFn = useServerFn(identifyArtwork);
+
+  function markIdentifyFailed(id: string) {
+    setIdentifyFailedIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    window.setTimeout(() => {
+      setIdentifyFailedIds((prev) => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 8000);
+  }
+
+  function clearIdentifyFailed(id: string) {
+    setIdentifyFailedIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -135,6 +164,207 @@ function VisitPage() {
 
   const atCap = artworks.length >= MAX_ARTWORKS;
   const remaining = Math.max(0, MAX_ARTWORKS - artworks.length);
+
+  async function fileToBase64(file: Blob): Promise<string> {
+    const buf = await file.arrayBuffer();
+    let binary = "";
+    const bytes = new Uint8Array(buf);
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary);
+  }
+
+  // Shared add-artwork pipeline used by both the multi-photo picker
+  // (auto-identify on) and the manual form (auto-identify off).
+  async function addArtworkFromPayload(
+    payload: {
+      file: File | null;
+      title: string;
+      artist: string;
+      year: string;
+      medium: string;
+      lingerSeconds: number;
+      emotions: string[];
+      rating: number;
+    },
+    opts: { autoIdentify: boolean },
+  ) {
+    const tempId = `temp-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
+
+    let palette: string[] = [];
+    if (payload.file) {
+      try {
+        palette = await extractPalette(payload.file, 3);
+      } catch {
+        /* palette optional */
+      }
+    }
+
+    const optimistic: ReceiptArtwork = {
+      id: tempId,
+      position: 0,
+      image_url: null,
+      title: payload.title,
+      artist: payload.artist,
+      year: payload.year,
+      medium: payload.medium,
+      linger_seconds: payload.lingerSeconds,
+      emotions: payload.emotions,
+      palette,
+      rating: payload.rating,
+    };
+    qc.setQueryData(["visit", visitId, sessionId], (old: unknown) => {
+      if (!old || typeof old !== "object") return old;
+      const prev = old as { artworks?: ReceiptArtwork[] };
+      const arts = prev.artworks ?? [];
+      optimistic.position = arts.length + 1;
+      return { ...prev, artworks: [...arts, optimistic] };
+    });
+
+    try {
+      let imagePath: string | null = null;
+      let photoTakenAt: string | null = null;
+      if (payload.file) {
+        try {
+          const meta = await exifr.parse(payload.file, ["DateTimeOriginal"]);
+          if (meta?.DateTimeOriginal) {
+            photoTakenAt = new Date(meta.DateTimeOriginal).toISOString();
+          }
+        } catch {
+          /* no exif; fine */
+        }
+        try {
+          const downscaled = await downscaleImage(payload.file, 2000, 0.85);
+          const dataBase64 = await fileToBase64(downscaled);
+          const { path } = await uploadFn({
+            data: {
+              sessionId,
+              visitId,
+              contentType: "image/jpeg",
+              ext: "jpg",
+              dataBase64,
+            },
+          });
+          imagePath = path;
+        } catch (uploadErr) {
+          console.error("[curio] photo upload failed", uploadErr);
+          imagePath = null;
+        }
+      }
+
+      const row = await addFn({
+        data: {
+          sessionId,
+          visitId,
+          imagePath,
+          title: payload.title,
+          artist: payload.artist,
+          year: payload.year,
+          medium: payload.medium,
+          lingerSeconds: payload.lingerSeconds,
+          emotions: payload.emotions,
+          photoTakenAt,
+          palette,
+          rating: payload.rating,
+        },
+      });
+      await qc.invalidateQueries({ queryKey: ["visit", visitId] });
+
+      // Auto-identify path: only fires when we have a photo and the
+      // caller asked for it (multi-photo picker).
+      const realId = (row as { id?: string } | null)?.id;
+      if (opts.autoIdentify && payload.file && realId) {
+        try {
+          const idDownscaled = await downscaleImage(payload.file, 1024, 0.85);
+          const imageBase64 = await fileToBase64(idDownscaled);
+          const result = await identifyFn({
+            data: {
+              imageBase64,
+              mimeType: "image/jpeg",
+              museum: visit?.museum ?? "",
+              city: visit?.city ?? null,
+              country: visit?.country ?? null,
+            },
+          });
+          if (result?.confident) {
+            const patch: {
+              title?: string;
+              artist?: string;
+              year?: string;
+              medium?: string;
+            } = {};
+            if (result.title && !payload.title.trim()) patch.title = result.title;
+            if (result.artist && !payload.artist.trim()) patch.artist = result.artist;
+            if (result.year && !payload.year.trim()) patch.year = result.year;
+            if (result.medium && !payload.medium.trim()) patch.medium = result.medium;
+            if (Object.keys(patch).length > 0) {
+              await updateFn({
+                data: { sessionId, visitId, artworkId: realId, ...patch },
+              });
+              await qc.invalidateQueries({ queryKey: ["visit", visitId] });
+            }
+          } else {
+            markIdentifyFailed(realId);
+          }
+        } catch (idErr) {
+          console.error("[curio] identify failed", idErr);
+          markIdentifyFailed(realId);
+        }
+      }
+    } catch (err) {
+      console.error("[curio] add artwork failed", err);
+      qc.setQueryData(["visit", visitId, sessionId], (old: unknown) => {
+        if (!old || typeof old !== "object") return old;
+        const prev = old as { artworks?: ReceiptArtwork[] };
+        return {
+          ...prev,
+          artworks: (prev.artworks ?? []).filter((a) => a.id !== tempId),
+        };
+      });
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`Couldn't add artwork: ${msg}`);
+    }
+  }
+
+  async function handlePickedPhotos(files: File[]) {
+    setPickerWarning(null);
+    // Enforce the hard cap against the *current* count (may have grown
+    // from concurrent adds) — server also rejects but we short-circuit
+    // client-side to avoid pointless uploads.
+    const room = Math.max(0, MAX_ARTWORKS - artworks.length);
+    const accepted = files.slice(0, room);
+    if (files.length > room) {
+      setPickerWarning(
+        room === 0
+          ? `You've already logged ${MAX_ARTWORKS} of ${MAX_ARTWORKS} artworks.`
+          : room === 1
+            ? "Only 1 more artwork allowed on this receipt."
+            : `Only ${room} more artworks allowed on this receipt.`,
+      );
+      window.setTimeout(() => setPickerWarning(null), 6000);
+    }
+    // Fire off adds in parallel — each manages its own optimistic row.
+    for (const f of accepted) {
+      addArtworkFromPayload(
+        {
+          file: f,
+          title: "",
+          artist: "",
+          year: "",
+          medium: "",
+          lingerSeconds: -1,
+          emotions: [],
+          rating: 0,
+        },
+        { autoIdentify: true },
+      );
+    }
+  }
+
+
+
 
   function goToPrint() {
     if (artworks.length === 0) return;
@@ -492,157 +722,36 @@ function VisitPage() {
                     Add up to {MAX_ARTWORKS} artworks · {remaining} more{" "}
                     {remaining === 1 ? "spot" : "spots"} left
                   </div>
-                  <AddArtworkForm
-                    sessionId={sessionId}
-                    visitId={visitId}
-                    museum={visit.museum}
-                    city={visit.city ?? null}
-                    country={visit.country ?? null}
-                    onSubmit={async (payload) => {
-                      const tempId = `temp-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
 
-                      // Extract palette client-side up front so the entry
-                      // row's color gradient shows immediately. It's fast
-                      // (48x48 canvas sample) and avoids a "gray" flash
-                      // before the background upload finishes.
-                      let palette: string[] = [];
-                      if (payload.file) {
-                        try {
-                          palette = await extractPalette(payload.file, 3);
-                        } catch {
-                          /* palette optional */
-                        }
-                      }
-
-                      // Insert an optimistic row so the entry appears
-                      // instantly. The real server row replaces it on the
-                      // background invalidate below.
-                      const optimistic: ReceiptArtwork = {
-                        id: tempId,
-                        position: 0, // filled in below
-                        image_url: null,
-                        title: payload.title,
-                        artist: payload.artist,
-                        year: payload.year,
-                        medium: payload.medium,
-                        linger_seconds: payload.lingerSeconds,
-                        emotions: payload.emotions,
-                        palette,
-                        rating: payload.rating,
-                      };
-                      qc.setQueryData(
-                        ["visit", visitId, sessionId],
-                        (old: unknown) => {
-                          if (!old || typeof old !== "object") return old;
-                          const prev = old as { artworks?: ReceiptArtwork[] };
-                          const arts = prev.artworks ?? [];
-                          optimistic.position = arts.length + 1;
-                          return { ...prev, artworks: [...arts, optimistic] };
-                        },
-                      );
-
-                      // Kick off upload + insert in the background. Any
-                      // failure rolls back the optimistic row and surfaces
-                      // an alert without blocking the UI.
-                      (async () => {
-                        try {
-                          let imagePath: string | null = null;
-                          let photoTakenAt: string | null = null;
-                          if (payload.file) {
-                            try {
-                              const meta = await exifr.parse(payload.file, [
-                                "DateTimeOriginal",
-                              ]);
-                              if (meta?.DateTimeOriginal) {
-                                photoTakenAt = new Date(
-                                  meta.DateTimeOriginal,
-                                ).toISOString();
-                              }
-                            } catch {
-                              /* no exif; that's fine */
-                            }
-                            try {
-                              const downscaled = await downscaleImage(
-                                payload.file,
-                                2000,
-                                0.85,
-                              );
-                              const buf = await downscaled.arrayBuffer();
-                              let binary = "";
-                              const bytes = new Uint8Array(buf);
-                              const chunk = 0x8000;
-                              for (let i = 0; i < bytes.length; i += chunk) {
-                                binary += String.fromCharCode(
-                                  ...bytes.subarray(i, i + chunk),
-                                );
-                              }
-                              const dataBase64 = btoa(binary);
-                              const { path } = await uploadFn({
-                                data: {
-                                  sessionId,
-                                  visitId,
-                                  contentType: "image/jpeg",
-                                  ext: "jpg",
-                                  dataBase64,
-                                },
-                              });
-                              imagePath = path;
-                            } catch (uploadErr) {
-                              console.error(
-                                "[curio] photo upload failed",
-                                uploadErr,
-                              );
-                              // Fall back to no image rather than failing
-                              // the whole add.
-                              imagePath = null;
-                            }
-                          }
-
-                          await addFn({
-                            data: {
-                              sessionId,
-                              visitId,
-                              imagePath,
-                              title: payload.title,
-                              artist: payload.artist,
-                              year: payload.year,
-                              medium: payload.medium,
-                              lingerSeconds: payload.lingerSeconds,
-                              emotions: payload.emotions,
-                              photoTakenAt,
-                              palette,
-                              rating: payload.rating,
-                            },
-                          });
-                          await qc.invalidateQueries({
-                            queryKey: ["visit", visitId],
-                          });
-                        } catch (err) {
-                          console.error("[curio] add artwork failed", err);
-                          // Rollback optimistic row.
-                          qc.setQueryData(
-                            ["visit", visitId, sessionId],
-                            (old: unknown) => {
-                              if (!old || typeof old !== "object") return old;
-                              const prev = old as {
-                                artworks?: ReceiptArtwork[];
-                              };
-                              return {
-                                ...prev,
-                                artworks: (prev.artworks ?? []).filter(
-                                  (a) => a.id !== tempId,
-                                ),
-                              };
-                            },
-                          );
-                          const msg =
-                            err instanceof Error ? err.message : String(err);
-                          alert(`Couldn't add artwork: ${msg}`);
-                        }
-                      })();
-                    }}
-
+                  <MultiPhotoPicker
+                    remaining={remaining}
+                    onPick={handlePickedPhotos}
+                    warning={pickerWarning}
                   />
+
+                  <div className="mt-3 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setManualOpen((v) => !v)}
+                      className="text-xs uppercase tracking-widest underline"
+                      style={{ color: "var(--ink-soft)" }}
+                    >
+                      {manualOpen ? "Hide manual entry" : "Add manually"}
+                    </button>
+                  </div>
+
+                  {manualOpen ? (
+                    <AddArtworkForm
+                      sessionId={sessionId}
+                      visitId={visitId}
+                      museum={visit.museum}
+                      city={visit.city ?? null}
+                      country={visit.country ?? null}
+                      onSubmit={(payload) =>
+                        addArtworkFromPayload(payload, { autoIdentify: false })
+                      }
+                    />
+                  ) : null}
                 </>
               ) : (
                 <div
@@ -652,9 +761,11 @@ function VisitPage() {
                     color: "var(--ink-soft)",
                   }}
                 >
-                  {MAX_ARTWORKS} / {MAX_ARTWORKS} artworks added
+                  {MAX_ARTWORKS} of {MAX_ARTWORKS} artworks logged — ready to print.
                 </div>
               )}
+
+
 
               {artworks.length > 0 ? (
                 <div className="mt-10">
@@ -675,6 +786,7 @@ function VisitPage() {
                               await updateFn({
                                 data: { sessionId, visitId, artworkId: a.id, ...patch },
                               });
+                              clearIdentifyFailed(a.id);
                               await qc.invalidateQueries({ queryKey: ["visit", visitId] });
                               setEditingId(null);
                             }}
@@ -684,10 +796,12 @@ function VisitPage() {
                         <ArtworkCard
                           key={a.id}
                           artwork={a}
+                          identifyFailed={identifyFailedIds.has(a.id)}
                           onEdit={() => setEditingId(a.id)}
                           onDelete={() => deleteMut.mutate(a.id)}
                         />
                       ),
+
                     )}
                   </ul>
 
@@ -1829,3 +1943,96 @@ function EditArtworkForm({
   );
 }
 
+
+function MultiPhotoPicker({
+  remaining,
+  onPick,
+  warning,
+}: {
+  remaining: number;
+  onPick: (files: File[]) => void;
+  warning: string | null;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [converting, setConverting] = useState(false);
+
+  async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (picked.length === 0) return;
+
+    setConverting(true);
+    try {
+      const converted: File[] = [];
+      for (const p of picked) {
+        const name = p.name.toLowerCase();
+        const isHeic =
+          p.type === "image/heic" ||
+          p.type === "image/heif" ||
+          name.endsWith(".heic") ||
+          name.endsWith(".heif");
+        if (isHeic) {
+          try {
+            const { default: heic2any } = await import("heic2any");
+            const c = await heic2any({
+              blob: p,
+              toType: "image/jpeg",
+              quality: 0.9,
+            });
+            const blob = Array.isArray(c) ? c[0] : c;
+            const jpgName = p.name.replace(/\.(heic|heif)$/i, "") + ".jpg";
+            converted.push(new File([blob], jpgName, { type: "image/jpeg" }));
+          } catch (err) {
+            console.error("HEIC conversion failed", err);
+          }
+        } else {
+          converted.push(p);
+        }
+      }
+      if (converted.length > 0) onPick(converted);
+    } finally {
+      setConverting(false);
+    }
+  }
+
+  return (
+    <div className="mt-4">
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*,.heic,.heif,image/heic,image/heif"
+        multiple
+        className="hidden"
+        onChange={handleChange}
+      />
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={converting}
+        className="w-full block border-2 border-dashed p-6 text-center disabled:opacity-60"
+        style={{
+          borderColor: "var(--border)",
+          WebkitTapHighlightColor: "transparent",
+          touchAction: "manipulation",
+        }}
+      >
+        <div className="text-sm" style={{ color: "var(--ink)" }}>
+          {converting ? "Converting photos…" : "✦ Tap to select artwork photos"}
+        </div>
+        <div className="text-xs mt-2" style={{ color: "var(--ink-soft)" }}>
+          {remaining === 1
+            ? "Pick 1 photo — we'll auto-identify the piece"
+            : `Pick up to ${remaining} photos — we'll auto-identify each piece`}
+        </div>
+      </button>
+      {warning ? (
+        <div
+          className="mt-2 text-xs text-center"
+          style={{ color: "var(--ink-soft)" }}
+        >
+          {warning}
+        </div>
+      ) : null}
+    </div>
+  );
+}
