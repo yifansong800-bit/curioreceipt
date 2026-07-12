@@ -24,7 +24,7 @@ type Stage = "idle" | "printing" | "printed";
 
 const PRINTER_WARMUP_MS = 1000;
 
-const MAX_ARTWORKS = 3;
+const MAX_ARTWORKS = 2;
 
 export const Route = createFileRoute("/visit/$visitId")({
   head: () => ({
