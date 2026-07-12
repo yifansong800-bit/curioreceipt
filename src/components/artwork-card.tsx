@@ -72,7 +72,16 @@ export function ArtworkCard({
             <span>{formatLingerShort(artwork.linger_seconds)}</span>
             {artwork.medium ? <span>· {artwork.medium}</span> : null}
           </div>
+          {identifyFailed ? (
+            <div
+              className="text-xs mt-1 italic"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              couldn't identify — enter manually
+            </div>
+          ) : null}
         </div>
+
 
         <div className="shrink-0 flex flex-col items-end gap-1">
           {onEdit ? (
