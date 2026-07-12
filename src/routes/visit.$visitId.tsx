@@ -786,6 +786,7 @@ function VisitPage() {
                               await updateFn({
                                 data: { sessionId, visitId, artworkId: a.id, ...patch },
                               });
+                              clearIdentifyFailed(a.id);
                               await qc.invalidateQueries({ queryKey: ["visit", visitId] });
                               setEditingId(null);
                             }}
@@ -795,10 +796,12 @@ function VisitPage() {
                         <ArtworkCard
                           key={a.id}
                           artwork={a}
+                          identifyFailed={identifyFailedIds.has(a.id)}
                           onEdit={() => setEditingId(a.id)}
                           onDelete={() => deleteMut.mutate(a.id)}
                         />
                       ),
+
                     )}
                   </ul>
 
