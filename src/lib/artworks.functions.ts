@@ -47,7 +47,7 @@ export const addArtwork = createServerFn({ method: "POST" })
       .select("id", { count: "exact", head: true })
       .eq("visit_id", data.visitId);
     const current = count ?? 0;
-    if (current >= 2) throw new Error("Artwork limit reached");
+    if (current >= 1) throw new Error("Artwork limit reached");
     const position = current + 1;
 
 
@@ -223,21 +223,24 @@ export const identifyArtwork = createServerFn({ method: "POST" })
       .join(" · ");
 
     const prompt =
-      "You identify famous, publicly-known artworks from a photograph. " +
+      "You identify famous, publicly-known artworks from a photograph taken inside a museum. " +
       (context ? `Context — ${context}. ` : "") +
       'Return ONLY a JSON object with keys confident (boolean), title, artist, year, medium — each a string or null. ' +
       'Use the artwork\'s creation year (e.g. "1889", "c. 1503", "1912–1913"). ' +
-      "If you are not confident this is a specific real, publicly-known artwork, " +
-      "set confident=false and every other field to null. Never guess.";
+      "Rules: (1) Only mark confident=true if you would stake your reputation on this EXACT title AND artist — the specific, real, publicly documented work. " +
+      "(2) A recognizable style is NOT enough — you must recognize this specific piece. " +
+      "(3) If the museum context is provided, the work should plausibly be in that museum's collection. " +
+      "(4) When in any doubt, set confident=false and every other field to null. Never guess titles, artists, years, or mediums. " +
+      "(5) Do not invent works. If uncertain between two similar pieces, return confident=false.";
 
     const abort = new AbortController();
-    const timeout = setTimeout(() => abort.abort(), 8000);
+    const timeout = setTimeout(() => abort.abort(), 15000);
     try {
       const gateway = createLovableAiGatewayProvider(key);
       const { text } = await generateText({
-        model: gateway("google/gemini-3-flash-preview"),
+        model: gateway("google/gemini-2.5-pro"),
         temperature: 0,
-        maxOutputTokens: 300,
+        maxOutputTokens: 400,
         abortSignal: abort.signal,
         messages: [
           {
@@ -254,6 +257,12 @@ export const identifyArtwork = createServerFn({ method: "POST" })
       });
       const parsed = parseIdentifyJson(text);
       if (!parsed || !parsed.confident) return empty;
+      // Server-side sanity check: a confident result must at minimum have a
+      // title and an artist. Anything less is untrustworthy — surface as
+      // not confident so the UI shows the "enter manually" hint.
+      const titleOk = typeof parsed.title === "string" && parsed.title.trim().length > 0;
+      const artistOk = typeof parsed.artist === "string" && parsed.artist.trim().length > 0;
+      if (!titleOk || !artistOk) return empty;
       return parsed;
     } catch (err) {
       if (!abort.signal.aborted) {

@@ -17,17 +17,17 @@ import { Footer } from "@/components/Footer";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Curio — Museum Visit Receipt Generator" },
+      { title: "Curio — Print your favorite museum art piece" },
       {
         name: "description",
         content:
-          "Turn your museum visit into a thermal receipt keepsake. Log the works you saw, how long you lingered, and how they made you feel.",
+          "Turn your favorite piece from a museum visit into a thermal receipt keepsake. One piece. One memory. Printed.",
       },
-      { property: "og:title", content: "Curio — Museum Visit Receipts" },
+      { property: "og:title", content: "Curio — Your favorite art piece, on receipt paper" },
       {
         property: "og:description",
         content:
-          "A little printable memento of every museum trip: artworks, lingers, and feelings on receipt paper.",
+          "A printable memento of your favorite piece from every museum trip.",
       },
     ],
   }),
@@ -122,9 +122,9 @@ function Index() {
           ***** www.curioreceipt.com *****
         </p>
         <p className="text-center mt-6 text-xs sm:text-sm" style={{ color: "var(--ink-soft)" }}>
-          A thermal receipt for your museum visit.
+          A thermal receipt for your favorite art piece.
           <br />
-          Log the works. Print the memory.
+          One piece. One memory. Printed.
         </p>
 
         <form
@@ -198,9 +198,9 @@ function Index() {
         <DialogTitle className="text-lg tracking-tight">About Curio</DialogTitle>
         <div className="space-y-4 text-sm sm:text-base leading-relaxed" style={{ color: "var(--ink)" }}>
           <p>
-            Curio helps art lovers and casual visitors log, save, and share memories of their favorite pieces — so they never get lost in a camera roll or Notes app.
+            Curio helps art lovers and casual visitors capture their favorite piece from every museum visit — so the one that moved you never gets lost in a camera roll or Notes app.
           </p>
-          <p>If you love it, share it. Let's keep our favorite art close.</p>
+          <p>If you love it, print it. Let's keep our favorite art close.</p>
           <p style={{ color: "var(--ink-soft)" }}>
             Built with ♡ by{" "}
             <a
