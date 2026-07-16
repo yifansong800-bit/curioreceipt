@@ -121,35 +121,8 @@ function VisitPage() {
   const [stage, setStage] = useState<Stage>("idle");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [confirmMissing, setConfirmMissing] = useState<number | null>(null);
-  const [manualOpen, setManualOpen] = useState(false);
-  const [identifyFailedIds, setIdentifyFailedIds] = useState<Set<string>>(new Set());
-  const [pickerWarning, setPickerWarning] = useState<string | null>(null);
   const identifyFn = useServerFn(identifyArtwork);
 
-  function markIdentifyFailed(id: string) {
-    setIdentifyFailedIds((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-    window.setTimeout(() => {
-      setIdentifyFailedIds((prev) => {
-        if (!prev.has(id)) return prev;
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    }, 8000);
-  }
-
-  function clearIdentifyFailed(id: string) {
-    setIdentifyFailedIds((prev) => {
-      if (!prev.has(id)) return prev;
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-  }
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
