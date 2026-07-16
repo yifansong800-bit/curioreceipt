@@ -47,7 +47,7 @@ export const addArtwork = createServerFn({ method: "POST" })
       .select("id", { count: "exact", head: true })
       .eq("visit_id", data.visitId);
     const current = count ?? 0;
-    if (current >= 2) throw new Error("Artwork limit reached");
+    if (current >= 1) throw new Error("Artwork limit reached");
     const position = current + 1;
 
 
