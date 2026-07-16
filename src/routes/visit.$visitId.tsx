@@ -882,71 +882,79 @@ function Loading() {
   );
 }
 
+type PiecePayload = {
+  file: File | null;
+  title: string;
+  artist: string;
+  year: string;
+  medium: string;
+  lingerSeconds: number;
+  emotions: string[];
+  rating: number;
+};
 
-
-function AddArtworkForm({
-  onSubmit,
-  sessionId: _sessionId,
-  visitId: _visitId,
+function PieceForm({
   museum,
   city,
   country,
+  onSave,
 }: {
-  sessionId: string;
-  visitId: string;
   museum: string;
   city: string | null;
   country: string | null;
-  onSubmit: (data: {
-    file: File | null;
-    title: string;
-    artist: string;
-    year: string;
-    medium: string;
-    lingerSeconds: number;
-    emotions: string[];
-    rating: number;
-  }) => Promise<void> | void;
+  onSave: (payload: PiecePayload) => Promise<void> | void;
 }) {
+  const identifyFn = useServerFn(identifyArtwork);
+
+  const [step, setStep] = useState<"piece" | "reflection">("piece");
+
+  // Step 1: the piece
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [converting, setConverting] = useState(false);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [year, setYear] = useState("");
   const [medium, setMedium] = useState("");
+  const [identifying, setIdentifying] = useState(false);
+  const [identifyFailed, setIdentifyFailed] = useState(false);
+  const identifyAbortRef = useRef<AbortController | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Step 2: the reflection
   const [lingerMin, setLingerMin] = useState<string>("");
   const [lingerSec, setLingerSec] = useState<string>("");
   const [emotions, setEmotions] = useState<string[]>([]);
   const [customEmotion, setCustomEmotion] = useState("");
   const [rating, setRating] = useState<number>(0);
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [converting, setConverting] = useState(false);
-  const [savedCount, setSavedCount] = useState(0);
-  const [uploadClosed, setUploadClosed] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const identifyFn = useServerFn(identifyArtwork);
-  const [identifying, setIdentifying] = useState(false);
-  const [identifyHint, setIdentifyHint] = useState<string | null>(null);
-  const identifyAbortRef = useRef<AbortController | null>(null);
-  const titleRef = useRef(title);
-  const artistRef = useRef(artist);
-  const yearRef = useRef(year);
-  const mediumRef = useRef(medium);
-  useEffect(() => { titleRef.current = title; }, [title]);
-  useEffect(() => { artistRef.current = artist; }, [artist]);
-  useEffect(() => { yearRef.current = year; }, [year]);
-  useEffect(() => { mediumRef.current = medium; }, [medium]);
+  useEffect(() => {
+    if (!file) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
-  async function handleIdentify() {
-    if (!file || identifying) return;
+  // Clear the "couldn't identify" hint the moment the user edits any of
+  // the identified fields — matches the spirit of the previous per-row hint.
+  useEffect(() => {
+    if (identifyFailed && (title.trim() || artist.trim() || year.trim() || medium.trim())) {
+      setIdentifyFailed(false);
+    }
+  }, [title, artist, year, medium, identifyFailed]);
+
+  async function runIdentify(target: File) {
     identifyAbortRef.current?.abort();
     const abort = new AbortController();
     identifyAbortRef.current = abort;
     setIdentifying(true);
-    setIdentifyHint(null);
+    setIdentifyFailed(false);
     try {
-      const downscaled = await downscaleImage(file, 1024, 0.85);
+      const downscaled = await downscaleImage(target, 1024, 0.85);
       if (abort.signal.aborted) return;
       const buf = await downscaled.arrayBuffer();
       let binary = "";
@@ -967,26 +975,18 @@ function AddArtworkForm({
       });
       if (abort.signal.aborted) return;
       if (!result?.confident) {
-        setIdentifyHint("Couldn't identify — enter details manually.");
-        window.setTimeout(() => setIdentifyHint(null), 4000);
+        setIdentifyFailed(true);
         return;
       }
-      let filledAny = false;
-      if (result.title && !titleRef.current.trim()) { setTitle(result.title); filledAny = true; }
-      if (result.artist && !artistRef.current.trim()) { setArtist(result.artist); filledAny = true; }
-      if (result.year && !yearRef.current.trim()) { setYear(result.year); filledAny = true; }
-      if (result.medium && !mediumRef.current.trim()) { setMedium(result.medium); filledAny = true; }
-      setIdentifyHint(
-        filledAny
-          ? "Filled from photo — edit anything."
-          : "Nothing new to fill — details already entered.",
-      );
-      window.setTimeout(() => setIdentifyHint(null), 4000);
+      // Only fill fields the user hasn't already typed into.
+      if (result.title && !title.trim()) setTitle(result.title);
+      if (result.artist && !artist.trim()) setArtist(result.artist);
+      if (result.year && !year.trim()) setYear(result.year);
+      if (result.medium && !medium.trim()) setMedium(result.medium);
     } catch (err) {
       if (!abort.signal.aborted) {
-        console.error("identify artwork failed", err);
-        setIdentifyHint("Couldn't identify right now — try again.");
-        window.setTimeout(() => setIdentifyHint(null), 4000);
+        console.error("[curio] identify failed", err);
+        setIdentifyFailed(true);
       }
     } finally {
       if (identifyAbortRef.current === abort) identifyAbortRef.current = null;
@@ -994,21 +994,9 @@ function AddArtworkForm({
     }
   }
 
-  useEffect(() => {
-    if (!file) {
-      setPreview(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
-
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    identifyAbortRef.current?.abort();
-    setIdentifyHint(null);
     const picked = e.target.files?.[0];
-    e.target.value = ""; // allow re-picking the same file
+    e.target.value = "";
     if (!picked) return;
 
     const name = picked.name.toLowerCase();
@@ -1018,39 +1006,44 @@ function AddArtworkForm({
       name.endsWith(".heic") ||
       name.endsWith(".heif");
 
-    if (!isHeic) {
-      setFile(picked);
-      setUploadClosed(true);
-      return;
+    let ready: File;
+    if (isHeic) {
+      setConverting(true);
+      try {
+        const { default: heic2any } = await import("heic2any");
+        const converted = await heic2any({
+          blob: picked,
+          toType: "image/jpeg",
+          quality: 0.9,
+        });
+        const blob = Array.isArray(converted) ? converted[0] : converted;
+        const jpgName = picked.name.replace(/\.(heic|heif)$/i, "") + ".jpg";
+        ready = new File([blob], jpgName, { type: "image/jpeg" });
+      } catch (err) {
+        console.error("HEIC conversion failed", err);
+        alert("Couldn't read this photo — try a JPG or PNG.");
+        setConverting(false);
+        return;
+      } finally {
+        setConverting(false);
+      }
+    } else {
+      ready = picked;
     }
-
-    setConverting(true);
-    try {
-      const { default: heic2any } = await import("heic2any");
-      const converted = await heic2any({
-        blob: picked,
-        toType: "image/jpeg",
-        quality: 0.9,
-      });
-      const blob = Array.isArray(converted) ? converted[0] : converted;
-      const jpgName = picked.name.replace(/\.(heic|heif)$/i, "") + ".jpg";
-      setFile(new File([blob], jpgName, { type: "image/jpeg" }));
-      setUploadClosed(true);
-    } catch (err) {
-      console.error("HEIC conversion failed", err);
-      alert("Couldn't read this photo — try a JPG or PNG.");
-    } finally {
-      setConverting(false);
-    }
+    setFile(ready);
+    // Reset identified fields whenever a new photo replaces the old one.
+    setTitle("");
+    setArtist("");
+    setYear("");
+    setMedium("");
+    setIdentifyFailed(false);
+    // Fire identify instantly — no button.
+    void runIdentify(ready);
   }
-
 
   function toggleEmotion(e: string) {
-    setEmotions((prev) =>
-      prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e],
-    );
+    setEmotions((prev) => (prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e]));
   }
-
   function addCustom() {
     const v = customEmotion.trim().toLowerCase();
     if (!v) return;
@@ -1058,23 +1051,25 @@ function AddArtworkForm({
     setCustomEmotion("");
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (busy) return;
-    setBusy(true);
+  const canGoNext = !!file && title.trim().length > 0 && !identifying;
 
-    const lingerMinRaw = lingerMin.trim();
-    const lingerSecRaw = lingerSec.trim();
+  function goNext() {
+    if (!canGoNext) return;
+    setStep("reflection");
+  }
+
+  async function handleSave() {
+    if (saving) return;
+    setSaving(true);
+    const minRaw = lingerMin.trim();
+    const secRaw = lingerSec.trim();
     const lingerSeconds =
-      lingerMinRaw === "" && lingerSecRaw === ""
+      minRaw === "" && secRaw === ""
         ? -1
-        : Math.max(0, Math.floor(parseInt(lingerMinRaw || "0", 10))) * 60 +
-          Math.max(0, Math.floor(parseInt(lingerSecRaw || "0", 10)));
-
-    // Fire-and-forget: parent inserts an optimistic row immediately and
-    // handles the photo upload + server insert in the background.
+        : Math.max(0, Math.floor(parseInt(minRaw || "0", 10))) * 60 +
+          Math.max(0, Math.floor(parseInt(secRaw || "0", 10)));
     try {
-      onSubmit({
+      await onSave({
         file,
         title: title.trim(),
         artist: artist.trim(),
@@ -1085,44 +1080,21 @@ function AddArtworkForm({
         rating,
       });
     } catch (err) {
-      console.error("[curio] add artwork failed", err);
+      console.error("[curio] save piece failed", err);
       const msg = err instanceof Error ? err.message : String(err);
-      alert(`Couldn't add artwork: ${msg}`);
-      setBusy(false);
-      return;
+      alert(`Couldn't save piece: ${msg}`);
+    } finally {
+      // Give the button a beat of "saving…" even on fast optimistic paths.
+      window.setTimeout(() => setSaving(false), 600);
     }
-
-    // reset immediately so the form is ready for the next entry
-    setTitle("");
-    setArtist("");
-    setYear("");
-    setMedium("");
-    setLingerMin("");
-    setLingerSec("");
-    setEmotions([]);
-    setCustomEmotion("");
-    setRating(0);
-    setFile(null);
-    identifyAbortRef.current?.abort();
-    setIdentifyHint(null);
-    setSavedCount((n) => n + 1);
-    setUploadClosed(true);
-
-    // Keep the "adding..." label visible briefly so the action feels
-    // acknowledged even though the row appears optimistically.
-    window.setTimeout(() => setBusy(false), 800);
   }
 
-
-
-
   return (
-    <form
-      onSubmit={handleSubmit}
+    <div
+      className="mt-8 border p-4 space-y-5"
+      style={{ borderColor: "var(--border)" }}
       onKeyDown={(e) => {
-        // Prevent Enter from submitting the whole form — users must
-        // click the "add to receipt" button so they don't accidentally
-        // save an empty artwork.
+        // Enter never submits — must click the explicit action buttons.
         const target = e.target as HTMLElement;
         if (
           e.key === "Enter" &&
@@ -1132,275 +1104,295 @@ function AddArtworkForm({
           e.preventDefault();
         }
       }}
-      className="mt-8 border p-4 space-y-4"
-      style={{ borderColor: "var(--border)" }}
     >
       <div
-        className="text-xs uppercase tracking-widest"
+        className="text-xs uppercase tracking-widest flex items-center justify-between"
         style={{ color: "var(--ink-soft)" }}
       >
-        + Add artwork
+        <span>{step === "piece" ? "Step 1 · The piece" : "Step 2 · Your reflection"}</span>
+        <span>{step === "piece" ? "○ ●" : "● ○"}</span>
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,.heic,.heif,image/heic,image/heif"
-        className="hidden"
-        onChange={handleFileChange}
-      />
+      {step === "piece" ? (
+        <>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,.heic,.heif,image/heic,image/heif"
+            className="hidden"
+            onChange={handleFileChange}
+          />
 
-      {uploadClosed ? (
-        <div
-          className="flex items-center gap-3 border p-3"
-          style={{ borderColor: "var(--border)" }}
-        >
           {file && preview ? (
-            <img
-              src={preview}
-              alt=""
-              className="w-12 h-12 object-cover"
-            />
-          ) : null}
-          <span
-            className="text-xs uppercase tracking-widest"
-            style={{ color: "var(--ink-soft)" }}
-          >
-            {file && preview
-              ? "✓ photo uploaded"
-              : `✓ Artwork ${savedCount} saved`}
-          </span>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="ml-auto text-xs uppercase tracking-widest underline"
-          >
-            {file && preview ? "change" : "add another photo"}
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="w-full block border-2 border-dashed p-4 text-center"
-          style={{ borderColor: "var(--border)" }}
-        >
-          {converting ? (
-            <span className="text-sm" style={{ color: "var(--ink-soft)" }}>
-              Converting photo…
-            </span>
+            <div
+              className="flex items-center gap-3 border p-3"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <img src={preview} alt="" className="w-14 h-14 object-cover" />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs uppercase tracking-widest" style={{ color: "var(--ink-soft)" }}>
+                  {identifying ? "Identifying piece…" : "✓ Photo uploaded"}
+                </div>
+                {identifyFailed ? (
+                  <div className="text-xs italic mt-1" style={{ color: "var(--ink-soft)" }}>
+                    couldn't identify — enter manually
+                  </div>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs uppercase tracking-widest underline"
+              >
+                change
+              </button>
+            </div>
           ) : (
-            <span className="text-sm" style={{ color: "var(--ink-soft)" }}>
-              tap to upload photo
-            </span>
-          )}
-        </button>
-      )}
-
-      {file && preview ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs" style={{ color: "var(--ink-soft)" }}>
-            Can't remember the details?
-          </span>
-          <button
-            type="button"
-            onClick={handleIdentify}
-            disabled={identifying}
-            className="text-xs uppercase tracking-widest px-2 py-1 border disabled:opacity-50"
-            style={{ borderColor: "var(--ink)" }}
-          >
-            {identifying ? "Identifying…" : "✦ Identify artwork"}
-          </button>
-          {identifyHint ? (
-            <span className="text-xs" style={{ color: "var(--ink-soft)" }}>
-              {identifyHint}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-
-
-
-
-      <MiniField label="TITLE" value={title} onChange={setTitle} placeholder="SARS" />
-      <div className="grid grid-cols-[1fr_100px] gap-3">
-        <MiniField label="ARTIST" value={artist} onChange={setArtist} placeholder="Fang Lijun" />
-        <MiniField label="YEAR" value={year} onChange={setYear} placeholder="2003" />
-      </div>
-      <div>
-        <MiniField label="MEDIUM" value={medium} onChange={setMedium} placeholder="oil on canvas" />
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          {MEDIUM_PRESETS.map((m) => {
-            const on = medium.trim().toLowerCase() === m;
-            return (
-              <button
-                type="button"
-                key={m}
-                onClick={() => setMedium(on ? "" : m)}
-                className="px-2 py-1 text-xs border"
-                style={{
-                  borderColor: "var(--ink)",
-                  backgroundColor: on ? "var(--ink)" : "transparent",
-                  color: on ? "var(--paper)" : "var(--ink)",
-                }}
-              >
-                [{m}]
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div>
-        <div
-          className="text-xs uppercase tracking-widest mb-1 flex items-baseline gap-2 flex-wrap"
-          style={{ color: "var(--ink-soft)" }}
-        >
-          <span>LINGER TIME</span>
-          <span style={{ textTransform: "none", letterSpacing: 0, fontStyle: "italic" }}>
-            you can estimate this!
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          <input
-            type="number"
-            min={0}
-            max={720}
-            value={lingerMin}
-            onChange={(e) => setLingerMin(e.target.value)}
-            className="w-16 bg-transparent border-b py-1 outline-none tabular-nums"
-            style={{ borderColor: "var(--ink)" }}
-          />
-          <span>min</span>
-          <input
-            type="number"
-            min={0}
-            max={59}
-            value={lingerSec}
-            onChange={(e) => setLingerSec(e.target.value)}
-            className="w-16 bg-transparent border-b py-1 outline-none tabular-nums"
-            style={{ borderColor: "var(--ink)" }}
-          />
-          <span>sec</span>
-        </div>
-      </div>
-
-      <div>
-        <div className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--ink-soft)" }}>
-          RATING
-        </div>
-        <div className="flex items-center gap-1">
-          {[1, 2, 3, 4, 5].map((n) => {
-            const on = rating >= n;
-            return (
-              <button
-                type="button"
-                key={n}
-                onClick={() => setRating(rating === n ? 0 : n)}
-                aria-label={`${n} star${n === 1 ? "" : "s"}`}
-                className="text-2xl leading-none px-1"
-                style={{ color: on ? "var(--ink)" : "var(--ink-soft)", opacity: on ? 1 : 0.5 }}
-              >
-                {on ? "★" : "☆"}
-              </button>
-            );
-          })}
-          {rating > 0 ? (
             <button
               type="button"
-              onClick={() => setRating(0)}
-              className="ml-2 text-xs uppercase tracking-widest underline"
-              style={{ color: "var(--ink-soft)" }}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={converting}
+              className="w-full block border-2 border-dashed p-6 text-center disabled:opacity-60"
+              style={{
+                borderColor: "var(--border)",
+                WebkitTapHighlightColor: "transparent",
+                touchAction: "manipulation",
+              }}
             >
-              clear
+              <div className="text-sm" style={{ color: "var(--ink)" }}>
+                {converting ? "Converting photo…" : "✦ Upload a photo of your favorite piece"}
+              </div>
+              <div className="text-xs mt-2" style={{ color: "var(--ink-soft)" }}>
+                We'll try to identify the title, artist, year, and medium.
+              </div>
             </button>
-          ) : null}
-        </div>
-      </div>
+          )}
 
+          <MiniField label="TITLE" value={title} onChange={setTitle} placeholder="Untitled" />
+          <div className="grid grid-cols-[1fr_100px] gap-3">
+            <MiniField label="ARTIST" value={artist} onChange={setArtist} placeholder="Artist name" />
+            <MiniField label="YEAR" value={year} onChange={setYear} placeholder="1889" />
+          </div>
+          <div>
+            <MiniField label="MEDIUM" value={medium} onChange={setMedium} placeholder="oil on canvas" />
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {MEDIUM_PRESETS.map((m) => {
+                const on = medium.trim().toLowerCase() === m;
+                return (
+                  <button
+                    type="button"
+                    key={m}
+                    onClick={() => setMedium(on ? "" : m)}
+                    className="px-2 py-1 text-xs border"
+                    style={{
+                      borderColor: "var(--ink)",
+                      backgroundColor: on ? "var(--ink)" : "transparent",
+                      color: on ? "var(--paper)" : "var(--ink)",
+                    }}
+                  >
+                    [{m}]
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-      <div>
-        <div className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--ink-soft)" }}>
-          I WAS…
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {EMOTION_PRESETS.map((e) => {
-            const on = emotions.includes(e);
-            return (
-              <button
-                type="button"
-                key={e}
-                onClick={() => toggleEmotion(e)}
-                className="px-2 py-1 text-xs border"
-                style={{
-                  borderColor: "var(--ink)",
-                  backgroundColor: on ? "var(--ink)" : "transparent",
-                  color: on ? "var(--paper)" : "var(--ink)",
-                }}
-              >
-                [{e}]
-              </button>
-            );
-          })}
-          {emotions
-            .filter((e) => !EMOTION_PRESETS.includes(e))
-            .map((e) => (
-              <button
-                type="button"
-                key={e}
-                onClick={() => toggleEmotion(e)}
-                className="px-2 py-1 text-xs border"
-                style={{
-                  borderColor: "var(--ink)",
-                  backgroundColor: "var(--ink)",
-                  color: "var(--paper)",
-                }}
-              >
-                [{e}] ×
-              </button>
-            ))}
-        </div>
-        <div className="flex gap-2 mt-2">
-          <input
-            value={customEmotion}
-            onChange={(e) => setCustomEmotion(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === ",") {
-                e.preventDefault();
-                addCustom();
-              }
-            }}
-            placeholder="add your own"
-            maxLength={30}
-            className="flex-1 bg-transparent border-b py-1 text-sm outline-none"
-            style={{ borderColor: "var(--ink)" }}
-          />
           <button
             type="button"
-            onClick={addCustom}
-            className="text-xs uppercase tracking-widest underline"
+            onClick={goNext}
+            disabled={!canGoNext}
+            className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
+            style={{
+              borderColor: "var(--ink)",
+              backgroundColor: "var(--ink)",
+              color: "var(--paper)",
+              fontWeight: 700,
+              WebkitTapHighlightColor: "transparent",
+              touchAction: "manipulation",
+            }}
           >
-            add
+            {!file
+              ? "Upload a photo to continue"
+              : identifying
+                ? "Identifying…"
+                : !title.trim()
+                  ? "Add a title to continue"
+                  : "Next → Your reflection"}
           </button>
-        </div>
-      </div>
+        </>
+      ) : (
+        <>
+          <div className="text-xs" style={{ color: "var(--ink-soft)", fontStyle: "italic" }}>
+            How did this piece land with you?
+          </div>
 
-      <button
-        type="submit"
-        disabled={busy}
-        className="w-full uppercase tracking-widest text-sm py-2 border disabled:opacity-40"
-        style={{
-          borderColor: "var(--ink)",
-          backgroundColor: "var(--ink)",
-          color: "var(--paper)",
-          fontWeight: 700,
-        }}
-      >
-        {busy ? "adding..." : "add to receipt"}
-      </button>
-    </form>
+          <div>
+            <div
+              className="text-xs uppercase tracking-widest mb-1 flex items-baseline gap-2 flex-wrap"
+              style={{ color: "var(--ink-soft)" }}
+            >
+              <span>LINGER TIME</span>
+              <span style={{ textTransform: "none", letterSpacing: 0, fontStyle: "italic" }}>
+                you can estimate this!
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <input
+                type="number"
+                min={0}
+                max={720}
+                value={lingerMin}
+                onChange={(e) => setLingerMin(e.target.value)}
+                className="w-16 bg-transparent border-b py-1 outline-none tabular-nums"
+                style={{ borderColor: "var(--ink)" }}
+              />
+              <span>min</span>
+              <input
+                type="number"
+                min={0}
+                max={59}
+                value={lingerSec}
+                onChange={(e) => setLingerSec(e.target.value)}
+                className="w-16 bg-transparent border-b py-1 outline-none tabular-nums"
+                style={{ borderColor: "var(--ink)" }}
+              />
+              <span>sec</span>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--ink-soft)" }}>
+              RATING
+            </div>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((n) => {
+                const on = rating >= n;
+                return (
+                  <button
+                    type="button"
+                    key={n}
+                    onClick={() => setRating(rating === n ? 0 : n)}
+                    aria-label={`${n} star${n === 1 ? "" : "s"}`}
+                    className="text-2xl leading-none px-1"
+                    style={{ color: on ? "var(--ink)" : "var(--ink-soft)", opacity: on ? 1 : 0.5 }}
+                  >
+                    {on ? "★" : "☆"}
+                  </button>
+                );
+              })}
+              {rating > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setRating(0)}
+                  className="ml-2 text-xs uppercase tracking-widest underline"
+                  style={{ color: "var(--ink-soft)" }}
+                >
+                  clear
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--ink-soft)" }}>
+              I WAS…
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {EMOTION_PRESETS.map((e) => {
+                const on = emotions.includes(e);
+                return (
+                  <button
+                    type="button"
+                    key={e}
+                    onClick={() => toggleEmotion(e)}
+                    className="px-2 py-1 text-xs border"
+                    style={{
+                      borderColor: "var(--ink)",
+                      backgroundColor: on ? "var(--ink)" : "transparent",
+                      color: on ? "var(--paper)" : "var(--ink)",
+                    }}
+                  >
+                    [{e}]
+                  </button>
+                );
+              })}
+              {emotions
+                .filter((e) => !EMOTION_PRESETS.includes(e))
+                .map((e) => (
+                  <button
+                    type="button"
+                    key={e}
+                    onClick={() => toggleEmotion(e)}
+                    className="px-2 py-1 text-xs border"
+                    style={{
+                      borderColor: "var(--ink)",
+                      backgroundColor: "var(--ink)",
+                      color: "var(--paper)",
+                    }}
+                  >
+                    [{e}] ×
+                  </button>
+                ))}
+            </div>
+            <div className="flex gap-2 mt-2">
+              <input
+                value={customEmotion}
+                onChange={(e) => setCustomEmotion(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === ",") {
+                    e.preventDefault();
+                    addCustom();
+                  }
+                }}
+                placeholder="add your own"
+                maxLength={30}
+                className="flex-1 bg-transparent border-b py-1 text-sm outline-none"
+                style={{ borderColor: "var(--ink)" }}
+              />
+              <button
+                type="button"
+                onClick={addCustom}
+                className="text-xs uppercase tracking-widest underline"
+              >
+                add
+              </button>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setStep("piece")}
+              disabled={saving}
+              className="uppercase tracking-widest text-sm py-3 px-4 border disabled:opacity-40"
+              style={{ borderColor: "var(--ink)" }}
+            >
+              ← Back
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
+              style={{
+                borderColor: "var(--ink)",
+                backgroundColor: "var(--ink)",
+                color: "var(--paper)",
+                fontWeight: 700,
+                WebkitTapHighlightColor: "transparent",
+                touchAction: "manipulation",
+              }}
+            >
+              {saving ? "Saving…" : "Save piece"}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
+
+
 
 function MiniField({
   label,
