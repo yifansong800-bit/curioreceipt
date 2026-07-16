@@ -612,45 +612,12 @@ function VisitPage() {
               />
 
               {!atCap ? (
-                <>
-                  <div
-                    className="mt-8 text-xs uppercase tracking-widest"
-                    style={{ color: "var(--ink-soft)" }}
-                  >
-                    Add up to {MAX_ARTWORKS} artworks · {remaining} more{" "}
-                    {remaining === 1 ? "spot" : "spots"} left
-                  </div>
-
-                  <MultiPhotoPicker
-                    remaining={remaining}
-                    onPick={handlePickedPhotos}
-                    warning={pickerWarning}
-                  />
-
-                  <div className="mt-3 text-center">
-                    <button
-                      type="button"
-                      onClick={() => setManualOpen((v) => !v)}
-                      className="text-xs uppercase tracking-widest underline"
-                      style={{ color: "var(--ink-soft)" }}
-                    >
-                      {manualOpen ? "Hide manual entry" : "Add manually"}
-                    </button>
-                  </div>
-
-                  {manualOpen ? (
-                    <AddArtworkForm
-                      sessionId={sessionId}
-                      visitId={visitId}
-                      museum={visit.museum}
-                      city={visit.city ?? null}
-                      country={visit.country ?? null}
-                      onSubmit={(payload) =>
-                        addArtworkFromPayload(payload, { autoIdentify: false })
-                      }
-                    />
-                  ) : null}
-                </>
+                <PieceForm
+                  museum={visit.museum}
+                  city={visit.city ?? null}
+                  country={visit.country ?? null}
+                  onSave={(payload) => addArtworkFromPayload(payload)}
+                />
               ) : (
                 <div
                   className="mt-8 border px-4 py-3 text-xs uppercase tracking-widest text-center"
@@ -659,11 +626,9 @@ function VisitPage() {
                     color: "var(--ink-soft)",
                   }}
                 >
-                  {MAX_ARTWORKS} of {MAX_ARTWORKS} artworks logged — ready to print.
+                  Piece logged — ready to print.
                 </div>
               )}
-
-
 
               {artworks.length > 0 ? (
                 <div className="mt-10">
@@ -671,7 +636,7 @@ function VisitPage() {
                     className="text-xs uppercase tracking-widest mb-3"
                     style={{ color: "var(--ink-soft)" }}
                   >
-                    Your entries
+                    Your piece
                   </h2>
                   <ul className="space-y-2">
                     {artworks.map((a) =>
@@ -684,7 +649,6 @@ function VisitPage() {
                               await updateFn({
                                 data: { sessionId, visitId, artworkId: a.id, ...patch },
                               });
-                              clearIdentifyFailed(a.id);
                               await qc.invalidateQueries({ queryKey: ["visit", visitId] });
                               setEditingId(null);
                             }}
@@ -694,17 +658,15 @@ function VisitPage() {
                         <ArtworkCard
                           key={a.id}
                           artwork={a}
-                          identifyFailed={identifyFailedIds.has(a.id)}
                           onEdit={() => setEditingId(a.id)}
                           onDelete={() => deleteMut.mutate(a.id)}
                         />
                       ),
-
                     )}
                   </ul>
-
                 </div>
               ) : null}
+
 
               <button
                 type="button"
