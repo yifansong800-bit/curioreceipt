@@ -1,48 +1,87 @@
 
-## Multi-photo upload + auto-identify, capped at 2 artworks
+## 1. Reposition as "one favorite art piece"
 
-Replace the "single photo → manual fields → Identify button" flow with a multi-select photo picker that auto-identifies each photo in the background. Hard cap the visit at 2 artworks.
+- **Cap**: change `MAX_ARTWORKS` from `2` → `1` in `src/routes/visit.$visitId.tsx`, and the matching `count >= 2` guard in `src/lib/artworks.functions.ts` → `count >= 1`.
+- **Copy / tagline** (`src/routes/index.tsx`):
+  - Subhead: `A thermal receipt for your museum visit. / Log the works. Print the memory.` → `A thermal receipt for your favorite art piece. / One piece. One memory. Printed.`
+  - Meta title/description updated to match (single-piece framing).
+  - About dialog: reword "favorite pieces" line to singular framing.
+- **Root head** (`src/routes/__root.tsx`): tweak description to "Curio prints your favorite museum art piece as a thermal receipt keepsake."
+- **Visit page compose header**: replace "Add up to 2 artworks · N spots left" and the multi-photo picker copy with a single-piece framing: "Your favorite piece from this visit". Once one artwork exists, hide the picker entirely and show `1 of 1 logged — ready to print.` (already handled by `atCap`, just via `MAX_ARTWORKS=1`).
+- **Print / share filenames**: no change (already per-visit).
 
-### UX
+Existing multi-visit flow (Log another museum, remembered visitor name) is preserved.
 
-On `visit.$visitId.tsx`:
+## 2. Redesign the upload → identify → reflect flow
 
-- Replace the current single-file input in `AddArtworkForm` with a **multi-select picker**: `<input type="file" accept="image/*" multiple />`. On mobile this opens the OS photo picker with multi-select; on desktop, the file dialog.
-- When the user picks photos, the form is **bypassed entirely** for those photos:
-  - Each photo becomes its own artwork row immediately (optimistic insert, same path as today's optimistic add).
-  - Auto-identify runs in the background per photo. Fields prefill on success; on non-confident/failure, a small inline hint appears on that row: **"couldn't identify — enter manually"** (auto-clears once the user edits any field on that row, or after ~8s).
-  - Linger time, emotions, rating remain empty — user fills those in via the existing edit flow.
-- Manual "type it in yourself" path stays available: a small **"Add manually"** link under the picker opens the current form (title/artist/etc.) with no photo or with a single photo.
+Replace the current dual UI (multi-picker + "Add manually" collapsed form) with **one linear flow** that separates *what the piece is* (auto-filled) from *what it meant to you* (manual). Everything lives in `src/routes/visit.$visitId.tsx` — no schema changes.
 
-### Hard 2-artwork cap
+Flow on the compose screen when no artwork exists yet:
 
-- If the visit already has N artworks (N ≥ 2), the picker and "Add manually" link are hidden and replaced with a muted line: **"2 of 2 artworks logged — ready to print."**
-- If the visit has 1 artwork and the user picks 2+ photos, we accept only the **first** photo and show a one-line hint: **"Only 1 more artwork allowed on this receipt."**
-- If the visit has 0 artworks and the user picks 3+, we accept only the **first 2** with the same hint.
-- Cap is also enforced server-side in `addArtwork` (`src/lib/artworks.functions.ts`): after the existing `count` query, reject with `Error("Artwork limit reached")` if `count >= 2`. Client rolls back optimistic rows on that error (existing rollback path).
+```text
+┌─ Step 1 · The piece ────────────────────────┐
+│  [ Upload a photo of your favorite piece ]  │
+│                                             │
+│  (after upload)                             │
+│   thumbnail   Identifying… ▍                │
+│                                             │
+│   Title       [ auto-filled, editable ]     │
+│   Artist      [ auto-filled, editable ]     │
+│   Year        [ auto-filled, editable ]     │
+│   Medium      [ auto-filled, editable ]     │
+│   ↳ "Couldn't identify — enter manually"    │
+│     (only on low-confidence result)         │
+│                                             │
+│                          [ Next → ]         │
+└─────────────────────────────────────────────┘
+```
 
-### Auto-identify wiring
+Clicking **Next** creates the artwork row (optimistic, same pipeline as today) and reveals Step 2 inline:
 
-- Reuse existing `identifyArtwork` server fn in `src/lib/artworks.functions.ts` — no changes to the function itself.
-- Per photo, after the optimistic row exists and the upload+downscale has produced a base64 payload, call `identifyArtwork` with `{ imageBase64, mimeType, museum, city, country }`.
-- On confident result: call `updateArtwork` to persist title/artist/year/medium **only for fields still empty** on that row (mirrors today's "don't overwrite user input" rule).
-- On non-confident / error / timeout: set a per-row `identifyFailed` flag in local component state (keyed by artwork id) → renders the "couldn't identify — enter manually" hint on that row's card. Flag clears when the user edits any of title/artist/year/medium on that row, or after 8s.
-- One in-flight identify per photo. If the user removes the row before identify resolves, abort via `AbortController`.
+```text
+┌─ Step 2 · Your reflection ──────────────────┐
+│  Linger time     [ min ] [ sec ]            │
+│  How it felt     [ chip picker + custom ]   │
+│  Rating          ☆☆☆☆☆                     │
+│                                             │
+│         [ ← Back ]      [ Save piece ]      │
+└─────────────────────────────────────────────┘
+```
 
-### Files touched
+Behavior details:
+- **Auto-identify is instant** — fires the moment a photo is chosen (no button). Uses the existing downscale + `identifyArtwork` pipeline. Fields prefill only if still empty; user can overwrite anything.
+- **No "identify artwork" button** anywhere — the button and its hint text are removed from `AddArtworkForm`. The multi-photo picker and the "Add manually" toggle are also removed. The single new form replaces both.
+- **Step 1 → Step 2 gating**: Next is disabled until a photo is chosen AND title has a value (either identified or typed). Skipping identify is still possible — user types it in and hits Next.
+- **Persistence timing**: the artwork row is inserted at end of Step 1 (Next). Step 2's Save issues `updateArtwork` with linger/emotions/rating, then returns to the "ready to print" state. Cancel/Back from Step 2 keeps the row (so identify credits aren't wasted) and just lets the user tweak fields again.
+- **Editing an existing entry** (the row's "edit" link) opens the same two-step form pre-filled, so the reflection fields don't get lost.
+- **Enter-key guard**: keep the existing `onKeyDown` protection so Enter never submits accidentally.
 
-- `src/routes/visit.$visitId.tsx` — replace form entry point with multi-picker, batch optimistic inserts, per-row auto-identify, hard cap UI, "Add manually" fallback.
-- `src/components/artwork-card.tsx` — accept + render the "couldn't identify — enter manually" hint (small muted line, matches existing hint styling).
-- `src/lib/artworks.functions.ts` — enforce `count >= 2` cap server-side in `addArtwork`.
+## 3. Improve identification accuracy
 
-No schema changes. No changes to `identifyArtwork`, `ai-gateway.server.ts`, `downscale.ts`, or receipt rendering.
+Two changes in `src/lib/artworks.functions.ts` `identifyArtwork`:
 
-### Credit cost (recap)
+- **Model swap**: `google/gemini-3-flash-preview` → `google/gemini-3-pro-preview` (higher-fidelity multimodal recognition; catalog id verified before wiring). This raises cost per identify from ~0.02–0.05 credits to ~0.10–0.20 credits, but since the cap is now **1 identify per visit**, per-visit cost drops overall vs the previous 2-photo flow.
+- **Stricter prompt + confidence gate**:
+  - Require the model to name the specific work only when it recognizes both the artist's characteristic style AND matches the museum context provided.
+  - Ask for a self-reported confidence rubric ("only mark confident=true if you would stake your reputation on this exact title+artist"). Any uncertainty → `confident=false` and null fields.
+  - Add a lightweight sanity check server-side: reject the result (treat as not confident) if `title` or `artist` is empty/whitespace, or if the returned year clearly contradicts the museum era (skip if unsure — keep it minimal to avoid false negatives).
+- Timeout stays at 8s; abort on user cancel/back preserved.
 
-- Cap = 2 identifies per visit, worst case. Estimated **~0.04–0.10 credits per full visit** with current `google/gemini-3-flash-preview` at 1024px. If real usage runs high after ship, we drop to 768px longest edge in `downscaleImage` — one-line change.
+If the model returns non-confident, Step 1 shows the "couldn't identify — enter manually" hint inline (same string as today) and clears when the user edits any field.
 
-### Non-goals
+## Technical notes
 
-- No true camera-roll/album integration (not possible on the web).
-- No auto-fill of linger time / emotions / rating — those stay user-entered.
-- No change to receipt animation, download rendering, or auth/security posture.
+- Files changed:
+  - `src/routes/visit.$visitId.tsx` — replace `MultiPhotoPicker` + `AddArtworkForm` + `EditArtworkForm` with a new `PieceForm` component driving Step 1 / Step 2. Reuse `addArtworkFromPayload` for insert; add a new "update reflection" path that calls `updateArtwork` with only linger/emotions/rating.
+  - `src/routes/index.tsx` — tagline + about copy.
+  - `src/routes/__root.tsx` — meta description.
+  - `src/lib/artworks.functions.ts` — cap `>= 1`; swap model; tighten prompt; add sanity check.
+  - `src/components/artwork-card.tsx` — no change (identifyFailed hint already supported).
+- No DB migration. No changes to `receipt.tsx`, `printer-stage.tsx`, dither pipeline, or download rendering.
+- Typecheck + a manual walk-through (upload → auto-identify → edit fields → Next → linger/emotions/rating → Save → print → download) before shipping.
+
+## Non-goals
+
+- No web search / external art database lookup (out of scope for credits; better prompting + stronger model is the accuracy lever here).
+- No changes to receipt visuals, print animation, or storage/RLS posture.
+- No support for logging multiple pieces per visit — that's the whole point of this repositioning.
