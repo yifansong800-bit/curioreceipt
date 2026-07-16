@@ -149,21 +149,19 @@ function VisitPage() {
     return btoa(binary);
   }
 
-  // Shared add-artwork pipeline used by both the multi-photo picker
-  // (auto-identify on) and the manual form (auto-identify off).
-  async function addArtworkFromPayload(
-    payload: {
-      file: File | null;
-      title: string;
-      artist: string;
-      year: string;
-      medium: string;
-      lingerSeconds: number;
-      emotions: string[];
-      rating: number;
-    },
-    opts: { autoIdentify: boolean },
-  ) {
+  // Shared add-artwork pipeline. Identification happens up-front inside
+  // PieceForm before the row is created, so this path just uploads the
+  // photo and inserts the artwork.
+  async function addArtworkFromPayload(payload: {
+    file: File | null;
+    title: string;
+    artist: string;
+    year: string;
+    medium: string;
+    lingerSeconds: number;
+    emotions: string[];
+    rating: number;
+  }) {
     const tempId = `temp-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
 
     let palette: string[] = [];
