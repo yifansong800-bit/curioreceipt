@@ -136,7 +136,6 @@ function VisitPage() {
   const receiptRef = useRef<HTMLDivElement | null>(null);
 
   const atCap = artworks.length >= MAX_ARTWORKS;
-  const remaining = Math.max(0, MAX_ARTWORKS - artworks.length);
 
   async function fileToBase64(file: Blob): Promise<string> {
     const buf = await file.arrayBuffer();
