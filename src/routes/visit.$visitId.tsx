@@ -121,7 +121,7 @@ function VisitPage() {
   const [stage, setStage] = useState<Stage>("idle");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [confirmMissing, setConfirmMissing] = useState<number | null>(null);
-  const identifyFn = useServerFn(identifyArtwork);
+
 
 
   const [saving, setSaving] = useState(false);
