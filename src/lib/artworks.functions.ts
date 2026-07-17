@@ -237,9 +237,30 @@ export const identifyArtwork = createServerFn({ method: "POST" })
         .map((p) => p.pageTitle ?? "")
         .filter((t) => t.length > 0);
 
+      // Heuristics to reject "website / museum page title" strings that
+      // don't describe the artwork itself (e.g. "M+希克藏品：心靈圖景| M+博物館").
+      const WEBSITE_NOISE = /museum|gallery|collection|藏品|博物館|美術館|画廊|artmuseum|moma|tate|louvre|guggenheim|wikipedia|wikiart|artsy|christie|sotheby|artnet|pinterest|flickr|reddit|instagram|facebook|twitter|youtube|m\+/i;
+      function looksLikeWebsiteTitle(text: string): boolean {
+        if (!text) return true;
+        // Pipes, bullets, and colons are strong signals of a page title layout.
+        if (/[|·•]/.test(text)) return true;
+        if ((text.match(/:/g) ?? []).length >= 1 && WEBSITE_NOISE.test(text)) return true;
+        if (WEBSITE_NOISE.test(text)) return true;
+        if (/\bhttps?:\/\//i.test(text)) return true;
+        if (text.length > 90) return true;
+        return false;
+      }
+      function cleanTitleFragment(text: string): string {
+        // Strip trailing " - Site" / " | Site" / " — Site" segments.
+        return text
+          .split(/\s+[|·•]\s+/)[0]
+          .replace(/\s+[-–—]\s+.*(museum|gallery|collection|藏品|博物館|美術館|wikipedia|artsy|m\+).*$/i, "")
+          .trim();
+      }
+
       // Title / artist extraction
       function splitTitleArtist(text: string): { title: string | null; artist: string | null } {
-        const cleaned = text.replace(/\s+[-–|·].*$/, "").trim();
+        const cleaned = cleanTitleFragment(text);
         const byMatch = cleaned.match(/^(.+?)\s+by\s+(.+)$/i);
         if (byMatch) return { title: byMatch[1].trim(), artist: byMatch[2].trim() };
         const commaMatch = cleaned.match(/^(.+?),\s*(.+)$/);
@@ -247,41 +268,63 @@ export const identifyArtwork = createServerFn({ method: "POST" })
         return { title: cleaned || null, artist: null };
       }
 
+      function looksLikePersonName(d: string): boolean {
+        if (!d) return false;
+        if (WEBSITE_NOISE.test(d)) return false;
+        if (/[|·•:]/.test(d)) return false;
+        // 2-4 capitalized tokens, latin or CJK single-name allowed.
+        if (/^[A-Z][a-zà-ÿ'’.-]+(?:\s+(?:[A-Z][a-zà-ÿ'’.-]+|de|van|von|del|della|di|da|le|la))+$/.test(d)) return true;
+        if (/^[\u4e00-\u9fff]{2,4}$/.test(d)) return true; // CJK personal name
+        return false;
+      }
+
+      // Prefer webEntities — these are Google's Knowledge Graph labels for the
+      // image itself, not the page hosting it. Fall back to bestGuess/pageTitles
+      // only after filtering website-title noise.
       let title: string | null = null;
       let artist: string | null = null;
-      if (bestGuess) {
-        const parsed = splitTitleArtist(bestGuess);
-        title = parsed.title;
-        artist = parsed.artist;
-      }
-      if (!title && entities.length > 0) title = entities[0].description ?? null;
-      if (!artist) {
-        for (const e of entities) {
-          const d = e.description ?? "";
-          if (d === title) continue;
-          if (/^[A-Z][a-zà-ÿ'’.-]+(?:\s+[A-Z][a-zà-ÿ'’.-]+){1,3}$/.test(d)) {
-            artist = d;
-            break;
-          }
+
+      // First pass: identify the artist among entities, and pick the highest-
+      // scoring non-person entity as the title candidate.
+      const nonPersonEntities: Array<{ description: string; score: number }> = [];
+      for (const e of entities) {
+        const d = (e.description ?? "").trim();
+        if (!d || WEBSITE_NOISE.test(d)) continue;
+        if (!artist && looksLikePersonName(d)) {
+          artist = d;
+          continue;
         }
+        nonPersonEntities.push({ description: d, score: e.score ?? 0 });
       }
-      if (!artist) {
+      if (nonPersonEntities.length > 0) {
+        title = nonPersonEntities[0].description;
+      }
+
+      // Only use bestGuess if it doesn't look like a website title.
+      if ((!title || !artist) && bestGuess && !looksLikeWebsiteTitle(bestGuess)) {
+        const parsed = splitTitleArtist(bestGuess);
+        if (!title && parsed.title) title = parsed.title;
+        if (!artist && parsed.artist) artist = parsed.artist;
+      }
+      // Same for page titles.
+      if (!artist || !title) {
         for (const t of pageTitles) {
+          if (looksLikeWebsiteTitle(t)) continue;
           const parsed = splitTitleArtist(t);
-          if (parsed.artist) {
-            artist = parsed.artist;
-            if (!title) title = parsed.title;
-            break;
-          }
+          if (!title && parsed.title) title = parsed.title;
+          if (!artist && parsed.artist) artist = parsed.artist;
+          if (title && artist) break;
         }
       }
 
-      // Year / medium extraction from combined text
-      const corpus = [bestGuess, ...pageTitles, ...entities.map((e) => e.description ?? "")].join(" \n ");
+      // Year / medium extraction from combined text (entities are cleanest;
+      // include page titles only as a fallback corpus for year detection).
+      const entityCorpus = entities.map((e) => e.description ?? "").join(" \n ");
+      const fullCorpus = [entityCorpus, bestGuess, ...pageTitles].join(" \n ");
       let year: string | null = null;
-      const circa = corpus.match(/\bc\.?\s*\d{3,4}\b/i);
-      const range = corpus.match(/\b(1[0-9]{3}|20[0-2][0-9])\s*[–-]\s*(1[0-9]{3}|20[0-2][0-9])\b/);
-      const single = corpus.match(/\b(1[0-9]{3}|20[0-2][0-9])\b/);
+      const circa = fullCorpus.match(/\bc\.?\s*\d{3,4}\b/i);
+      const range = fullCorpus.match(/\b(1[0-9]{3}|20[0-2][0-9])\s*[–-]\s*(1[0-9]{3}|20[0-2][0-9])\b/);
+      const single = fullCorpus.match(/\b(1[0-9]{3}|20[0-2][0-9])\b/);
       if (circa) year = circa[0];
       else if (range) year = range[0];
       else if (single) year = single[0];
@@ -294,7 +337,7 @@ export const identifyArtwork = createServerFn({ method: "POST" })
         "charcoal", "ink on paper", "pencil on paper",
       ];
       let medium: string | null = null;
-      const lower = corpus.toLowerCase();
+      const lower = fullCorpus.toLowerCase();
       for (const m of MEDIUMS) {
         if (lower.includes(m)) {
           medium = m.replace(/\b\w/g, (c) => c.toUpperCase());
@@ -302,7 +345,7 @@ export const identifyArtwork = createServerFn({ method: "POST" })
         }
       }
 
-      const titleOk = !!(title && title.trim().length > 0);
+      const titleOk = !!(title && title.trim().length > 0 && !looksLikeWebsiteTitle(title));
       const artistOk = !!(artist && artist.trim().length > 0);
       if (!titleOk || !artistOk) return empty;
 
@@ -313,6 +356,7 @@ export const identifyArtwork = createServerFn({ method: "POST" })
         year: year ?? null,
         medium: medium ?? null,
       };
+
     } catch (err) {
       if (!abort.signal.aborted) {
         console.error("identifyArtwork failed", err instanceof Error ? err.message : err);
