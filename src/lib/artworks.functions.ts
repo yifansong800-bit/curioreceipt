@@ -210,60 +210,130 @@ export const identifyArtwork = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const empty = { confident: false, title: null, artist: null, year: null, medium: null };
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) return empty;
+    const visionKey = process.env.GOOGLE_VISION_API_KEY;
+    if (!visionKey) {
+      console.error("identifyArtwork: GOOGLE_VISION_API_KEY not configured");
+      return empty;
+    }
     if (!IDENTIFY_ALLOWED_MIME.has(data.mimeType)) return empty;
-
-    const context = [
-      data.museum ? `Museum: ${data.museum}` : null,
-      data.city ? `City: ${data.city}` : null,
-      data.country ? `Country: ${data.country}` : null,
-    ]
-      .filter(Boolean)
-      .join(" · ");
-
-    const prompt =
-      "You identify famous, publicly-known artworks from a photograph taken inside a museum. " +
-      (context ? `Context — ${context}. ` : "") +
-      'Return ONLY a JSON object with keys confident (boolean), title, artist, year, medium — each a string or null. ' +
-      'Use the artwork\'s creation year (e.g. "1889", "c. 1503", "1912–1913"). ' +
-      "Rules: (1) Only mark confident=true if you would stake your reputation on this EXACT title AND artist — the specific, real, publicly documented work. " +
-      "(2) A recognizable style is NOT enough — you must recognize this specific piece. " +
-      "(3) If the museum context is provided, the work should plausibly be in that museum's collection. " +
-      "(4) When in any doubt, set confident=false and every other field to null. Never guess titles, artists, years, or mediums. " +
-      "(5) Do not invent works. If uncertain between two similar pieces, return confident=false.";
 
     const abort = new AbortController();
     const timeout = setTimeout(() => abort.abort(), 15000);
     try {
-      const gateway = createLovableAiGatewayProvider(key);
-      const { text } = await generateText({
-        model: gateway("google/gemini-2.5-pro"),
-        temperature: 0,
-        maxOutputTokens: 400,
-        abortSignal: abort.signal,
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
+      const resp = await fetch(
+        `https://vision.googleapis.com/v1/images:annotate?key=${encodeURIComponent(visionKey)}`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            requests: [
               {
-                type: "image",
-                image: `data:${data.mimeType};base64,${data.imageBase64}`,
+                image: { content: data.imageBase64 },
+                features: [{ type: "WEB_DETECTION", maxResults: 15 }],
               },
             ],
-          },
-        ],
-      });
-      const parsed = parseIdentifyJson(text);
-      if (!parsed || !parsed.confident) return empty;
-      // Server-side sanity check: a confident result must at minimum have a
-      // title and an artist. Anything less is untrustworthy — surface as
-      // not confident so the UI shows the "enter manually" hint.
-      const titleOk = typeof parsed.title === "string" && parsed.title.trim().length > 0;
-      const artistOk = typeof parsed.artist === "string" && parsed.artist.trim().length > 0;
+          }),
+          signal: abort.signal,
+        },
+      );
+      if (!resp.ok) {
+        console.error("identifyArtwork: Vision API error", resp.status, await resp.text());
+        return empty;
+      }
+      const payload = (await resp.json()) as {
+        responses?: Array<{
+          webDetection?: {
+            webEntities?: Array<{ description?: string; score?: number }>;
+            bestGuessLabels?: Array<{ label?: string }>;
+            pagesWithMatchingImages?: Array<{ pageTitle?: string }>;
+          };
+        }>;
+      };
+      const web = payload?.responses?.[0]?.webDetection ?? {};
+      const entities = (web.webEntities ?? []).filter(
+        (e) => e.description && (e.score ?? 0) > 0.3,
+      );
+      const bestGuess = web.bestGuessLabels?.[0]?.label ?? "";
+      const pageTitles = (web.pagesWithMatchingImages ?? [])
+        .map((p) => p.pageTitle ?? "")
+        .filter((t) => t.length > 0);
+
+      // Title / artist extraction
+      function splitTitleArtist(text: string): { title: string | null; artist: string | null } {
+        const cleaned = text.replace(/\s+[-–|·].*$/, "").trim();
+        const byMatch = cleaned.match(/^(.+?)\s+by\s+(.+)$/i);
+        if (byMatch) return { title: byMatch[1].trim(), artist: byMatch[2].trim() };
+        const commaMatch = cleaned.match(/^(.+?),\s*(.+)$/);
+        if (commaMatch) return { title: commaMatch[1].trim(), artist: commaMatch[2].trim() };
+        return { title: cleaned || null, artist: null };
+      }
+
+      let title: string | null = null;
+      let artist: string | null = null;
+      if (bestGuess) {
+        const parsed = splitTitleArtist(bestGuess);
+        title = parsed.title;
+        artist = parsed.artist;
+      }
+      if (!title && entities.length > 0) title = entities[0].description ?? null;
+      if (!artist) {
+        for (const e of entities) {
+          const d = e.description ?? "";
+          if (d === title) continue;
+          if (/^[A-Z][a-zà-ÿ'’.-]+(?:\s+[A-Z][a-zà-ÿ'’.-]+){1,3}$/.test(d)) {
+            artist = d;
+            break;
+          }
+        }
+      }
+      if (!artist) {
+        for (const t of pageTitles) {
+          const parsed = splitTitleArtist(t);
+          if (parsed.artist) {
+            artist = parsed.artist;
+            if (!title) title = parsed.title;
+            break;
+          }
+        }
+      }
+
+      // Year / medium extraction from combined text
+      const corpus = [bestGuess, ...pageTitles, ...entities.map((e) => e.description ?? "")].join(" \n ");
+      let year: string | null = null;
+      const circa = corpus.match(/\bc\.?\s*\d{3,4}\b/i);
+      const range = corpus.match(/\b(1[0-9]{3}|20[0-2][0-9])\s*[–-]\s*(1[0-9]{3}|20[0-2][0-9])\b/);
+      const single = corpus.match(/\b(1[0-9]{3}|20[0-2][0-9])\b/);
+      if (circa) year = circa[0];
+      else if (range) year = range[0];
+      else if (single) year = single[0];
+
+      const MEDIUMS = [
+        "oil on canvas", "oil on panel", "oil on wood", "acrylic on canvas",
+        "tempera on panel", "tempera on wood", "watercolor", "gouache", "fresco",
+        "marble", "bronze", "sculpture", "lithograph", "etching", "engraving",
+        "woodcut", "photograph", "gelatin silver print", "mixed media", "pastel",
+        "charcoal", "ink on paper", "pencil on paper",
+      ];
+      let medium: string | null = null;
+      const lower = corpus.toLowerCase();
+      for (const m of MEDIUMS) {
+        if (lower.includes(m)) {
+          medium = m.replace(/\b\w/g, (c) => c.toUpperCase());
+          break;
+        }
+      }
+
+      const titleOk = !!(title && title.trim().length > 0);
+      const artistOk = !!(artist && artist.trim().length > 0);
       if (!titleOk || !artistOk) return empty;
-      return parsed;
+
+      return {
+        confident: true,
+        title: title!.trim(),
+        artist: artist!.trim(),
+        year: year ?? null,
+        medium: medium ?? null,
+      };
     } catch (err) {
       if (!abort.signal.aborted) {
         console.error("identifyArtwork failed", err instanceof Error ? err.message : err);
@@ -273,3 +343,4 @@ export const identifyArtwork = createServerFn({ method: "POST" })
       clearTimeout(timeout);
     }
   });
+
