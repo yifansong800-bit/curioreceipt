@@ -171,29 +171,9 @@ export const uploadArtworkPhoto = createServerFn({ method: "POST" })
     return { path: key };
   });
 
-const identifySchema = z.object({
-  confident: z.boolean(),
-  title: z.string().nullable(),
-  artist: z.string().nullable(),
-  year: z.string().nullable(),
-  medium: z.string().nullable(),
-});
-
 const IDENTIFY_ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_IDENTIFY_BASE64 = Math.ceil((4 * 1024 * 1024 * 4) / 3) + 32;
 
-function parseIdentifyJson(text: string) {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
-  const src = fenced ?? text;
-  const s = src.indexOf("{");
-  const e = src.lastIndexOf("}");
-  if (s === -1 || e === -1 || e <= s) return null;
-  try {
-    return identifySchema.parse(JSON.parse(src.slice(s, e + 1)));
-  } catch {
-    return null;
-  }
-}
 
 export const identifyArtwork = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) =>
