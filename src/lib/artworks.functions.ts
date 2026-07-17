@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateText } from "ai";
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+
 
 const uuid = z.string().uuid();
 
