@@ -973,7 +973,10 @@ function PieceForm({
         },
       });
       if (abort.signal.aborted) return;
-      if (!result?.confident) {
+      const hasAnyField = Boolean(
+        result?.title?.trim() || result?.artist?.trim() || result?.year?.trim() || result?.medium?.trim(),
+      );
+      if (!hasAnyField) {
         setIdentifyFailed(true);
         return;
       }
@@ -982,6 +985,7 @@ function PieceForm({
       if (result.artist && !artist.trim()) setArtist(result.artist);
       if (result.year && !year.trim()) setYear(result.year);
       if (result.medium && !medium.trim()) setMedium(result.medium);
+      setIdentifyFailed(!result.confident);
     } catch (err) {
       if (!abort.signal.aborted) {
         console.error("[curio] identify failed", err);

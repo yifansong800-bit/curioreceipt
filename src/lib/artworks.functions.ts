@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { identifyArtworkInternal } from "./artwork-identify.server";
 
 
 const uuid = z.string().uuid();
@@ -171,9 +172,7 @@ export const uploadArtworkPhoto = createServerFn({ method: "POST" })
     return { path: key };
   });
 
-const IDENTIFY_ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_IDENTIFY_BASE64 = Math.ceil((4 * 1024 * 1024 * 4) / 3) + 32;
-
 
 export const identifyArtwork = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) =>
@@ -187,84 +186,6 @@ export const identifyArtwork = createServerFn({ method: "POST" })
       })
       .parse(raw),
   )
-  .handler(async ({ data }) => {
-    const empty = { confident: false, title: null, artist: null, year: null, medium: null };
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) {
-      console.error("identifyArtwork: GEMINI_API_KEY not configured");
-      return empty;
-    }
-    if (!IDENTIFY_ALLOWED_MIME.has(data.mimeType)) return empty;
-
-    const museumName = (data.museum ?? "").trim() || "a museum";
-    const prompt = `Identify the exact artwork title, artist, medium of artwork and date of artwork created for this piece seen at ${museumName}. Respond ONLY with a compact JSON object with keys "title", "artist", "year", "medium". Use null for any field you are not confident about. Do not include any commentary, markdown, or code fences.`;
-
-    const abort = new AbortController();
-    const timeout = setTimeout(() => abort.abort(), 20000);
-    try {
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${encodeURIComponent(geminiKey)}`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  { text: prompt },
-                  { inline_data: { mime_type: data.mimeType, data: data.imageBase64 } },
-                ],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.2,
-              responseMimeType: "application/json",
-            },
-          }),
-          signal: abort.signal,
-        },
-      );
-      if (!resp.ok) {
-        console.error("identifyArtwork: Gemini error", resp.status, await resp.text());
-        return empty;
-      }
-      const payload = (await resp.json()) as {
-        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-      };
-      const text = payload?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
-      const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/, "").trim();
-      if (!cleaned) return empty;
-
-      let parsed: { title?: unknown; artist?: unknown; year?: unknown; medium?: unknown };
-      try {
-        parsed = JSON.parse(cleaned);
-      } catch {
-        console.error("identifyArtwork: could not parse Gemini JSON", cleaned.slice(0, 200));
-        return empty;
-      }
-
-      const clean = (v: unknown): string | null => {
-        if (typeof v !== "string") return null;
-        const t = v.trim();
-        if (!t || /^(null|unknown|n\/a|none)$/i.test(t)) return null;
-        return t.length > 200 ? t.slice(0, 200) : t;
-      };
-      const title = clean(parsed.title);
-      const artist = clean(parsed.artist);
-      const year = clean(parsed.year);
-      const medium = clean(parsed.medium);
-
-      if (!title || !artist) return empty;
-      return { confident: true, title, artist, year, medium };
-    } catch (err) {
-      if (!abort.signal.aborted) {
-        console.error("identifyArtwork failed", err instanceof Error ? err.message : err);
-      }
-      return empty;
-    } finally {
-      clearTimeout(timeout);
-    }
-  });
+  .handler(async ({ data }) => identifyArtworkInternal(data));
 
 
