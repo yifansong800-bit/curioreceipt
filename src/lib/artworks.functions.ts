@@ -203,7 +203,7 @@ export const identifyArtwork = createServerFn({ method: "POST" })
     const timeout = setTimeout(() => abort.abort(), 20000);
     try {
       const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${encodeURIComponent(geminiKey)}`,
         {
           method: "POST",
           headers: { "content-type": "application/json" },
