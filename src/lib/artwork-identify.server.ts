@@ -12,7 +12,7 @@ type IdentifyResult = {
   artist: string | null;
   year: string | null;
   medium: string | null;
-  source?: "deepseek";
+  source?: "lovable-ai";
   reason?: string;
 };
 
@@ -62,73 +62,95 @@ function finalize(fields: Record<string, unknown>): IdentifyResult {
     artist,
     year,
     medium,
-    source: "deepseek",
+    source: "lovable-ai",
   };
 }
 
 export async function identifyArtworkInternal(data: IdentifyInput): Promise<IdentifyResult> {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+  const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) {
-    console.error("identifyArtwork: DEEPSEEK_API_KEY not configured");
+    console.error("identifyArtwork: LOVABLE_API_KEY not configured");
     return emptyIdentify("no-key");
   }
 
   const museumName = (data.museum ?? "").trim() || "the museum the visitor entered";
   const location = [data.city, data.country].filter(Boolean).join(", ");
   const prompt =
-    `Identify the exact artwork title, artist, medium of artwork and date of artwork created for this piece seen at ${museumName}${location ? ` in ${location}` : ""}. ` +
-    "Return ONLY a compact JSON object with keys title, artist, year, medium. Use null for any field you cannot identify with high confidence. Do not guess.";
+    `Identify the exact artwork title, artist, medium of artwork and date the artwork was created for this piece seen at ${museumName}${location ? ` in ${location}` : ""}. ` +
+    "Use the image itself as primary evidence, plus the museum context. Do NOT use a museum website title, exhibition title, or collection page title as the artwork title. " +
+    "Return ONLY a compact JSON object with keys title, artist, year, medium. Use null for any field you cannot identify with high confidence — do not guess.";
 
-  const abort = new AbortController();
-  const timeout = setTimeout(() => abort.abort(), 15000);
-  try {
-    const response = await fetch("https://api.deepseek.com/chat/completions", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        temperature: 0,
-        max_tokens: 300,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are an art historian. Respond with a single JSON object only, no prose. Keys: title, artist, year, medium. Use null when unsure.",
-          },
-          { role: "user", content: prompt },
-        ],
-      }),
-      signal: abort.signal,
-    });
-    if (!response.ok) {
-      const detail = (await response.text()).slice(0, 1000);
-      console.error("identifyArtwork: DeepSeek error", response.status, detail);
-      return emptyIdentify(`deepseek-${response.status}`);
+  // Try strongest multimodal models first for accuracy.
+  const models = [
+    "google/gemini-3.1-pro-preview",
+    "google/gemini-2.5-pro",
+    "google/gemini-3.5-flash",
+  ];
+
+  for (const model of models) {
+    const abort = new AbortController();
+    const timeout = setTimeout(() => abort.abort(), 30000);
+    try {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "Lovable-API-Key": apiKey,
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0,
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are an expert art historian and museum curator. Identify artworks precisely from visual evidence. Respond with a single JSON object only: keys title, artist, year, medium. Use null when you cannot identify with high confidence. Never guess.",
+            },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: prompt },
+                {
+                  type: "image_url",
+                  image_url: { url: `data:${data.mimeType};base64,${data.imageBase64}` },
+                },
+              ],
+            },
+          ],
+        }),
+        signal: abort.signal,
+      });
+
+      if (!response.ok) {
+        const detail = (await response.text()).slice(0, 1000);
+        console.error("identifyArtwork: gateway error", model, response.status, detail);
+        if (response.status === 429 || response.status === 402) return emptyIdentify(`gateway-${response.status}`);
+        continue;
+      }
+      const payload = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const text = payload.choices?.[0]?.message?.content ?? "";
+      if (!text.trim()) {
+        console.error("identifyArtwork: empty response from", model);
+        continue;
+      }
+      const parsed = parseJsonObject(text);
+      if (!parsed) {
+        console.error("identifyArtwork: could not parse JSON from", model, text.slice(0, 300));
+        continue;
+      }
+      const result = finalize(parsed);
+      if (result.title || result.artist || result.year || result.medium) return result;
+    } catch (err) {
+      if (!abort.signal.aborted) {
+        console.error("identifyArtwork: call failed", model, err instanceof Error ? err.message : err);
+      }
+    } finally {
+      clearTimeout(timeout);
     }
-    const payload = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const text = payload.choices?.[0]?.message?.content ?? "";
-    if (!text.trim()) {
-      console.error("identifyArtwork: DeepSeek empty response");
-      return emptyIdentify("empty");
-    }
-    const parsed = parseJsonObject(text);
-    if (!parsed) {
-      console.error("identifyArtwork: could not parse DeepSeek JSON", text.slice(0, 300));
-      return emptyIdentify("parse-failed");
-    }
-    return finalize(parsed);
-  } catch (err) {
-    if (!abort.signal.aborted) {
-      console.error("identifyArtwork: DeepSeek call failed", err instanceof Error ? err.message : err);
-    }
-    return emptyIdentify("network");
-  } finally {
-    clearTimeout(timeout);
   }
+
+  return emptyIdentify("not-found");
 }
