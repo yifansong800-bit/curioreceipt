@@ -67,9 +67,9 @@ function finalize(fields: Record<string, unknown>): IdentifyResult {
 }
 
 export async function identifyArtworkInternal(data: IdentifyInput): Promise<IdentifyResult> {
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    console.error("identifyArtwork: LOVABLE_API_KEY not configured");
+    console.error("identifyArtwork: OPENROUTER_API_KEY not configured");
     return emptyIdentify("no-key");
   }
 
