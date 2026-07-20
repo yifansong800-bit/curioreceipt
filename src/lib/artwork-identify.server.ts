@@ -80,22 +80,24 @@ export async function identifyArtworkInternal(data: IdentifyInput): Promise<Iden
     "Use the image itself as primary evidence, plus the museum context. Do NOT use a museum website title, exhibition title, or collection page title as the artwork title. " +
     "Return ONLY a compact JSON object with keys title, artist, year, medium. Use null for any field you cannot identify with high confidence — do not guess.";
 
-  // Try strongest multimodal models first for accuracy.
+  // Free OpenRouter vision models, tried in order.
   const models = [
-    "google/gemini-3.1-pro-preview",
-    "google/gemini-2.5-pro",
-    "google/gemini-3.5-flash",
+    "google/gemma-4-31b-it:free",
+    "google/gemma-4-26b-a4b-it:free",
+    "nvidia/nemotron-nano-12b-v2-vl:free",
   ];
 
   for (const model of models) {
     const abort = new AbortController();
     const timeout = setTimeout(() => abort.abort(), 30000);
     try {
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "Lovable-API-Key": apiKey,
+          Authorization: `Bearer ${apiKey}`,
+          "HTTP-Referer": "https://curioreceipt.com",
+          "X-Title": "Curio",
         },
         body: JSON.stringify({
           model,
