@@ -905,7 +905,8 @@ function PieceForm({
   country: string | null;
   onSave: (payload: PiecePayload) => Promise<void> | void;
 }) {
-  const identifyFn = useServerFn(identifyArtwork);
+  // Identification runs through the `identify-artwork` Supabase Edge Function
+  // (Vision reverse-image → scrape → DeepSeek extraction).
 
   const [step, setStep] = useState<"piece" | "reflection">("piece");
 
