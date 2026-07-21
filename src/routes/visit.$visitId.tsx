@@ -12,7 +12,9 @@ import { downscaleImage } from "@/lib/downscale";
 
 import { getSessionId } from "@/lib/session";
 import { getVisit, updateVisitLocation } from "@/lib/visits.functions";
-import { addArtwork, deleteArtwork, updateArtwork, uploadArtworkPhoto, identifyArtwork } from "@/lib/artworks.functions";
+import { addArtwork, deleteArtwork, updateArtwork, uploadArtworkPhoto } from "@/lib/artworks.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { Receipt, type ReceiptArtwork } from "@/components/receipt";
 import { PrinterStage } from "@/components/printer-stage";
 import { ArtworkCard } from "@/components/artwork-card";
