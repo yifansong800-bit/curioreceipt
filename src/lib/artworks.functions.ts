@@ -170,20 +170,9 @@ export const uploadArtworkPhoto = createServerFn({ method: "POST" })
     return { path: key };
   });
 
-const MAX_IDENTIFY_BASE64 = Math.ceil((4 * 1024 * 1024 * 4) / 3) + 32;
+// Note: artwork identification lives in the `identify-artwork` Supabase Edge
+// Function (Vision reverse-image → scrape → DeepSeek). The frontend calls it
+// via `supabase.functions.invoke('identify-artwork', …)`.
 
-export const identifyArtwork = createServerFn({ method: "POST" })
-  .inputValidator((raw: unknown) =>
-    z
-      .object({
-        imageBase64: z.string().min(16).max(MAX_IDENTIFY_BASE64),
-        mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
-        museum: z.string().trim().max(160).optional(),
-        city: z.string().trim().max(120).nullable().optional(),
-        country: z.string().trim().max(120).nullable().optional(),
-      })
-      .parse(raw),
-  )
-  .handler(async ({ data }) => identifyArtworkInternal(data));
 
 
