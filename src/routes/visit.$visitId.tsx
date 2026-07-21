@@ -12,7 +12,9 @@ import { downscaleImage } from "@/lib/downscale";
 
 import { getSessionId } from "@/lib/session";
 import { getVisit, updateVisitLocation } from "@/lib/visits.functions";
-import { addArtwork, deleteArtwork, updateArtwork, uploadArtworkPhoto, identifyArtwork } from "@/lib/artworks.functions";
+import { addArtwork, deleteArtwork, updateArtwork, uploadArtworkPhoto } from "@/lib/artworks.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { Receipt, type ReceiptArtwork } from "@/components/receipt";
 import { PrinterStage } from "@/components/printer-stage";
 import { ArtworkCard } from "@/components/artwork-card";
@@ -903,7 +905,8 @@ function PieceForm({
   country: string | null;
   onSave: (payload: PiecePayload) => Promise<void> | void;
 }) {
-  const identifyFn = useServerFn(identifyArtwork);
+  // Identification runs through the `identify-artwork` Supabase Edge Function
+  // (Vision reverse-image → scrape → DeepSeek extraction).
 
   const [step, setStep] = useState<"piece" | "reflection">("piece");
 
@@ -963,8 +966,9 @@ function PieceForm({
       }
       const imageBase64 = btoa(binary);
       if (abort.signal.aborted) return;
-      const result = await identifyFn({
-        data: {
+      console.log("[curio] invoking identify-artwork edge function", { museum, city, country });
+      const { data: result, error: invokeError } = await supabase.functions.invoke("identify-artwork", {
+        body: {
           imageBase64,
           mimeType: "image/jpeg",
           museum,
@@ -973,22 +977,41 @@ function PieceForm({
         },
       });
       if (abort.signal.aborted) return;
-      const hasAnyField = Boolean(
-        result?.title?.trim() || result?.artist?.trim() || result?.year?.trim() || result?.medium?.trim(),
-      );
-      if (!hasAnyField) {
+      if (invokeError) {
+        console.error("[curio] identify-artwork invoke error", invokeError);
+        toast.error("Couldn't identify artwork", { description: invokeError.message ?? "Please enter details manually." });
         setIdentifyFailed(true);
         return;
       }
+      console.log("[curio] identify-artwork result", result);
+      const FALLBACK = "couldn't identify, enter manually";
+      const clean = (v: unknown) => {
+        if (typeof v !== "string") return "";
+        const t = v.trim();
+        if (!t || t === FALLBACK) return "";
+        return t;
+      };
+      const rTitle = clean(result?.title);
+      const rArtist = clean(result?.artist);
+      const rYear = clean(result?.year);
+      const rMedium = clean(result?.medium);
+      const hasAnyField = Boolean(rTitle || rArtist || rYear || rMedium);
+      if (!hasAnyField) {
+        setIdentifyFailed(true);
+        toast("Couldn't identify this piece", { description: "Enter the details manually." });
+        return;
+      }
       // Only fill fields the user hasn't already typed into.
-      if (result.title && !title.trim()) setTitle(result.title);
-      if (result.artist && !artist.trim()) setArtist(result.artist);
-      if (result.year && !year.trim()) setYear(result.year);
-      if (result.medium && !medium.trim()) setMedium(result.medium);
-      setIdentifyFailed(!result.confident);
+      if (rTitle && !title.trim()) setTitle(rTitle);
+      if (rArtist && !artist.trim()) setArtist(rArtist);
+      if (rYear && !year.trim()) setYear(rYear);
+      if (rMedium && !medium.trim()) setMedium(rMedium);
+      setIdentifyFailed(!result?.confident);
+      if (result?.confident) toast.success("Piece identified");
     } catch (err) {
       if (!abort.signal.aborted) {
         console.error("[curio] identify failed", err);
+        toast.error("Identification failed", { description: err instanceof Error ? err.message : "Enter details manually." });
         setIdentifyFailed(true);
       }
     } finally {
