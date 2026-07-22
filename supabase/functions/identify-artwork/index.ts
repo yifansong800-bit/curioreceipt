@@ -1,22 +1,26 @@
 // Supabase Edge Function: identify-artwork
-// Reverse-image-search pipeline with reranking + per-candidate extraction:
-//   1. Google Cloud Vision WEB_DETECTION on the uploaded image.
-//   2. Take top-5 matching pages, rerank so official collection catalog URLs
-//      (/collection/, /object/, /artwork/, etc.) come first.
-//   3. For each candidate (in rank order), fetch the HTML, locate the
-//      block surrounding the matched image asset (fullMatchingImages URL),
-//      strip tags to get the caption/context text.
-//   4. Send that isolated text + web entities + user museum context to
-//      DeepSeek for strict JSON extraction. Stop as soon as we get a
-//      confident result; otherwise return the best partial result.
 //
-// Body: {
-//   imageBase64: string,   // required (no data: prefix)
-//   mimeType?: string,     // informational
-//   museum?: string,       // user-provided context
-//   city?: string | null,
-//   country?: string | null,
-// }
+// Museum-aware reverse-image identification pipeline (spec v2):
+//   1. Google Vision WEB_DETECTION.
+//   2. Candidate collection: museum's own domain > trusted allowlist > rest.
+//   3. Two-gate verification per page:
+//        Gate 1 (identity)   — og:image matches Vision's matched image URL
+//                              (skipped when Vision returned no image-match
+//                              data, e.g. real photos of an artwork).
+//        Gate 2 (specificity)— JSON-LD VisualArtwork/Painting OR labeled
+//                              details block. Otherwise compare og:description
+//                              to the homepage: identical text = sitewide
+//                              boilerplate → fail. Unique prose → pass but
+//                              flag as unstructured.
+//   4. Cross-validation: accept a field only when 2+ passing sources agree,
+//      OR a single museum-domain source with a structured details block.
+//   5. LLM extraction (DeepSeek) — only for unstructured-but-passing pages,
+//      strict "return null if not explicitly stated" prompt.
+//   6. No-match fallback: return non-confident + FALLBACK fields so the UI
+//      shows "couldn't find a match — enter manually". No AI guessing.
+//
+// Body: { imageBase64, mimeType?, museum?, city?, country? }
+// Response: { title, artist, year, medium, confident, sourceUrl, sources? }
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,6 +37,8 @@ function json(status: number, body: unknown) {
   });
 }
 
+// ---------- types ----------
+
 interface VisionWebEntity { description?: string; score?: number }
 interface VisionPage {
   url?: string;
@@ -46,10 +52,101 @@ interface VisionWebDetection {
   bestGuessLabels?: { label?: string }[];
   pagesWithMatchingImages?: VisionPage[];
   fullMatchingImages?: { url?: string }[];
+  partialMatchingImages?: { url?: string }[];
 }
 
+type Priority = "museum" | "trusted" | "other";
+
+interface RankedPage {
+  page: VisionPage;
+  url: string;
+  host: string;
+  priority: Priority;
+  hasImageMatch: boolean;
+}
+
+interface ExtractedFields {
+  title: string | null;
+  artist: string | null;
+  year: string | null;
+  medium: string | null;
+}
+
+interface PassingSource {
+  url: string;
+  host: string;
+  priority: Priority;
+  structured: boolean; // Gate 2 via JSON-LD or labeled details block
+  fields: ExtractedFields;
+}
+
+// ---------- museum domain lookup ----------
+
+// Curated map from museum keywords → canonical domain hosts. Matching is
+// case-insensitive substring on the user-provided museum name.
+const MUSEUM_DOMAINS: { keywords: string[]; host: string; collectionApi?: string }[] = [
+  { keywords: ["m+", "m plus", "mplus"], host: "mplus.org.hk" },
+  { keywords: ["moma", "museum of modern art"], host: "moma.org" },
+  { keywords: ["met ", "metropolitan"], host: "metmuseum.org",
+    collectionApi: "https://collectionapi.metmuseum.org/public/collection/v1/search?q=" },
+  { keywords: ["tate"], host: "tate.org.uk" },
+  { keywords: ["guggenheim"], host: "guggenheim.org" },
+  { keywords: ["art institute of chicago", "artic"], host: "artic.edu",
+    collectionApi: "https://api.artic.edu/api/v1/artworks/search?q=" },
+  { keywords: ["national gallery of art", "nga"], host: "nga.gov" },
+  { keywords: ["louvre"], host: "louvre.fr" },
+  { keywords: ["british museum"], host: "britishmuseum.org" },
+  { keywords: ["national gallery"], host: "nationalgallery.org.uk" },
+  { keywords: ["centre pompidou", "pompidou"], host: "centrepompidou.fr" },
+  { keywords: ["rijksmuseum"], host: "rijksmuseum.nl",
+    collectionApi: "https://www.rijksmuseum.nl/api/en/collection?key=0fiuZFh4&q=" },
+  { keywords: ["smithsonian"], host: "si.edu" },
+  { keywords: ["getty"], host: "getty.edu" },
+  { keywords: ["whitney"], host: "whitney.org" },
+  { keywords: ["smb", "staatliche museen"], host: "smb.museum" },
+  { keywords: ["hammer"], host: "hammer.ucla.edu" },
+  { keywords: ["van gogh"], host: "vangoghmuseum.nl" },
+  { keywords: ["uffizi"], host: "uffizi.it" },
+  { keywords: ["prado"], host: "museodelprado.es" },
+  { keywords: ["reina sofia"], host: "museoreinasofia.es" },
+  { keywords: ["national museum of china"], host: "chnmuseum.cn" },
+  { keywords: ["palace museum", "forbidden city"], host: "dpm.org.cn" },
+  { keywords: ["hong kong museum of art"], host: "hk.art.museum" },
+];
+
+const TRUSTED_HOSTS = [
+  "wikipedia.org", "wikimedia.org", "wikidata.org",
+  "europeana.eu", "artsy.net", "google.com/culturalinstitute",
+  "artsandculture.google.com",
+  "christies.com", "sothebys.com", "phillips.com", "bonhams.com",
+];
+
+const BLOCKLIST_HOSTS = [
+  "pinterest.", "reddit.", "tumblr.", "facebook.", "instagram.",
+  "twitter.", "x.com", "tiktok.", "youtube.",
+];
+
+function hostOf(url: string): string {
+  try { return new URL(url).hostname.toLowerCase(); } catch { return ""; }
+}
+
+function resolveMuseumHost(museum: string): string | null {
+  const m = museum.toLowerCase();
+  if (!m) return null;
+  const hit = MUSEUM_DOMAINS.find((entry) => entry.keywords.some((k) => m.includes(k)));
+  return hit?.host ?? null;
+}
+
+function resolveMuseumApi(museum: string): string | null {
+  const m = museum.toLowerCase();
+  const hit = MUSEUM_DOMAINS.find((entry) => entry.keywords.some((k) => m.includes(k)));
+  return hit?.collectionApi ?? null;
+}
+
+// ---------- STEP 1: Vision ----------
+
 async function runVision(apiKey: string, imageBase64: string): Promise<VisionWebDetection> {
-  console.log("[identify-artwork] step 1: calling Google Vision WEB_DETECTION");
+  console.log("[identify] step 1 — Google Vision WEB_DETECTION");
   const resp = await fetch(
     `https://vision.googleapis.com/v1/images:annotate?key=${encodeURIComponent(apiKey)}`,
     {
@@ -58,190 +155,57 @@ async function runVision(apiKey: string, imageBase64: string): Promise<VisionWeb
       body: JSON.stringify({
         requests: [{
           image: { content: imageBase64 },
-          features: [{ type: "WEB_DETECTION", maxResults: 20 }],
+          features: [{ type: "WEB_DETECTION", maxResults: 25 }],
         }],
       }),
     },
   );
-  if (!resp.ok) {
-    const detail = (await resp.text()).slice(0, 500);
-    throw new Error(`Vision API ${resp.status}: ${detail}`);
-  }
-  const payload = await resp.json();
-  const web: VisionWebDetection = payload?.responses?.[0]?.webDetection ?? {};
-  console.log(
-    "[identify-artwork] vision returned",
+  if (!resp.ok) throw new Error(`Vision API ${resp.status}: ${(await resp.text()).slice(0, 400)}`);
+  const web: VisionWebDetection = (await resp.json())?.responses?.[0]?.webDetection ?? {};
+  console.log("[identify] vision:",
     (web.webEntities ?? []).length, "entities,",
-    (web.pagesWithMatchingImages ?? []).length, "pages",
-  );
+    (web.pagesWithMatchingImages ?? []).length, "pages,",
+    (web.fullMatchingImages ?? []).length, "full-match,",
+    (web.partialMatchingImages ?? []).length, "partial-match");
   return web;
 }
 
-// Rerank the top-N pages so catalog/object pages come first. Museum
-// collection pages consistently host the caption text (title, artist,
-// year, medium) directly under the artwork image, unlike blog posts,
-// news articles, or aggregator sites.
-const CATALOG_PATTERNS = [
-  /\/collection[s]?\//i,
-  /\/object[s]?\//i,
-  /\/artwork[s]?\//i,
-  /\/artist[s]?\//i,
-  /\/art\//i,
-  /\/oeuvre[s]?\//i,
-  /\/work[s]?\//i,
-  /\/piece[s]?\//i,
-  /\/exhibition[s]?\//i,
-];
-const CATALOG_HOST_HINTS = [
-  "museum", "gallery", "moma", "metmuseum", "tate", "guggenheim",
-  "artic.edu", "nga.gov", "mplus", "louvre", "britishmuseum",
-  "nationalgallery", "smb.museum", "centrepompidou", "rijksmuseum",
-  "smithsonian", "getty.edu", "hammer.ucla", "whitney.org",
-];
-const BLOCKLIST_HOSTS = ["pinterest.", "wikipedia.", "wikimedia.", "reddit.", "tumblr.", "facebook."];
+// ---------- STEP 2: candidate collection ----------
 
-function rerankPages(pages: VisionPage[]): VisionPage[] {
-  const scored = pages.filter((p) => p.url).map((p) => {
-    const url = p.url!.toLowerCase();
-    let score = p.score ?? 0;
-    if (CATALOG_PATTERNS.some((re) => re.test(url))) score += 10;
-    if (CATALOG_HOST_HINTS.some((h) => url.includes(h))) score += 5;
-    if (BLOCKLIST_HOSTS.some((h) => url.includes(h))) score -= 8;
-    if ((p.fullMatchingImages?.length ?? 0) > 0) score += 2;
-    return { page: p, score };
-  });
-  scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, 5).map((s) => s.page);
+function rankPages(pages: VisionPage[], museumHost: string | null): RankedPage[] {
+  const seen = new Set<string>();
+  const ranked: RankedPage[] = [];
+  for (const p of pages) {
+    if (!p.url) continue;
+    const host = hostOf(p.url);
+    if (!host || seen.has(p.url)) continue;
+    if (BLOCKLIST_HOSTS.some((b) => host.includes(b))) continue;
+    seen.add(p.url);
+
+    const hasImageMatch =
+      (p.fullMatchingImages?.length ?? 0) > 0 ||
+      (p.partialMatchingImages?.length ?? 0) > 0;
+
+    let priority: Priority = "other";
+    if (museumHost && host.endsWith(museumHost)) priority = "museum";
+    else if (TRUSTED_HOSTS.some((t) => host.includes(t) || p.url!.includes(t))) priority = "trusted";
+
+    ranked.push({ page: p, url: p.url, host, priority, hasImageMatch });
+  }
+  const rank = (r: RankedPage) =>
+    (r.priority === "museum" ? 100 : r.priority === "trusted" ? 50 : 0) +
+    (r.hasImageMatch ? 5 : 0) +
+    (r.page.score ?? 0);
+  ranked.sort((a, b) => rank(b) - rank(a));
+  return ranked.slice(0, 8);
 }
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+// ---------- STEP 3: two-gate verification ----------
 
-// Locate the target <img> in the DOM and return ONLY text from its immediate
-// caption context — <figcaption>, sibling caption/info divs, or the closest
-// enclosing <figure>/<article>/<aside>. Hero banners, <nav>, <header>,
-// <footer>, recommendations, and unrelated gallery grids are excluded.
-//
-// Returns null when no textual metadata sits adjacent to the target image —
-// the caller then falls back to entity-only extraction rather than guessing
-// from unrelated page text.
-async function isolateImageCaption(
-  html: string,
-  imageUrls: string[],
-): Promise<string | null> {
-  let DOMParserCtor: typeof globalThis extends { DOMParser: infer P } ? P : any;
-  try {
-    ({ DOMParser: DOMParserCtor } = await import(
-      "https://deno.land/x/deno_dom@v0.1.46/deno-dom-wasm.ts"
-    ));
-  } catch (err) {
-    console.warn("[identify-artwork] deno-dom import failed, skipping DOM isolation", err);
-    return null;
-  }
-  let doc: any;
-  try {
-    doc = new (DOMParserCtor as any)().parseFromString(html, "text/html");
-  } catch (err) {
-    console.warn("[identify-artwork] HTML parse failed", err);
-    return null;
-  }
-  if (!doc) return null;
-
-  // Strip anything that reliably isn't the target image's caption.
-  const KILL = "nav, header, footer, aside.related, .related, .recommendations, .recommended, .related-artworks, .related-works, .site-header, .site-footer, .breadcrumbs, .menu, .navigation, script, style, noscript";
-  for (const el of Array.from(doc.querySelectorAll(KILL))) el.remove();
-
-  // Find the target <img> by matching src / data-src / srcset / alt against
-  // any of the URLs Vision handed us.
-  const needles = imageUrls
-    .flatMap((u) => {
-      if (!u) return [] as string[];
-      const file = u.split("/").pop()?.split("?")[0] ?? "";
-      return [u, file].filter(Boolean);
-    })
-    .map((n) => n.toLowerCase());
-
-  let target: Element | null = null;
-  for (const img of Array.from(doc.querySelectorAll("img"))) {
-    const hay = [
-      img.getAttribute("src") ?? "",
-      img.getAttribute("data-src") ?? "",
-      img.getAttribute("data-original") ?? "",
-      img.getAttribute("srcset") ?? "",
-      img.getAttribute("alt") ?? "",
-    ].join(" ").toLowerCase();
-    if (needles.some((n) => n && hay.includes(n))) { target = img; break; }
-  }
-  if (!target) {
-    console.log("[identify-artwork] target <img> not found in DOM");
-    return null;
-  }
-
-  const pieces: string[] = [];
-  const pushText = (el: Element | null | undefined) => {
-    if (!el) return;
-    const t = (el.textContent ?? "").replace(/\s+/g, " ").trim();
-    if (t) pieces.push(t);
-  };
-
-  // 1. Enclosing <figure> → its <figcaption>.
-  const figure = target.closest("figure");
-  if (figure) {
-    for (const cap of Array.from(figure.querySelectorAll("figcaption"))) pushText(cap);
-  }
-
-  // 2. Sibling caption/info blocks within the same immediate parent.
-  const parent = target.parentElement;
-  const CAPTION_SEL = ".caption, .artwork-info, .artwork-details, .details, .metadata, .meta, .object-info, .work-info, .tombstone, .artwork-tombstone, [class*='caption'], [class*='tombstone']";
-  if (parent) {
-    for (const sib of Array.from(parent.children)) {
-      if (sib === target) continue;
-      if (sib.matches?.(CAPTION_SEL)) pushText(sib);
-    }
-    // Also check one level up (common wrapper pattern).
-    const grand = parent.parentElement;
-    if (grand) {
-      for (const sib of Array.from(grand.children)) {
-        if (sib === parent) continue;
-        if (sib.matches?.(CAPTION_SEL)) pushText(sib);
-      }
-    }
-  }
-
-  // 3. Closest <article> / <aside> that wraps the image — but only its
-  // caption-ish descendants, not the whole thing.
-  const wrapper = target.closest("article, aside, section");
-  if (wrapper && pieces.length === 0) {
-    for (const c of Array.from(wrapper.querySelectorAll(CAPTION_SEL))) pushText(c);
-    for (const c of Array.from(wrapper.querySelectorAll("figcaption"))) pushText(c);
-  }
-
-  const combined = pieces.join(" \n ").trim();
-  if (!combined) return null;
-  return combined.slice(0, 3500);
-}
-
-interface Candidate { url: string; text: string }
-
-async function fetchCandidate(page: VisionPage, extraImageUrls: string[]): Promise<Candidate | null> {
-  const url = page.url!;
-  console.log("[identify-artwork] step 2: fetching", url);
+async function fetchHtml(url: string, timeoutMs = 8000): Promise<string | null> {
   try {
     const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 8000);
+    const t = setTimeout(() => controller.abort(), timeoutMs);
     const resp = await fetch(url, {
       headers: {
         "user-agent": "Mozilla/5.0 (compatible; CurioBot/1.0; +https://curioreceipt.com)",
@@ -250,107 +214,233 @@ async function fetchCandidate(page: VisionPage, extraImageUrls: string[]): Promi
       signal: controller.signal,
     });
     clearTimeout(t);
-    if (!resp.ok) {
-      console.warn("[identify-artwork] fetch failed", url, resp.status);
-      return null;
-    }
-    const html = await resp.text();
-    const imgUrls = [
-      ...(page.fullMatchingImages ?? []).map((i) => i.url).filter(Boolean) as string[],
-      ...(page.partialMatchingImages ?? []).map((i) => i.url).filter(Boolean) as string[],
-      ...extraImageUrls,
-    ];
-    const caption = await isolateImageCaption(html, imgUrls);
-    if (!caption || caption.length < 30) {
-      console.warn("[identify-artwork] no adjacent caption for target image, skipping page-text extraction for", url);
-      return null;
-    }
-    console.log("[identify-artwork] extracted", caption.length, "chars of caption context from", url);
-    return { url, text: caption };
-  } catch (err) {
-    console.warn("[identify-artwork] fetch error", url, err instanceof Error ? err.message : err);
-    return null;
+    if (!resp.ok) return null;
+    return await resp.text();
+  } catch { return null; }
+}
+
+function metaContent(html: string, key: "og:image" | "og:description" | "description"): string {
+  const attr = key.startsWith("og:") ? "property" : "name";
+  const re = new RegExp(`<meta[^>]+${attr}=["']${key}["'][^>]*content=["']([^"']+)["']`, "i");
+  const re2 = new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]*${attr}=["']${key}["']`, "i");
+  return (html.match(re)?.[1] ?? html.match(re2)?.[1] ?? "").trim();
+}
+
+// Gate 1 — does the page's og:image (or any prominent img) point to the same
+// asset Vision matched? Skipped when Vision has no image match to compare.
+function gate1(html: string, matchUrls: string[]): boolean | null {
+  if (matchUrls.length === 0) return null; // not applicable
+  const og = metaContent(html, "og:image");
+  const needles = matchUrls
+    .flatMap((u) => {
+      const file = u.split("/").pop()?.split("?")[0] ?? "";
+      return [u, file].filter(Boolean);
+    })
+    .map((s) => s.toLowerCase());
+  const hay = (og + " " + html).toLowerCase();
+  return needles.some((n) => n && hay.includes(n));
+}
+
+// Gate 2 — extract JSON-LD VisualArtwork/Painting OR a labeled details block.
+// Returns extracted fields when structured; { text } when only unstructured
+// prose is available; false when the page is boilerplate.
+async function gate2(
+  html: string,
+  pageUrl: string,
+  homepageDesc: string | null,
+): Promise<
+  | { structured: true; fields: ExtractedFields }
+  | { structured: false; text: string }
+  | false
+> {
+  // 2a. JSON-LD.
+  const ldMatches = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi) ?? [];
+  for (const block of ldMatches) {
+    const bodyMatch = block.match(/>([\s\S]*?)<\/script>/i);
+    if (!bodyMatch) continue;
+    try {
+      const parsed = JSON.parse(bodyMatch[1].trim());
+      const nodes = Array.isArray(parsed) ? parsed : [parsed];
+      for (const node of nodes) {
+        const type = String(node?.["@type"] ?? "").toLowerCase();
+        if (!["visualartwork", "painting", "creativework", "sculpture"].some((t) => type.includes(t))) continue;
+        const fields: ExtractedFields = {
+          title: pickStr(node.name) ?? null,
+          artist: pickStr(node.creator?.name ?? node.creator ?? node.author?.name ?? node.author) ?? null,
+          year: pickStr(node.dateCreated ?? node.dateProduced ?? node.datePublished) ?? null,
+          medium: pickStr(node.artMedium ?? node.material ?? node.medium) ?? null,
+        };
+        if (fields.title || fields.artist) {
+          console.log("[identify] gate2 JSON-LD hit for", pageUrl);
+          return { structured: true, fields };
+        }
+      }
+    } catch { /* not JSON */ }
   }
+
+  // 2b. Labeled details block (rows like "Artist:", "Medium:", "Date:").
+  const stripped = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ");
+  const rows: Record<string, string> = {};
+  const rowPatterns = [
+    /(?:artist|creator|maker|artist name|by)\s*[:\-]?\s*<[^>]+>\s*([^<\n]{2,120})/i,
+    /<dt[^>]*>\s*(?:artist|creator|maker|by)[^<]*<\/dt>\s*<dd[^>]*>\s*([^<]{2,120})<\/dd>/i,
+    /<th[^>]*>\s*(?:artist|creator|maker)[^<]*<\/th>\s*<td[^>]*>\s*([^<]{2,120})<\/td>/i,
+  ];
+  for (const re of rowPatterns) {
+    const m = stripped.match(re);
+    if (m?.[1]) { rows.artist = m[1].trim(); break; }
+  }
+  const titleRow = stripped.match(/<dt[^>]*>\s*title[^<]*<\/dt>\s*<dd[^>]*>\s*([^<]{2,200})<\/dd>/i)
+    ?? stripped.match(/<th[^>]*>\s*title[^<]*<\/th>\s*<td[^>]*>\s*([^<]{2,200})<\/td>/i);
+  if (titleRow?.[1]) rows.title = titleRow[1].trim();
+  const mediumRow = stripped.match(/(?:<dt|<th)[^>]*>\s*(?:medium|material)[^<]*<\/(?:dt|th)>\s*(?:<dd|<td)[^>]*>\s*([^<]{2,200})<\/(?:dd|td)>/i);
+  if (mediumRow?.[1]) rows.medium = mediumRow[1].trim();
+  const dateRow = stripped.match(/(?:<dt|<th)[^>]*>\s*(?:date|year|dated|date created)[^<]*<\/(?:dt|th)>\s*(?:<dd|<td)[^>]*>\s*([^<]{2,60})<\/(?:dd|td)>/i);
+  if (dateRow?.[1]) rows.year = dateRow[1].trim();
+  if (rows.title || rows.artist) {
+    console.log("[identify] gate2 labeled-rows hit for", pageUrl);
+    return { structured: true, fields: {
+      title: rows.title ?? null, artist: rows.artist ?? null,
+      year: rows.year ?? null, medium: rows.medium ?? null,
+    } };
+  }
+
+  // 2c. Fall through to prose. Compare og:description against homepage — if
+  // identical it's sitewide boilerplate.
+  const desc = metaContent(html, "og:description") || metaContent(html, "description");
+  if (desc && homepageDesc) {
+    const a = desc.replace(/\s+/g, " ").trim().toLowerCase();
+    const b = homepageDesc.replace(/\s+/g, " ").trim().toLowerCase();
+    if (a && a === b) {
+      console.log("[identify] gate2 boilerplate reject for", pageUrl);
+      return false;
+    }
+  }
+  // Pull a small unstructured text sample from around the page title/heading.
+  const bodyText = stripped
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 2500);
+  if (desc || bodyText.length > 120) {
+    return { structured: false, text: (desc ? desc + "\n\n" : "") + bodyText };
+  }
+  return false;
 }
 
-interface DeepSeekResult { title: string; artist: string; year: string; medium: string }
-
-function scoreResult(r: DeepSeekResult): number {
-  return (r.title !== FALLBACK ? 2 : 0) +
-    (r.artist !== FALLBACK ? 2 : 0) +
-    (r.year !== FALLBACK ? 1 : 0) +
-    (r.medium !== FALLBACK ? 1 : 0);
+function pickStr(v: unknown): string | null {
+  if (typeof v === "string") { const t = v.trim(); return t || null; }
+  if (Array.isArray(v)) return pickStr(v[0]);
+  if (v && typeof v === "object") return pickStr((v as any).name ?? (v as any)["@value"]);
+  return null;
 }
+
+// ---------- STEP 5: DeepSeek extraction for unstructured pages ----------
 
 async function extractWithDeepSeek(
   apiKey: string,
-  ctx: { museum: string; location: string; entities: string[]; bestGuess: string; pageText: string; pageUrl: string },
-): Promise<DeepSeekResult> {
-  console.log("[identify-artwork] step 3: calling DeepSeek for", ctx.pageUrl);
-  const userPrompt =
-    `You are extracting artwork metadata from reverse-image-search results.\n` +
-    `The user photographed a piece at: ${ctx.museum || "an unspecified museum"}${ctx.location ? ` (${ctx.location})` : ""}.\n\n` +
-    `WEBPAGE SOURCE (${ctx.pageUrl}):\n${ctx.pageText}\n\n` +
-    `GOOGLE BEST GUESS LABEL: ${ctx.bestGuess || "(none)"}\n` +
-    `GOOGLE WEB ENTITIES: ${ctx.entities.slice(0, 15).join(" | ") || "(none)"}\n\n` +
-    `The webpage source above is the HTML region surrounding the matched artwork image, ` +
-    `so the caption/label text near the image is the most reliable ground truth. ` +
-    `Extract the artwork's title, artist, year created, and medium STRICTLY from the sources above. ` +
-    `Do NOT invent or guess facts that are not present in the sources. ` +
-    `Ignore website navigation, museum names, exhibition titles, and page headers — they are not the artwork title. ` +
-    `If a field is not clearly present, set it to exactly: "${FALLBACK}".\n\n` +
-    `Return ONLY raw JSON (no markdown, no commentary) with this exact schema:\n` +
-    `{"title": "string", "artist": "string", "year": "string", "medium": "string"}`;
-
+  ctx: { museum: string; location: string; pageText: string; pageUrl: string },
+): Promise<ExtractedFields> {
+  console.log("[identify] step 5 — DeepSeek extraction for", ctx.pageUrl);
+  const prompt =
+    `The user photographed a piece at ${ctx.museum || "an unspecified museum"}` +
+    `${ctx.location ? ` (${ctx.location})` : ""}.\n\n` +
+    `Extract title, artist, year, and medium from the following text. ` +
+    `Only return a field if explicitly and specifically stated as describing this artwork. ` +
+    `Return null for any field not explicitly present. Do not guess or infer.\n\n` +
+    `SOURCE (${ctx.pageUrl}):\n${ctx.pageText}\n\n` +
+    `Respond in JSON only with this exact schema:\n` +
+    `{"title": string|null, "artist": string|null, "year": string|null, "medium": string|null}`;
   const resp = await fetch("https://api.deepseek.com/chat/completions", {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
+    headers: { "content-type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model: "deepseek-chat",
       temperature: 0,
       response_format: { type: "json_object" },
       messages: [
-        {
-          role: "system",
-          content:
-            "You extract structured artwork metadata from provided source text. You never invent facts. You always return one JSON object matching the requested schema.",
-        },
-        { role: "user", content: userPrompt },
+        { role: "system", content: "You extract structured artwork metadata. You never invent facts. You return one JSON object matching the requested schema." },
+        { role: "user", content: prompt },
       ],
     }),
   });
-
-  if (!resp.ok) {
-    const detail = (await resp.text()).slice(0, 500);
-    throw new Error(`DeepSeek ${resp.status}: ${detail}`);
-  }
-  const payload = await resp.json();
-  const text: string = payload?.choices?.[0]?.message?.content ?? "";
-  console.log("[identify-artwork] deepseek raw:", text.slice(0, 300));
+  if (!resp.ok) throw new Error(`DeepSeek ${resp.status}: ${(await resp.text()).slice(0, 400)}`);
+  const text = (await resp.json())?.choices?.[0]?.message?.content ?? "";
   let parsed: Record<string, unknown> = {};
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-    if (start !== -1 && end > start) {
-      try { parsed = JSON.parse(text.slice(start, end + 1)); } catch { /* noop */ }
-    }
+  try { parsed = JSON.parse(text); } catch {
+    const s = text.indexOf("{"), e = text.lastIndexOf("}");
+    if (s !== -1 && e > s) { try { parsed = JSON.parse(text.slice(s, e + 1)); } catch { /* noop */ } }
   }
-  const pick = (k: string): string => {
+  const pick = (k: string): string | null => {
     const v = parsed[k];
-    if (typeof v !== "string") return FALLBACK;
-    const cleaned = v.trim();
-    if (!cleaned || /^(null|unknown|n\/a|none|not available|not specified|unspecified)$/i.test(cleaned)) {
-      return FALLBACK;
-    }
-    return cleaned;
+    if (typeof v !== "string") return null;
+    const t = v.trim();
+    if (!t || /^(null|unknown|n\/a|none|not (available|specified|stated))$/i.test(t)) return null;
+    return t;
   };
   return { title: pick("title"), artist: pick("artist"), year: pick("year"), medium: pick("medium") };
 }
+
+// ---------- STEP 4: cross-validation ----------
+
+function normalize(s: string | null): string {
+  return (s ?? "").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
+}
+function agree(a: string | null, b: string | null): boolean {
+  const na = normalize(a), nb = normalize(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  return na.includes(nb) || nb.includes(na);
+}
+
+function crossValidate(sources: PassingSource[]): {
+  fields: { title: string; artist: string; year: string; medium: string };
+  confident: boolean;
+  primary: PassingSource | null;
+  conflicts: string[];
+} {
+  const conflicts: string[] = [];
+  const museumStructured = sources.find((s) => s.priority === "museum" && s.structured);
+
+  const pickField = (key: keyof ExtractedFields): string => {
+    // Single museum-structured source is sufficient.
+    if (museumStructured && museumStructured.fields[key]) {
+      // But still surface conflict if others disagree.
+      const others = sources.filter((s) => s !== museumStructured && s.fields[key]);
+      for (const o of others) {
+        if (!agree(museumStructured.fields[key], o.fields[key])) {
+          conflicts.push(`${key}: "${museumStructured.fields[key]}" (museum) vs "${o.fields[key]}" (${o.host})`);
+        }
+      }
+      return museumStructured.fields[key]!;
+    }
+    // Otherwise need 2+ agreeing sources.
+    const values = sources.map((s) => s.fields[key]).filter(Boolean) as string[];
+    for (let i = 0; i < values.length; i++) {
+      const agreeing = values.filter((v) => agree(v, values[i]));
+      if (agreeing.length >= 2) return values[i];
+    }
+    if (values.length >= 2) {
+      conflicts.push(`${key}: ${values.map((v) => `"${v}"`).join(" vs ")}`);
+    }
+    return FALLBACK;
+  };
+
+  const fields = {
+    title: pickField("title"),
+    artist: pickField("artist"),
+    year: pickField("year"),
+    medium: pickField("medium"),
+  };
+  const confident = fields.title !== FALLBACK &&
+    (fields.artist !== FALLBACK || fields.year !== FALLBACK);
+  const primary = museumStructured ?? sources.find((s) => s.priority === "museum") ?? sources[0] ?? null;
+  return { fields, confident, primary, conflicts };
+}
+
+// ---------- orchestrator ----------
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -361,82 +451,151 @@ Deno.serve(async (req) => {
   if (!visionKey) return json(500, { error: "GOOGLE_VISION_API_KEY not configured" });
   if (!deepseekKey) return json(500, { error: "DEEPSEEK_API_KEY not configured" });
 
-  let body: {
-    imageBase64?: string;
-    mimeType?: string;
-    museum?: string;
-    city?: string | null;
-    country?: string | null;
-  };
+  let body: { imageBase64?: string; mimeType?: string; museum?: string; city?: string | null; country?: string | null };
   try { body = await req.json(); } catch { return json(400, { error: "Invalid JSON body" }); }
   if (!body.imageBase64) return json(400, { error: "imageBase64 is required" });
 
   const museum = (body.museum ?? "").trim();
   const location = [body.city, body.country].filter(Boolean).join(", ");
-  console.log("[identify-artwork] request received", { museum, location, mimeType: body.mimeType });
+  const museumHost = resolveMuseumHost(museum);
+  console.log("[identify] request", { museum, location, museumHost });
 
   try {
+    // STEP 1
     const web = await runVision(visionKey, body.imageBase64);
+    const globalMatchUrls = [
+      ...(web.fullMatchingImages ?? []).map((i) => i.url).filter(Boolean),
+      ...(web.partialMatchingImages ?? []).map((i) => i.url).filter(Boolean),
+    ] as string[];
     const entities = (web.webEntities ?? [])
-      .filter((e) => e.description && (e.score ?? 0) > 0.3)
+      .filter((e) => e.description && (e.score ?? 0) > 0.5)
       .map((e) => e.description!) as string[];
-    const bestGuess = web.bestGuessLabels?.[0]?.label ?? "";
-    const pages = web.pagesWithMatchingImages ?? [];
-    const globalFullImages = (web.fullMatchingImages ?? [])
-      .map((i) => i.url).filter(Boolean) as string[];
 
-    const ranked = rerankPages(pages);
-    console.log("[identify-artwork] reranked top", ranked.length, "candidates:",
-      ranked.map((p) => p.url));
+    // STEP 2: rank Vision pages + optionally query museum collection API.
+    const ranked = rankPages(web.pagesWithMatchingImages ?? [], museumHost);
+    console.log("[identify] step 2 — ranked candidates:",
+      ranked.map((r) => `${r.priority}:${r.host}${r.hasImageMatch ? "*" : ""}`));
 
-    let best: { result: DeepSeekResult; url: string } | null = null;
-
-    for (const page of ranked) {
-      const candidate = await fetchCandidate(page, globalFullImages);
-      if (!candidate) continue;
+    const museumApi = resolveMuseumApi(museum);
+    if (museumApi && entities.length > 0) {
+      const query = encodeURIComponent(entities.slice(0, 3).join(" "));
       try {
-        const result = await extractWithDeepSeek(deepseekKey, {
-          museum, location, entities, bestGuess,
-          pageText: candidate.text, pageUrl: candidate.url,
-        });
-        const score = scoreResult(result);
-        console.log("[identify-artwork] candidate scored", score, "from", candidate.url);
-        if (!best || score > scoreResult(best.result)) {
-          best = { result, url: candidate.url };
+        const apiResp = await fetch(museumApi + query, { headers: { accept: "application/json" } });
+        if (apiResp.ok) {
+          const apiJson = await apiResp.json();
+          console.log("[identify] museum collection API responded ok for", museum);
+          // We don't parse per-museum shapes here; the museum website result
+          // via ranked pages usually surfaces the same records with richer HTML.
+          void apiJson;
         }
-        // Fully confident (title + artist + year + medium) → stop early.
-        if (score >= 6) break;
       } catch (err) {
-        console.warn("[identify-artwork] deepseek error on", candidate.url, err instanceof Error ? err.message : err);
+        console.warn("[identify] museum API call failed", err instanceof Error ? err.message : err);
       }
     }
 
-    // Final fallback: entities-only extraction if no page had adjacent caption text.
-    if (!best) {
-      console.log("[identify-artwork] no scraped candidates; running entities-only extraction");
-      const result = await extractWithDeepSeek(deepseekKey, {
-        museum, location, entities, bestGuess,
-        pageText:
-          "No page caption found for this specific image; rely strictly on the Google web entities and the user-provided museum/location context below. Do not invent facts.",
-        pageUrl: "(entities-only fallback)",
-      });
-      best = { result, url: "" };
+    // Prefetch homepage description for museum host so we can detect
+    // sitewide-boilerplate og:descriptions in Gate 2c.
+    const homepageDesc: Record<string, string | null> = {};
+    async function getHomepageDesc(host: string): Promise<string | null> {
+      if (host in homepageDesc) return homepageDesc[host];
+      const html = await fetchHtml(`https://${host}/`, 5000);
+      const d = html ? (metaContent(html, "og:description") || metaContent(html, "description")) : "";
+      homepageDesc[host] = d || null;
+      return homepageDesc[host];
     }
 
-    const result = best.result;
-    const confident =
-      result.title !== FALLBACK && (result.artist !== FALLBACK || result.year !== FALLBACK || result.medium !== FALLBACK);
+    // STEP 3 + 5: verify each candidate; collect passing sources.
+    const passing: PassingSource[] = [];
+    const unstructuredNeedingLLM: { source: Omit<PassingSource, "fields">; text: string }[] = [];
 
-    console.log("[identify-artwork] done", { confident, sourceUrl: best.url, ...result });
+    for (const cand of ranked) {
+      const html = await fetchHtml(cand.url);
+      if (!html) continue;
+
+      // Gate 1
+      const matchUrls = [
+        ...(cand.page.fullMatchingImages ?? []).map((i) => i.url).filter(Boolean) as string[],
+        ...(cand.page.partialMatchingImages ?? []).map((i) => i.url).filter(Boolean) as string[],
+      ];
+      const g1 = gate1(html, matchUrls);
+      if (g1 === false && cand.priority === "other") {
+        console.log("[identify] gate1 fail (other-tier)", cand.url);
+        continue; // for untrusted tier a failed identity gate is disqualifying
+      }
+      // For museum/trusted tier a failed image match downgrades but does not
+      // outright block (real-photo case). g1 === null means not applicable.
+
+      // Gate 2
+      const homeDesc = await getHomepageDesc(cand.host);
+      const g2 = await gate2(html, cand.url, homeDesc);
+      if (g2 === false) continue;
+
+      if (g2.structured) {
+        passing.push({
+          url: cand.url, host: cand.host, priority: cand.priority,
+          structured: true, fields: g2.fields,
+        });
+      } else {
+        unstructuredNeedingLLM.push({
+          source: { url: cand.url, host: cand.host, priority: cand.priority, structured: false },
+          text: g2.text,
+        });
+      }
+
+      // Fast path: a museum-domain structured hit is enough on its own.
+      if (passing.some((p) => p.priority === "museum" && p.structured)) break;
+    }
+
+    // Run LLM extraction for unstructured passing pages (cap at 3 to keep it cheap).
+    for (const u of unstructuredNeedingLLM.slice(0, 3)) {
+      try {
+        const fields = await extractWithDeepSeek(deepseekKey, {
+          museum, location, pageText: u.text, pageUrl: u.source.url,
+        });
+        if (fields.title || fields.artist) {
+          passing.push({ ...u.source, fields });
+        }
+      } catch (err) {
+        console.warn("[identify] deepseek error on", u.source.url, err instanceof Error ? err.message : err);
+      }
+    }
+
+    console.log("[identify] step 4 — passing sources:", passing.length);
+
+    // STEP 4: cross-validate.
+    if (passing.length === 0) {
+      // STEP 6: no-match fallback (no AI guessing).
+      console.log("[identify] step 6 — no match; returning fallback");
+      return json(200, {
+        title: FALLBACK, artist: FALLBACK, year: FALLBACK, medium: FALLBACK,
+        confident: false, source: "no-match", sourceUrl: null,
+      });
+    }
+
+    const { fields, confident, primary, conflicts } = crossValidate(passing);
+    if (conflicts.length) console.log("[identify] conflicts:", conflicts);
+
+    if (!confident) {
+      console.log("[identify] step 6 — insufficient corroboration; returning fallback");
+      return json(200, {
+        title: FALLBACK, artist: FALLBACK, year: FALLBACK, medium: FALLBACK,
+        confident: false, source: "insufficient-corroboration",
+        sourceUrl: primary?.url ?? null, conflicts,
+      });
+    }
+
+    console.log("[identify] done", { confident, sourceUrl: primary?.url, ...fields });
     return json(200, {
-      ...result,
-      confident,
-      source: "vision+deepseek",
-      sourceUrl: best.url || null,
+      ...fields,
+      confident: true,
+      source: "vision+verify",
+      sourceUrl: primary?.url ?? null,
+      sources: passing.map((s) => ({ url: s.url, host: s.host, priority: s.priority, structured: s.structured })),
+      conflicts,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[identify-artwork] pipeline failed:", msg);
+    console.error("[identify] pipeline failed:", msg);
     return json(500, { error: msg });
   }
 });
