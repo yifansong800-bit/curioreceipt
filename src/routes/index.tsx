@@ -124,7 +124,7 @@ function Index() {
         <p className="text-center mt-6 text-xs sm:text-sm" style={{ color: "var(--ink-soft)" }}>
           A thermal receipt for your favorite art piece.
           <br />
-          One piece. One memory. Printed.
+          Turn your favorite view into a print.
         </p>
 
         <form
