@@ -1007,13 +1007,10 @@ function PieceForm({
         toast("Couldn't identify this piece", { description: "Enter the details manually." });
         return;
       }
-      // Only fill fields the user hasn't already typed into.
-      if (rTitle && !title.trim()) setTitle(rTitle);
-      if (rArtist && !artist.trim()) setArtist(rArtist);
-      if (rYear && !year.trim()) setYear(rYear);
-      if (rMedium && !medium.trim()) setMedium(rMedium);
+      // Surface as a suggestion the user can accept or dismiss.
+      setSuggestion({ title: rTitle, artist: rArtist, year: rYear, medium: rMedium });
       setIdentifyFailed(!result?.confident);
-      if (result?.confident) toast.success("Piece identified");
+      if (result?.confident) toast.success("Found a possible match");
     } catch (err) {
       if (!abort.signal.aborted) {
         console.error("[curio] identify failed", err);
