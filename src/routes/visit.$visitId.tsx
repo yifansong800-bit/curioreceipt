@@ -1201,10 +1201,70 @@ function PieceForm({
                 {converting ? "Converting photo…" : "✦ Upload a photo of your favorite piece"}
               </div>
               <div className="text-xs mt-2" style={{ color: "var(--ink-soft)" }}>
-                We'll try to identify the title, artist, year, and medium.
+                Fill in the details yourself, or ask us to try identifying it.
               </div>
             </button>
           )}
+
+          {file ? (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => file && runIdentify(file)}
+                disabled={identifying}
+                className="text-xs underline disabled:opacity-50"
+                style={{ color: "var(--ink-soft)" }}
+              >
+                {identifying
+                  ? "Identifying…"
+                  : suggestion
+                    ? "✦ Try identifying again"
+                    : "Can't remember the details? ✦ Identify for me"}
+              </button>
+            </div>
+          ) : null}
+
+          {suggestion ? (
+            <div
+              className="border p-3 space-y-2"
+              style={{ borderColor: "var(--ink)", backgroundColor: "var(--paper)" }}
+            >
+              <div className="text-xs uppercase tracking-widest" style={{ color: "var(--ink-soft)" }}>
+                ✦ Is this right?
+              </div>
+              <div className="text-sm space-y-0.5">
+                <div>
+                  <span className="italic">{suggestion.title || "—"}</span>
+                  {suggestion.artist ? ` — ${suggestion.artist}` : ""}
+                </div>
+                <div className="text-xs" style={{ color: "var(--ink-soft)" }}>
+                  {[suggestion.year, suggestion.medium].filter(Boolean).join(" · ") || "no year/medium found"}
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={acceptSuggestion}
+                  className="flex-1 text-xs uppercase tracking-widest py-2 border"
+                  style={{
+                    borderColor: "var(--ink)",
+                    backgroundColor: "var(--ink)",
+                    color: "var(--paper)",
+                  }}
+                >
+                  Yes, use these
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSuggestion(null)}
+                  className="flex-1 text-xs uppercase tracking-widest py-2 border"
+                  style={{ borderColor: "var(--ink)", color: "var(--ink)" }}
+                >
+                  No, I'll type it
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <MiniField label="TITLE" value={title} onChange={setTitle} placeholder="Untitled" />
           <div className="grid grid-cols-[1fr_100px] gap-3">
