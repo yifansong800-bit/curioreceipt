@@ -1066,8 +1066,17 @@ function PieceForm({
     setYear("");
     setMedium("");
     setIdentifyFailed(false);
-    // Fire identify instantly — no button.
-    void runIdentify(ready);
+    setSuggestion(null);
+    // Identification is now opt-in — user clicks "Identify for me" if needed.
+  }
+
+  function acceptSuggestion() {
+    if (!suggestion) return;
+    if (suggestion.title && !title.trim()) setTitle(suggestion.title);
+    if (suggestion.artist && !artist.trim()) setArtist(suggestion.artist);
+    if (suggestion.year && !year.trim()) setYear(suggestion.year);
+    if (suggestion.medium && !medium.trim()) setMedium(suggestion.medium);
+    setSuggestion(null);
   }
 
   function toggleEmotion(e: string) {
