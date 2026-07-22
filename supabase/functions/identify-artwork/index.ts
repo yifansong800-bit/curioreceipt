@@ -130,30 +130,105 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-// Try to isolate the caption/metadata block surrounding the matched image
-// on the page. Strategy:
-//   1. Find the first <img> whose src matches one of the image URLs from
-//      Vision's fullMatchingImages / partialMatchingImages.
-//   2. Return a window of HTML ~4000 chars centered on that <img>.
-// Falls back to the whole body when no matched <img> can be found.
-function isolateImageContext(html: string, imageUrls: string[]): string {
-  const lowerHtml = html;
-  let bestIdx = -1;
-  for (const raw of imageUrls) {
-    if (!raw) continue;
-    const filename = raw.split("/").pop()?.split("?")[0];
-    const needles = [raw, filename].filter(Boolean) as string[];
-    for (const needle of needles) {
-      const idx = lowerHtml.indexOf(needle);
-      if (idx !== -1) { bestIdx = idx; break; }
-    }
-    if (bestIdx !== -1) break;
+// Locate the target <img> in the DOM and return ONLY text from its immediate
+// caption context — <figcaption>, sibling caption/info divs, or the closest
+// enclosing <figure>/<article>/<aside>. Hero banners, <nav>, <header>,
+// <footer>, recommendations, and unrelated gallery grids are excluded.
+//
+// Returns null when no textual metadata sits adjacent to the target image —
+// the caller then falls back to entity-only extraction rather than guessing
+// from unrelated page text.
+async function isolateImageCaption(
+  html: string,
+  imageUrls: string[],
+): Promise<string | null> {
+  let parseHTML: (html: string) => { document: Document };
+  try {
+    ({ parseHTML } = await import("https://esm.sh/linkedom@0.16.11"));
+  } catch (err) {
+    console.warn("[identify-artwork] linkedom import failed, skipping DOM isolation", err);
+    return null;
   }
-  if (bestIdx === -1) return html;
-  // Grab the enclosing <figure>/<article>/<section> if we can find one nearby.
-  const windowStart = Math.max(0, bestIdx - 2000);
-  const windowEnd = Math.min(lowerHtml.length, bestIdx + 4000);
-  return lowerHtml.slice(windowStart, windowEnd);
+  let doc: Document;
+  try {
+    doc = parseHTML(html).document;
+  } catch (err) {
+    console.warn("[identify-artwork] HTML parse failed", err);
+    return null;
+  }
+
+  // Strip anything that reliably isn't the target image's caption.
+  const KILL = "nav, header, footer, aside.related, .related, .recommendations, .recommended, .related-artworks, .related-works, .site-header, .site-footer, .breadcrumbs, .menu, .navigation, script, style, noscript";
+  for (const el of Array.from(doc.querySelectorAll(KILL))) el.remove();
+
+  // Find the target <img> by matching src / data-src / srcset / alt against
+  // any of the URLs Vision handed us.
+  const needles = imageUrls
+    .flatMap((u) => {
+      if (!u) return [] as string[];
+      const file = u.split("/").pop()?.split("?")[0] ?? "";
+      return [u, file].filter(Boolean);
+    })
+    .map((n) => n.toLowerCase());
+
+  let target: Element | null = null;
+  for (const img of Array.from(doc.querySelectorAll("img"))) {
+    const hay = [
+      img.getAttribute("src") ?? "",
+      img.getAttribute("data-src") ?? "",
+      img.getAttribute("data-original") ?? "",
+      img.getAttribute("srcset") ?? "",
+      img.getAttribute("alt") ?? "",
+    ].join(" ").toLowerCase();
+    if (needles.some((n) => n && hay.includes(n))) { target = img; break; }
+  }
+  if (!target) {
+    console.log("[identify-artwork] target <img> not found in DOM");
+    return null;
+  }
+
+  const pieces: string[] = [];
+  const pushText = (el: Element | null | undefined) => {
+    if (!el) return;
+    const t = (el.textContent ?? "").replace(/\s+/g, " ").trim();
+    if (t) pieces.push(t);
+  };
+
+  // 1. Enclosing <figure> → its <figcaption>.
+  const figure = target.closest("figure");
+  if (figure) {
+    for (const cap of Array.from(figure.querySelectorAll("figcaption"))) pushText(cap);
+  }
+
+  // 2. Sibling caption/info blocks within the same immediate parent.
+  const parent = target.parentElement;
+  const CAPTION_SEL = ".caption, .artwork-info, .artwork-details, .details, .metadata, .meta, .object-info, .work-info, .tombstone, .artwork-tombstone, [class*='caption'], [class*='tombstone']";
+  if (parent) {
+    for (const sib of Array.from(parent.children)) {
+      if (sib === target) continue;
+      if (sib.matches?.(CAPTION_SEL)) pushText(sib);
+    }
+    // Also check one level up (common wrapper pattern).
+    const grand = parent.parentElement;
+    if (grand) {
+      for (const sib of Array.from(grand.children)) {
+        if (sib === parent) continue;
+        if (sib.matches?.(CAPTION_SEL)) pushText(sib);
+      }
+    }
+  }
+
+  // 3. Closest <article> / <aside> that wraps the image — but only its
+  // caption-ish descendants, not the whole thing.
+  const wrapper = target.closest("article, aside, section");
+  if (wrapper && pieces.length === 0) {
+    for (const c of Array.from(wrapper.querySelectorAll(CAPTION_SEL))) pushText(c);
+    for (const c of Array.from(wrapper.querySelectorAll("figcaption"))) pushText(c);
+  }
+
+  const combined = pieces.join(" \n ").trim();
+  if (!combined) return null;
+  return combined.slice(0, 3500);
 }
 
 interface Candidate { url: string; text: string }
@@ -182,14 +257,13 @@ async function fetchCandidate(page: VisionPage, extraImageUrls: string[]): Promi
       ...(page.partialMatchingImages ?? []).map((i) => i.url).filter(Boolean) as string[],
       ...extraImageUrls,
     ];
-    const isolated = isolateImageContext(html, imgUrls);
-    const text = stripHtml(isolated).slice(0, 3500);
-    if (text.length < 80) {
-      console.warn("[identify-artwork] isolated text too short, skipping", url);
+    const caption = await isolateImageCaption(html, imgUrls);
+    if (!caption || caption.length < 30) {
+      console.warn("[identify-artwork] no adjacent caption for target image, skipping page-text extraction for", url);
       return null;
     }
-    console.log("[identify-artwork] scraped", text.length, "chars from", url, "(isolated:", isolated.length !== html.length, ")");
-    return { url, text };
+    console.log("[identify-artwork] extracted", caption.length, "chars of caption context from", url);
+    return { url, text: caption };
   } catch (err) {
     console.warn("[identify-artwork] fetch error", url, err instanceof Error ? err.message : err);
     return null;
