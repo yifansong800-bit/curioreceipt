@@ -1171,7 +1171,7 @@ function PieceForm({
                 <div className="text-xs uppercase tracking-widest" style={{ color: "var(--ink-soft)" }}>
                   {identifying ? "Identifying piece…" : "✓ Photo uploaded"}
                 </div>
-                {identifyFailed ? (
+                {identifyFailed && !suggestion ? (
                   <div className="text-xs italic mt-1" style={{ color: "var(--ink-soft)" }}>
                     couldn't identify — enter manually
                   </div>
