@@ -920,6 +920,12 @@ function PieceForm({
   const [medium, setMedium] = useState("");
   const [identifying, setIdentifying] = useState(false);
   const [identifyFailed, setIdentifyFailed] = useState(false);
+  const [suggestion, setSuggestion] = useState<{
+    title: string;
+    artist: string;
+    year: string;
+    medium: string;
+  } | null>(null);
   const identifyAbortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
