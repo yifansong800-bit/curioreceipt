@@ -142,20 +142,23 @@ async function isolateImageCaption(
   html: string,
   imageUrls: string[],
 ): Promise<string | null> {
-  let parseHTML: (html: string) => { document: Document };
+  let DOMParserCtor: typeof globalThis extends { DOMParser: infer P } ? P : any;
   try {
-    ({ parseHTML } = await import("https://esm.sh/linkedom@0.16.11"));
+    ({ DOMParser: DOMParserCtor } = await import(
+      "https://deno.land/x/deno_dom@v0.1.46/deno-dom-wasm.ts"
+    ));
   } catch (err) {
-    console.warn("[identify-artwork] linkedom import failed, skipping DOM isolation", err);
+    console.warn("[identify-artwork] deno-dom import failed, skipping DOM isolation", err);
     return null;
   }
-  let doc: Document;
+  let doc: any;
   try {
-    doc = parseHTML(html).document;
+    doc = new (DOMParserCtor as any)().parseFromString(html, "text/html");
   } catch (err) {
     console.warn("[identify-artwork] HTML parse failed", err);
     return null;
   }
+  if (!doc) return null;
 
   // Strip anything that reliably isn't the target image's caption.
   const KILL = "nav, header, footer, aside.related, .related, .recommendations, .recommended, .related-artworks, .related-works, .site-header, .site-footer, .breadcrumbs, .menu, .navigation, script, style, noscript";
