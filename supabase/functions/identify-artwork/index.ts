@@ -408,13 +408,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Final fallback: entities-only extraction if nothing scraped.
+    // Final fallback: entities-only extraction if no page had adjacent caption text.
     if (!best) {
       console.log("[identify-artwork] no scraped candidates; running entities-only extraction");
       const result = await extractWithDeepSeek(deepseekKey, {
         museum, location, entities, bestGuess,
-        pageText: "(no webpage scraped — rely on the Google web entities below)",
-        pageUrl: "(none)",
+        pageText:
+          "No page caption found for this specific image; rely strictly on the Google web entities and the user-provided museum/location context below. Do not invent facts.",
+        pageUrl: "(entities-only fallback)",
       });
       best = { result, url: "" };
     }
