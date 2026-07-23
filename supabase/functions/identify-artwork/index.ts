@@ -1,10 +1,10 @@
 // Supabase Edge Function: identify-artwork
 //
-// Simple single-shot artwork identification using the Lovable AI Gateway
-// (Gemini 2.5 Flash-Lite vision) with a JSON-schema-constrained response.
+// Calls the official Google Gemini API directly with GEMINI_API_KEY,
+// using gemini-3.5-flash-lite with a JSON schema constraint.
 //
 // Body: { imageBase64, mimeType?, museum?, city?, country? }
-// Response: { title, artist, year, medium, confident, sources? }
+// Response: { title, artist, year, medium, confident }
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,7 +13,7 @@ const corsHeaders = {
 };
 
 const FALLBACK = "couldn't identify, enter manually";
-const MODEL = "google/gemini-2.5-flash-lite";
+const MODEL = "gemini-3.5-flash-lite";
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -50,8 +50,8 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) return json(500, { error: "Missing LOVABLE_API_KEY" });
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  if (!apiKey) return json(500, { error: "Missing GEMINI_API_KEY" });
 
   let body: RequestBody;
   try {
@@ -70,71 +70,47 @@ Deno.serve(async (req: Request) => {
   const city = normalize(body.city);
   const country = normalize(body.country);
   const contextParts = [museum, city, country].filter(Boolean);
-  const contextLine = contextParts.length
-    ? `Museum/location context provided by the user: ${contextParts.join(", ")}. Use this to disambiguate, but do not invent details that aren't supported by the image.`
-    : "No museum context was provided.";
+  const locationLabel = contextParts.length ? contextParts.join(", ") : "an unspecified museum";
 
-  const systemPrompt = [
-    "You identify artworks from a photograph taken by a museum visitor.",
-    "Return the exact title, artist, creation year, and medium of the depicted artwork.",
-    "Only claim details you are highly confident about from visual evidence (style, signature, plaque if visible) plus the museum context.",
-    "If you are not confident about a specific field, return an empty string for that field.",
-    "Set confident=true only if you are certain of at least the title AND artist. Otherwise confident=false.",
-    "Never guess or fabricate. Empty string is always better than a wrong answer.",
-    contextLine,
-  ].join(" ");
+  const promptText = `Identify the title, artist name, year, and medium of this artwork seen in ${locationLabel}. Only claim a field if you are confident based on the image and context; otherwise return an empty string for that field. Set confident=true only if you are certain of at least the title AND artist.`;
 
   const requestBody = {
-    model: MODEL,
-    messages: [
-      {
-        role: "system",
-        content: systemPrompt,
-      },
+    contents: [
       {
         role: "user",
-        content: [
-          { type: "text", text: "Identify this artwork." },
-          {
-            type: "image_url",
-            image_url: { url: `data:${mimeType};base64,${imageBase64}` },
-          },
+        parts: [
+          { text: promptText },
+          { inline_data: { mime_type: mimeType, data: imageBase64 } },
         ],
       },
     ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "artwork_identification",
-        strict: true,
-        schema: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            title: { type: "string", description: "Exact artwork title, or empty string if unsure." },
-            artist: { type: "string", description: "Full artist name, or empty string if unsure." },
-            year: { type: "string", description: "Year or year range created (e.g. '1889'), or empty string if unsure." },
-            medium: { type: "string", description: "Medium/materials (e.g. 'Oil on canvas'), or empty string if unsure." },
-            confident: { type: "boolean" },
-          },
-          required: ["title", "artist", "year", "medium", "confident"],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "OBJECT",
+        properties: {
+          title: { type: "STRING" },
+          artist: { type: "STRING" },
+          year: { type: "STRING" },
+          medium: { type: "STRING" },
+          confident: { type: "BOOLEAN" },
         },
+        required: ["title", "artist", "year", "medium", "confident"],
       },
     },
   };
 
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
   let resp: Response;
   try {
-    resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    resp = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     });
   } catch (err) {
-    console.error("[identify-artwork] gateway fetch failed", err);
+    console.error("[identify-artwork] Gemini fetch failed", err);
     return json(200, {
       title: FALLBACK, artist: FALLBACK, year: FALLBACK, medium: FALLBACK,
       confident: false,
@@ -143,9 +119,8 @@ Deno.serve(async (req: Request) => {
 
   if (!resp.ok) {
     const text = await resp.text();
-    console.error(`[identify-artwork] gateway ${resp.status}: ${text}`);
+    console.error(`[identify-artwork] Gemini ${resp.status}: ${text}`);
     if (resp.status === 429) return json(429, { error: "Rate limit exceeded, please try again shortly." });
-    if (resp.status === 402) return json(402, { error: "AI credits exhausted." });
     return json(200, {
       title: FALLBACK, artist: FALLBACK, year: FALLBACK, medium: FALLBACK,
       confident: false,
@@ -153,9 +128,9 @@ Deno.serve(async (req: Request) => {
   }
 
   const payload = await resp.json().catch(() => null) as
-    | { choices?: { message?: { content?: string } }[] }
+    | { candidates?: { content?: { parts?: { text?: string }[] } }[] }
     | null;
-  const content = payload?.choices?.[0]?.message?.content ?? "";
+  const content = payload?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
   let parsed: Partial<IdentifyResult> = {};
   try {
     parsed = JSON.parse(content);
