@@ -13,7 +13,7 @@ const corsHeaders = {
 };
 
 const FALLBACK = "couldn't identify, enter manually";
-const MODEL = "gemini-3.5-flash-lite";
+const MODEL = "gemini-2.5-pro";
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -72,7 +72,16 @@ Deno.serve(async (req: Request) => {
   const contextParts = [museum, city, country].filter(Boolean);
   const locationLabel = contextParts.length ? contextParts.join(", ") : "an unspecified museum";
 
-  const promptText = `Identify the title, artist name, year, and medium of this artwork seen in ${locationLabel}. Only claim a field if you are confident based on the image and context; otherwise return an empty string for that field. Set confident=true only if you are certain of at least the title AND artist.`;
+  const promptText = `You are identifying a specific artwork from a photograph taken by a visitor at ${locationLabel}.
+
+Rules — read carefully:
+1. Only fill a field (title, artist, year, medium) if you actually RECOGNIZE this specific artwork from the image itself. Recognition means you can name the exact work, not just guess based on style, subject, or the museum's collection.
+2. If you recognize the artist but are not certain of the exact title, return the artist and leave title empty. Do NOT invent a plausible-sounding title. Same rule for every field independently.
+3. If you are unsure of the year, medium, or any other detail, return an empty string for that field. Do NOT approximate ("circa 2000", "early 2000s") — either the exact known value or empty.
+4. Set confident=true ONLY if you would stake your reputation on the exact title AND artist matching this specific work. Otherwise confident=false.
+5. Never guess from context alone (museum name, room, style). The image must be the primary evidence.
+
+Return strictly the JSON schema. Empty string means "I don't know" — that is the correct answer when uncertain.`;
 
   const requestBody = {
     contents: [
@@ -85,6 +94,8 @@ Deno.serve(async (req: Request) => {
       },
     ],
     generationConfig: {
+      temperature: 0,
+      topP: 0.1,
       responseMimeType: "application/json",
       responseSchema: {
         type: "OBJECT",
