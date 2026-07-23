@@ -13,7 +13,7 @@ const corsHeaders = {
 };
 
 const FALLBACK = "couldn't identify, enter manually";
-const MODEL = "gemini-3.5-flash-lite";
+const MODEL = "gemini-2.5-pro";
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
