@@ -972,11 +972,13 @@ function PieceForm({
       }
       const imageBase64 = btoa(binary);
       if (abort.signal.aborted) return;
-      console.log("[curio] invoking identify-artwork edge function", { museum, city, country });
+      const museumContext = [museum, city, country].filter(Boolean).join(", ");
+      console.log("[curio] invoking identify-artwork edge function", { museumContext });
       const { data: result, error: invokeError } = await supabase.functions.invoke("identify-artwork", {
         body: {
           imageBase64,
           mimeType: "image/jpeg",
+          museumContext,
           museum,
           city,
           country,
