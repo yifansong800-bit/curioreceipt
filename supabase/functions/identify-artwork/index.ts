@@ -1,9 +1,10 @@
 // Supabase Edge Function: identify-artwork
 //
-// Calls the official Google Gemini API directly with GEMINI_API_KEY,
-// using gemini-3.5-flash-lite with a JSON schema constraint.
+// Calls the official Google Gemini API with Search Grounding enabled to
+// identify an artwork from an uploaded image. Accepts an optional
+// museumContext string that helps disambiguate similar works.
 //
-// Body: { imageBase64, mimeType?, museum?, city?, country? }
+// Body: { imageBase64, mimeType?, museumContext?, museum?, city?, country? }
 // Response: { title, artist, year, medium, confident }
 
 const corsHeaders = {
@@ -14,6 +15,7 @@ const corsHeaders = {
 
 const FALLBACK = "couldn't identify, enter manually";
 const MODEL = "gemini-3.6-flash";
+const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -25,6 +27,7 @@ function json(status: number, body: unknown) {
 interface RequestBody {
   imageBase64?: string;
   mimeType?: string;
+  museumContext?: string;
   museum?: string;
   city?: string;
   country?: string;
@@ -35,7 +38,8 @@ interface IdentifyResult {
   artist: string;
   year: string;
   medium: string;
-  confident: boolean;
+  confidence?: boolean | string | number;
+  confident?: boolean;
 }
 
 function normalize(v: unknown): string {
@@ -46,127 +50,188 @@ function normalize(v: unknown): string {
   return s;
 }
 
+function coerceConfident(v: unknown): boolean {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "number") return v >= 0.7;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    if (["true", "high", "confident", "yes"].includes(s)) return true;
+    const n = Number(s);
+    if (!Number.isNaN(n)) return n >= 0.7;
+  }
+  return false;
+}
+
+function extractJson(text: string): string | null {
+  // Strip code fences and grab the first JSON object.
+  const cleaned = text.replace(/```json|```/gi, "").trim();
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  return match ? match[0] : null;
+}
+
 Deno.serve(async (req: Request) => {
+  const startedAt = Date.now();
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
   const apiKey = Deno.env.get("GEMINI_API_KEY");
-  if (!apiKey) return json(500, { error: "Missing GEMINI_API_KEY" });
+  if (!apiKey) {
+    console.error("[identify-artwork] Missing GEMINI_API_KEY");
+    return json(500, { error: "Missing GEMINI_API_KEY" });
+  }
 
   let body: RequestBody;
   try {
     body = await req.json();
   } catch {
+    console.error("[identify-artwork] Invalid JSON body");
     return json(400, { error: "Invalid JSON body" });
   }
 
   const imageBase64 = body.imageBase64;
   const mimeType = body.mimeType || "image/jpeg";
   if (!imageBase64 || typeof imageBase64 !== "string") {
+    console.error("[identify-artwork] imageBase64 missing");
     return json(400, { error: "imageBase64 is required" });
   }
 
+  const explicitContext = normalize(body.museumContext);
   const museum = normalize(body.museum);
   const city = normalize(body.city);
   const country = normalize(body.country);
-  const contextParts = [museum, city, country].filter(Boolean);
-  const locationLabel = contextParts.length ? contextParts.join(", ") : "an unspecified museum";
+  const derivedContext = [museum, city, country].filter(Boolean).join(", ");
+  const museumContext = explicitContext || derivedContext || "Unknown / Unspecified";
 
-  const promptText = `You are identifying a specific artwork from a photograph taken by a visitor at ${locationLabel}.
+  console.log("[identify-artwork] REQUEST", {
+    timestamp: new Date().toISOString(),
+    museumContext,
+    imageBytes: imageBase64.length,
+    mimeType,
+  });
 
-Rules — read carefully:
-1. Only fill a field (title, artist, year, medium) if you actually RECOGNIZE this specific artwork from the image itself. Recognition means you can name the exact work, not just guess based on style, subject, or the museum's collection.
-2. If you recognize the artist but are not certain of the exact title, return the artist and leave title empty. Do NOT invent a plausible-sounding title. Same rule for every field independently.
-3. If you are unsure of the year, medium, or any other detail, return an empty string for that field. Do NOT approximate ("circa 2000", "early 2000s") — either the exact known value or empty.
-4. Set confident=true ONLY if you would stake your reputation on the exact title AND artist matching this specific work. Otherwise confident=false.
-5. Never guess from context alone (museum name, room, style). The image must be the primary evidence.
+  const systemPrompt = `You are an expert museum curator and art historian. Analyze the provided image to identify the exact artwork.
 
-Return strictly the JSON schema. Empty string means "I don't know" — that is the correct answer when uncertain.`;
+WHERE IT'S SEEN:
+- Museum / Venue Location: ${museumContext}
+
+CRITICAL ACCURACY RULES:
+1. OCR & PLAQUE FIRST: Check for any visible exhibition text, wall plaques, artist signatures, or labels. Prioritize exact text over general visual pattern matching.
+2. DISAMBIGUATE WITH USER CONTEXT: Use the provided Museum / Venue Location to narrow down artwork titles when an artist has created multiple similar-looking series or installations (e.g., Yue Minjun's "2000 A.D." at M+ Museum vs. "Contemporary Terracotta Warriors" at Donum Estate).
+3. USE GOOGLE SEARCH: Verify the visual details and location context against live web/catalog search results before confirming the title.
+4. Return strictly JSON with keys: title, artist, year, medium, confidence.
+
+If you cannot verify a field, return an empty string for that field. Do not invent or approximate. "confidence" is a boolean: true only if title AND artist are both verified.`;
 
   const requestBody = {
     contents: [
       {
         role: "user",
         parts: [
-          { text: promptText },
+          { text: "Identify this artwork per the system rules. Return only JSON." },
           { inline_data: { mime_type: mimeType, data: imageBase64 } },
         ],
       },
     ],
+    systemInstruction: {
+      role: "system",
+      parts: [{ text: systemPrompt }],
+    },
+    tools: [{ google_search: {} }],
     generationConfig: {
       temperature: 0,
       topP: 0.1,
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: "OBJECT",
-        properties: {
-          title: { type: "STRING" },
-          artist: { type: "STRING" },
-          year: { type: "STRING" },
-          medium: { type: "STRING" },
-          confident: { type: "BOOLEAN" },
-        },
-        required: ["title", "artist", "year", "medium", "confident"],
-      },
+      // Note: responseMimeType/responseSchema cannot be combined with google_search tool.
     },
   };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  console.log("[identify-artwork] GEMINI_REQUEST", {
+    endpoint: ENDPOINT,
+    model: MODEL,
+    temperature: 0,
+    topP: 0.1,
+    tools: ["google_search"],
+    systemPromptChars: systemPrompt.length,
+  });
 
   let resp: Response;
   try {
-    resp = await fetch(url, {
+    resp = await fetch(`${ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     });
   } catch (err) {
-    console.error("[identify-artwork] Gemini fetch failed", err);
+    console.error("[identify-artwork] Gemini fetch threw", err);
+    console.log("[identify-artwork] DURATION_MS", Date.now() - startedAt);
     return json(200, {
-      title: FALLBACK, artist: FALLBACK, year: FALLBACK, medium: FALLBACK,
-      confident: false,
+      title: FALLBACK, artist: FALLBACK, year: FALLBACK, medium: FALLBACK, confident: false,
     });
   }
 
+  console.log("[identify-artwork] GEMINI_STATUS", resp.status, resp.statusText);
+
   if (!resp.ok) {
-    const text = await resp.text();
-    console.error(`[identify-artwork] Gemini ${resp.status}: ${text}`);
+    const errText = await resp.text();
+    console.error("[identify-artwork] GEMINI_ERROR_BODY", errText);
+    console.log("[identify-artwork] DURATION_MS", Date.now() - startedAt);
     if (resp.status === 429) return json(429, { error: "Rate limit exceeded, please try again shortly." });
     return json(200, {
-      title: FALLBACK, artist: FALLBACK, year: FALLBACK, medium: FALLBACK,
-      confident: false,
+      title: FALLBACK, artist: FALLBACK, year: FALLBACK, medium: FALLBACK, confident: false,
     });
   }
 
   const payload = await resp.json().catch(() => null) as
-    | { candidates?: { content?: { parts?: { text?: string }[] } }[] }
+    | {
+        candidates?: {
+          content?: { parts?: { text?: string }[] };
+          groundingMetadata?: unknown;
+        }[];
+      }
     | null;
-  const content = payload?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+
+  const rawText = payload?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+  const grounding = payload?.candidates?.[0]?.groundingMetadata ?? null;
+
+  console.log("[identify-artwork] GEMINI_RAW_TEXT", rawText);
+  console.log("[identify-artwork] GEMINI_GROUNDING", JSON.stringify(grounding));
+
   let parsed: Partial<IdentifyResult> = {};
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    console.error("[identify-artwork] failed to parse model JSON:", content);
+  const jsonSlice = extractJson(rawText);
+  if (jsonSlice) {
+    try {
+      parsed = JSON.parse(jsonSlice);
+      console.log("[identify-artwork] PARSE_OK", parsed);
+    } catch (err) {
+      console.error("[identify-artwork] PARSE_FAIL", err, jsonSlice);
+    }
+  } else {
+    console.error("[identify-artwork] PARSE_FAIL no JSON object found in response");
   }
 
   const title = normalize(parsed.title);
   const artist = normalize(parsed.artist);
   const year = normalize(parsed.year);
   const medium = normalize(parsed.medium);
+  const modelConfident = coerceConfident(parsed.confidence ?? parsed.confident);
   const anyField = title || artist || year || medium;
 
   if (!anyField) {
-    return json(200, {
-      title: FALLBACK, artist: FALLBACK, year: FALLBACK, medium: FALLBACK,
-      confident: false,
-    });
+    const out = {
+      title: FALLBACK, artist: FALLBACK, year: FALLBACK, medium: FALLBACK, confident: false,
+    };
+    console.log("[identify-artwork] FINAL", out);
+    console.log("[identify-artwork] DURATION_MS", Date.now() - startedAt);
+    return json(200, out);
   }
 
-  return json(200, {
+  const out = {
     title: title || FALLBACK,
     artist: artist || FALLBACK,
     year: year || FALLBACK,
     medium: medium || FALLBACK,
-    confident: Boolean(parsed.confident) && Boolean(title) && Boolean(artist),
-  });
+    confident: modelConfident && Boolean(title) && Boolean(artist),
+  };
+  console.log("[identify-artwork] FINAL", out);
+  console.log("[identify-artwork] DURATION_MS", Date.now() - startedAt);
+  return json(200, out);
 });
