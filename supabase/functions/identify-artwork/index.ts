@@ -228,8 +228,14 @@ Deno.serve(async (req: Request) => {
         `WEB ENTITIES (description : score):\n${
           evidence.webEntities.map((e) => `- ${e.description} : ${e.score.toFixed(2)}`).join("\n") || "(none)"
         }`,
-        `PAGE TITLES HOSTING A MATCHING IMAGE:\n${
-          evidence.pageTitles.map((t) => `- ${t}`).join("\n") || "(none)"
+        `PAGES HOSTING A MATCHING IMAGE (title — url):\n${
+          evidence.pages.map((p) => `- ${p.title || "(untitled)"} — ${p.url}`).join("\n") || "(none)"
+        }`,
+        `EXACT IMAGE MATCHES (url — path keywords):\n${
+          evidence.fullMatchUrls.map((u) => `- ${u}\n  ↳ ${urlHint(u)}`).join("\n") || "(none)"
+        }`,
+        `PARTIAL / VISUALLY SIMILAR IMAGE MATCHES (url — path keywords):\n${
+          evidence.partialMatchUrls.map((u) => `- ${u}\n  ↳ ${urlHint(u)}`).join("\n") || "(none)"
         }`,
       ].join("\n\n")
     : "(reverse image search unavailable for this request)";
@@ -239,13 +245,15 @@ Deno.serve(async (req: Request) => {
 WHERE IT'S SEEN:
 - Museum / Venue Location: ${museumContext}
 
-REVERSE-IMAGE SEARCH HINTS (from Google Vision — helpful but incomplete; phone photos often return generic or noisy matches):
+REVERSE-IMAGE SEARCH EVIDENCE (from Google Vision — helpful but noisy; phone photos often return generic or unrelated matches):
 ${evidenceBlock}
 
-HOW TO USE THE SOURCES, IN PRIORITY ORDER:
-1. PLAQUE OCR: if the photo's OCR text contains a title, artist, date, or medium, copy it verbatim (fix only obvious OCR typos). This outranks everything else.
-2. REVERSE-IMAGE HINTS: use page titles / best-guess labels / entities to pin down the exact work, especially to disambiguate similar works by the same artist (e.g. Yue Minjun's "2000 A.D." at M+ vs "Contemporary Terracotta Warriors" at Donum Estate). Ignore hints that are generic ("sculpture", "art museum") or clearly about a different work.
-3. YOUR OWN KNOWLEDGE: if the hints are empty or unhelpful but you genuinely recognise this specific work from the image and the museum context, you SHOULD fill the fields from your own knowledge. Empty hints are NOT a reason to return blanks.
+HOW TO REASON:
+1. LOOK AT THE PHOTO FIRST. Describe to yourself what is actually depicted: medium (painting / sculpture / installation), subject, colours, number of figures, scale, framing, gallery setting.
+2. PLAQUE OCR: if the OCR text contains a title, artist, date, or medium, copy it verbatim (fix only obvious OCR typos). This outranks everything else.
+3. CROSS-REFERENCE THE WEB CLUES AGAINST THE PHOTO. Treat page titles, page URLs, exact-match URLs and their path keywords (slugs often literally contain the artwork title and year) and web entities as candidate hypotheses. Accept a candidate only if it is consistent with what you actually see in the image AND with the museum context. Reject any candidate that contradicts the photo (wrong medium, wrong subject, different number of figures, different colours) — a URL match alone is not proof.
+4. WEIGHT THE EVIDENCE: exact image matches > pages hosting a matching image > best-guess label > web entities > visually-similar matches (weakest — these are lookalikes, not the same work).
+5. YOUR OWN KNOWLEDGE: if the clues are empty or unhelpful but you genuinely recognise this specific work from the image and the museum context, fill the fields from your own knowledge. Empty clues are NOT a reason to return blanks.
 
 ACCURACY RULES:
 - Never invent a plausible-sounding title just because you recognise the artist or style. If you cannot name the specific work, leave title blank but still return the artist.
