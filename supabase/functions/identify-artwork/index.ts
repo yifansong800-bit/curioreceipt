@@ -95,9 +95,10 @@ async function callVision(apiKey: string, imageBase64: string): Promise<VisionEv
       {
         image: { content: imageBase64 },
         features: [
-          { type: "WEB_DETECTION", maxResults: 10 },
+          { type: "WEB_DETECTION", maxResults: 25 },
           { type: "TEXT_DETECTION", maxResults: 1 },
         ],
+        imageContext: { webDetectionParams: { includeGeoResults: true } },
       },
     ],
   };
