@@ -40,8 +40,27 @@ interface RequestBody {
 interface VisionEvidence {
   bestGuessLabels: string[];
   webEntities: { description: string; score: number }[];
-  pageTitles: string[];
+  pages: { title: string; url: string }[];
+  fullMatchUrls: string[];
+  partialMatchUrls: string[];
   ocrText: string;
+}
+
+function urlHint(url: string): string {
+  try {
+    const u = new URL(url);
+    const slug = decodeURIComponent(u.pathname)
+      .replace(/\.(html?|php|aspx?|jpe?g|png|webp)$/i, "")
+      .split("/")
+      .filter(Boolean)
+      .slice(-2)
+      .join(" / ")
+      .replace(/[-_+]+/g, " ")
+      .trim();
+    return slug ? `${u.hostname} — ${slug}` : u.hostname;
+  } catch {
+    return url;
+  }
 }
 
 function normalize(v: unknown): string {
@@ -76,9 +95,10 @@ async function callVision(apiKey: string, imageBase64: string): Promise<VisionEv
       {
         image: { content: imageBase64 },
         features: [
-          { type: "WEB_DETECTION", maxResults: 10 },
+          { type: "WEB_DETECTION", maxResults: 25 },
           { type: "TEXT_DETECTION", maxResults: 1 },
         ],
+        imageContext: { webDetectionParams: { includeGeoResults: true } },
       },
     ],
   };
@@ -107,7 +127,10 @@ async function callVision(apiKey: string, imageBase64: string): Promise<VisionEv
       webDetection?: {
         bestGuessLabels?: { label?: string }[];
         webEntities?: { description?: string; score?: number }[];
-        pagesWithMatchingImages?: { pageTitle?: string }[];
+        pagesWithMatchingImages?: { pageTitle?: string; url?: string }[];
+        fullMatchingImages?: { url?: string }[];
+        partialMatchingImages?: { url?: string }[];
+        visuallySimilarImages?: { url?: string }[];
       };
       fullTextAnnotation?: { text?: string };
       textAnnotations?: { description?: string }[];
@@ -127,16 +150,29 @@ async function callVision(apiKey: string, imageBase64: string): Promise<VisionEv
   const webEntities = (r.webDetection?.webEntities ?? [])
     .map((e) => ({ description: normalize(e.description), score: typeof e.score === "number" ? e.score : 0 }))
     .filter((e) => e.description)
-    .slice(0, 12);
+    .slice(0, 20);
 
-  const pageTitles = (r.webDetection?.pagesWithMatchingImages ?? [])
-    .map((p) => normalize(p.pageTitle))
+  const pages = (r.webDetection?.pagesWithMatchingImages ?? [])
+    .map((p) => ({ title: normalize(p.pageTitle), url: normalize(p.url) }))
+    .filter((p) => p.title || p.url)
+    .slice(0, 15);
+
+  const fullMatchUrls = (r.webDetection?.fullMatchingImages ?? [])
+    .map((i) => normalize(i.url))
     .filter(Boolean)
-    .slice(0, 10);
+    .slice(0, 15);
+
+  const partialMatchUrls = [
+    ...(r.webDetection?.partialMatchingImages ?? []),
+    ...(r.webDetection?.visuallySimilarImages ?? []),
+  ]
+    .map((i) => normalize(i.url))
+    .filter(Boolean)
+    .slice(0, 15);
 
   const ocrText = normalize(r.fullTextAnnotation?.text ?? r.textAnnotations?.[0]?.description ?? "");
 
-  return { bestGuessLabels, webEntities, pageTitles, ocrText };
+  return { bestGuessLabels, webEntities, pages, fullMatchUrls, partialMatchUrls, ocrText };
 }
 
 Deno.serve(async (req: Request) => {
@@ -145,7 +181,9 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
-  const visionKey = Deno.env.get("GOOGLE_VISION_API_KEY") ?? Deno.env.get("GEMINI_API_KEY");
+  const visionKey = Deno.env.get("VISION_API_KEY")
+    ?? Deno.env.get("GOOGLE_VISION_API_KEY")
+    ?? Deno.env.get("GEMINI_API_KEY");
   if (!geminiKey) {
     console.error("[identify-artwork] Missing GEMINI_API_KEY");
     return json(500, { error: "Missing GEMINI_API_KEY" });
@@ -190,8 +228,14 @@ Deno.serve(async (req: Request) => {
         `WEB ENTITIES (description : score):\n${
           evidence.webEntities.map((e) => `- ${e.description} : ${e.score.toFixed(2)}`).join("\n") || "(none)"
         }`,
-        `PAGE TITLES HOSTING A MATCHING IMAGE:\n${
-          evidence.pageTitles.map((t) => `- ${t}`).join("\n") || "(none)"
+        `PAGES HOSTING A MATCHING IMAGE (title — url):\n${
+          evidence.pages.map((p) => `- ${p.title || "(untitled)"} — ${p.url}`).join("\n") || "(none)"
+        }`,
+        `EXACT IMAGE MATCHES (url — path keywords):\n${
+          evidence.fullMatchUrls.map((u) => `- ${u}\n  ↳ ${urlHint(u)}`).join("\n") || "(none)"
+        }`,
+        `PARTIAL / VISUALLY SIMILAR IMAGE MATCHES (url — path keywords):\n${
+          evidence.partialMatchUrls.map((u) => `- ${u}\n  ↳ ${urlHint(u)}`).join("\n") || "(none)"
         }`,
       ].join("\n\n")
     : "(reverse image search unavailable for this request)";
@@ -201,13 +245,15 @@ Deno.serve(async (req: Request) => {
 WHERE IT'S SEEN:
 - Museum / Venue Location: ${museumContext}
 
-REVERSE-IMAGE SEARCH HINTS (from Google Vision — helpful but incomplete; phone photos often return generic or noisy matches):
+REVERSE-IMAGE SEARCH EVIDENCE (from Google Vision — helpful but noisy; phone photos often return generic or unrelated matches):
 ${evidenceBlock}
 
-HOW TO USE THE SOURCES, IN PRIORITY ORDER:
-1. PLAQUE OCR: if the photo's OCR text contains a title, artist, date, or medium, copy it verbatim (fix only obvious OCR typos). This outranks everything else.
-2. REVERSE-IMAGE HINTS: use page titles / best-guess labels / entities to pin down the exact work, especially to disambiguate similar works by the same artist (e.g. Yue Minjun's "2000 A.D." at M+ vs "Contemporary Terracotta Warriors" at Donum Estate). Ignore hints that are generic ("sculpture", "art museum") or clearly about a different work.
-3. YOUR OWN KNOWLEDGE: if the hints are empty or unhelpful but you genuinely recognise this specific work from the image and the museum context, you SHOULD fill the fields from your own knowledge. Empty hints are NOT a reason to return blanks.
+HOW TO REASON:
+1. LOOK AT THE PHOTO FIRST. Describe to yourself what is actually depicted: medium (painting / sculpture / installation), subject, colours, number of figures, scale, framing, gallery setting.
+2. PLAQUE OCR: if the OCR text contains a title, artist, date, or medium, copy it verbatim (fix only obvious OCR typos). This outranks everything else.
+3. CROSS-REFERENCE THE WEB CLUES AGAINST THE PHOTO. Treat page titles, page URLs, exact-match URLs and their path keywords (slugs often literally contain the artwork title and year) and web entities as candidate hypotheses. Accept a candidate only if it is consistent with what you actually see in the image AND with the museum context. Reject any candidate that contradicts the photo (wrong medium, wrong subject, different number of figures, different colours) — a URL match alone is not proof.
+4. WEIGHT THE EVIDENCE: exact image matches > pages hosting a matching image > best-guess label > web entities > visually-similar matches (weakest — these are lookalikes, not the same work).
+5. YOUR OWN KNOWLEDGE: if the clues are empty or unhelpful but you genuinely recognise this specific work from the image and the museum context, fill the fields from your own knowledge. Empty clues are NOT a reason to return blanks.
 
 ACCURACY RULES:
 - Never invent a plausible-sounding title just because you recognise the artist or style. If you cannot name the specific work, leave title blank but still return the artist.
