@@ -127,7 +127,10 @@ async function callVision(apiKey: string, imageBase64: string): Promise<VisionEv
       webDetection?: {
         bestGuessLabels?: { label?: string }[];
         webEntities?: { description?: string; score?: number }[];
-        pagesWithMatchingImages?: { pageTitle?: string }[];
+        pagesWithMatchingImages?: { pageTitle?: string; url?: string }[];
+        fullMatchingImages?: { url?: string }[];
+        partialMatchingImages?: { url?: string }[];
+        visuallySimilarImages?: { url?: string }[];
       };
       fullTextAnnotation?: { text?: string };
       textAnnotations?: { description?: string }[];
@@ -147,16 +150,29 @@ async function callVision(apiKey: string, imageBase64: string): Promise<VisionEv
   const webEntities = (r.webDetection?.webEntities ?? [])
     .map((e) => ({ description: normalize(e.description), score: typeof e.score === "number" ? e.score : 0 }))
     .filter((e) => e.description)
-    .slice(0, 12);
+    .slice(0, 20);
 
-  const pageTitles = (r.webDetection?.pagesWithMatchingImages ?? [])
-    .map((p) => normalize(p.pageTitle))
+  const pages = (r.webDetection?.pagesWithMatchingImages ?? [])
+    .map((p) => ({ title: normalize(p.pageTitle), url: normalize(p.url) }))
+    .filter((p) => p.title || p.url)
+    .slice(0, 15);
+
+  const fullMatchUrls = (r.webDetection?.fullMatchingImages ?? [])
+    .map((i) => normalize(i.url))
     .filter(Boolean)
-    .slice(0, 10);
+    .slice(0, 15);
+
+  const partialMatchUrls = [
+    ...(r.webDetection?.partialMatchingImages ?? []),
+    ...(r.webDetection?.visuallySimilarImages ?? []),
+  ]
+    .map((i) => normalize(i.url))
+    .filter(Boolean)
+    .slice(0, 15);
 
   const ocrText = normalize(r.fullTextAnnotation?.text ?? r.textAnnotations?.[0]?.description ?? "");
 
-  return { bestGuessLabels, webEntities, pageTitles, ocrText };
+  return { bestGuessLabels, webEntities, pages, fullMatchUrls, partialMatchUrls, ocrText };
 }
 
 Deno.serve(async (req: Request) => {
