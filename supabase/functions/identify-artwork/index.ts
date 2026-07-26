@@ -1,8 +1,11 @@
 // Supabase Edge Function: identify-artwork
 //
-// Uses Gemini with Google Search grounding to identify an artwork from a photo
-// plus optional museum context. Search grounding requires a billed Google AI
-// Studio project (free tier blocks the tool).
+// Two-stage identification (no paid Search Grounding required):
+//   1. Google Vision — WEB_DETECTION (best-guess labels, web entities, matching
+//      page titles) + TEXT_DETECTION (wall-plaque OCR). Used as HINTS.
+//   2. Gemini flash — looks at the photo itself, uses the Vision hints and the
+//      museum context to disambiguate, and may also use its own art-historical
+//      knowledge. Vision is a tie-breaker, never a gate.
 //
 // Body: { imageBase64, mimeType?, museumContext?, museum?, city?, country? }
 // Response: { title, artist, year, medium, confident }
@@ -16,6 +19,7 @@ const corsHeaders = {
 const FALLBACK = "couldn't identify, enter manually";
 const GEMINI_MODEL = "gemini-3.6-flash";
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const VISION_ENDPOINT = "https://vision.googleapis.com/v1/images:annotate";
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -31,6 +35,13 @@ interface RequestBody {
   museum?: string;
   city?: string;
   country?: string;
+}
+
+interface VisionEvidence {
+  bestGuessLabels: string[];
+  webEntities: { description: string; score: number }[];
+  pageTitles: string[];
+  ocrText: string;
 }
 
 function normalize(v: unknown): string {
@@ -59,12 +70,82 @@ function extractJson(text: string): string | null {
   return match ? match[0] : null;
 }
 
+async function callVision(apiKey: string, imageBase64: string): Promise<VisionEvidence | null> {
+  const body = {
+    requests: [
+      {
+        image: { content: imageBase64 },
+        features: [
+          { type: "WEB_DETECTION", maxResults: 10 },
+          { type: "TEXT_DETECTION", maxResults: 1 },
+        ],
+      },
+    ],
+  };
+
+  let resp: Response;
+  try {
+    resp = await fetch(`${VISION_ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    console.error("[identify-artwork] VISION_FETCH_THREW", err);
+    return null;
+  }
+
+  console.log("[identify-artwork] VISION_STATUS", resp.status, resp.statusText);
+  if (!resp.ok) {
+    const errText = await resp.text();
+    console.error("[identify-artwork] VISION_ERROR_BODY", errText);
+    return null;
+  }
+
+  const payload = await resp.json().catch(() => null) as {
+    responses?: {
+      webDetection?: {
+        bestGuessLabels?: { label?: string }[];
+        webEntities?: { description?: string; score?: number }[];
+        pagesWithMatchingImages?: { pageTitle?: string }[];
+      };
+      fullTextAnnotation?: { text?: string };
+      textAnnotations?: { description?: string }[];
+      error?: unknown;
+    }[];
+  } | null;
+
+  const r = payload?.responses?.[0];
+  if (!r) return null;
+  if (r.error) console.error("[identify-artwork] VISION_RESPONSE_ERROR", JSON.stringify(r.error));
+
+  const bestGuessLabels = (r.webDetection?.bestGuessLabels ?? [])
+    .map((b) => normalize(b.label))
+    .filter(Boolean);
+
+  // Keep low-score entities too — they are hints, not proof.
+  const webEntities = (r.webDetection?.webEntities ?? [])
+    .map((e) => ({ description: normalize(e.description), score: typeof e.score === "number" ? e.score : 0 }))
+    .filter((e) => e.description)
+    .slice(0, 12);
+
+  const pageTitles = (r.webDetection?.pagesWithMatchingImages ?? [])
+    .map((p) => normalize(p.pageTitle))
+    .filter(Boolean)
+    .slice(0, 10);
+
+  const ocrText = normalize(r.fullTextAnnotation?.text ?? r.textAnnotations?.[0]?.description ?? "");
+
+  return { bestGuessLabels, webEntities, pageTitles, ocrText };
+}
+
 Deno.serve(async (req: Request) => {
   const startedAt = Date.now();
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
+  const visionKey = Deno.env.get("GOOGLE_VISION_API_KEY") ?? Deno.env.get("GEMINI_API_KEY");
   if (!geminiKey) {
     console.error("[identify-artwork] Missing GEMINI_API_KEY");
     return json(500, { error: "Missing GEMINI_API_KEY" });
@@ -95,27 +176,53 @@ Deno.serve(async (req: Request) => {
     museumContext,
     imageBytes: imageBase64.length,
     mimeType,
+    visionKeyPresent: Boolean(visionKey),
   });
 
-  const systemPrompt = `You are an expert museum curator and art historian. Analyze the provided image to identify the exact artwork.
+  // Stage 1 — Vision hints (best-effort; never blocks identification)
+  const evidence = visionKey ? await callVision(visionKey, imageBase64) : null;
+  console.log("[identify-artwork] VISION_EVIDENCE", JSON.stringify(evidence));
+
+  const evidenceBlock = evidence
+    ? [
+        `PLAQUE OCR (verbatim text detected in the photo):\n${evidence.ocrText || "(none)"}`,
+        `REVERSE-IMAGE BEST GUESS:\n${evidence.bestGuessLabels.join(" | ") || "(none)"}`,
+        `WEB ENTITIES (description : score):\n${
+          evidence.webEntities.map((e) => `- ${e.description} : ${e.score.toFixed(2)}`).join("\n") || "(none)"
+        }`,
+        `PAGE TITLES HOSTING A MATCHING IMAGE:\n${
+          evidence.pageTitles.map((t) => `- ${t}`).join("\n") || "(none)"
+        }`,
+      ].join("\n\n")
+    : "(reverse image search unavailable for this request)";
+
+  const systemPrompt = `You are an expert museum curator and art historian identifying an artwork from a visitor's photo.
 
 WHERE IT'S SEEN:
 - Museum / Venue Location: ${museumContext}
 
-CRITICAL ACCURACY RULES:
-1. OCR & PLAQUE FIRST: Check for any visible exhibition text, wall plaques, artist signatures, or labels. Prioritize exact text over general visual pattern matching.
-2. DISAMBIGUATE WITH USER CONTEXT: Use the provided Museum / Venue Location to narrow down artwork titles when an artist has created multiple similar-looking series or installations (e.g., Yue Minjun's "2000 A.D." at M+ Museum vs. "Contemporary Terracotta Warriors" at Donum Estate).
-3. USE GOOGLE SEARCH: Verify the visual details and location context against live web/catalog search results before confirming the title.
-4. Each field is independent — a confident artist with unknown title is fine (return artist filled, title empty). Do not invent plausible values. Do not approximate the year ("circa 2000") — either evidence gives a specific year or leave it blank.
-5. Return strictly JSON with keys: title, artist, year, medium, confidence.
-   - confidence is a boolean: true ONLY if BOTH title AND artist are directly supported by evidence.`;
+REVERSE-IMAGE SEARCH HINTS (from Google Vision — helpful but incomplete; phone photos often return generic or noisy matches):
+${evidenceBlock}
+
+HOW TO USE THE SOURCES, IN PRIORITY ORDER:
+1. PLAQUE OCR: if the photo's OCR text contains a title, artist, date, or medium, copy it verbatim (fix only obvious OCR typos). This outranks everything else.
+2. REVERSE-IMAGE HINTS: use page titles / best-guess labels / entities to pin down the exact work, especially to disambiguate similar works by the same artist (e.g. Yue Minjun's "2000 A.D." at M+ vs "Contemporary Terracotta Warriors" at Donum Estate). Ignore hints that are generic ("sculpture", "art museum") or clearly about a different work.
+3. YOUR OWN KNOWLEDGE: if the hints are empty or unhelpful but you genuinely recognise this specific work from the image and the museum context, you SHOULD fill the fields from your own knowledge. Empty hints are NOT a reason to return blanks.
+
+ACCURACY RULES:
+- Never invent a plausible-sounding title just because you recognise the artist or style. If you cannot name the specific work, leave title blank but still return the artist.
+- Never approximate the year ("circa 2000", "2000s") — give a specific year or leave it blank.
+- Each field is independent; partial answers are expected and useful.
+- Medium: use the catalogue wording if known (e.g. "acrylic on polyester and fiberglass"), otherwise leave blank.
+- Return strictly JSON with keys: title, artist, year, medium, confidence.
+  - confidence is a boolean: true only if BOTH title AND artist are supported by the plaque OCR, the reverse-image hints, or unambiguous first-hand recognition of this exact work.`;
 
   const requestBody = {
     contents: [
       {
         role: "user",
         parts: [
-          { text: "Identify this artwork using the rules in the system prompt. Return only JSON." },
+          { text: "Identify this artwork using the rules in the system prompt. Return only JSON. Fill every field you can support; leave a field as an empty string only when you truly cannot support it." },
           { inline_data: { mime_type: mimeType, data: imageBase64 } },
         ],
       },
@@ -124,10 +231,21 @@ CRITICAL ACCURACY RULES:
       role: "system",
       parts: [{ text: systemPrompt }],
     },
-    tools: [{ google_search: {} }],
     generationConfig: {
       temperature: 0,
       topP: 0.1,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "OBJECT",
+        properties: {
+          title: { type: "STRING" },
+          artist: { type: "STRING" },
+          year: { type: "STRING" },
+          medium: { type: "STRING" },
+          confidence: { type: "BOOLEAN" },
+        },
+        required: ["title", "artist", "year", "medium", "confidence"],
+      },
     },
   };
 
@@ -136,8 +254,8 @@ CRITICAL ACCURACY RULES:
     model: GEMINI_MODEL,
     temperature: 0,
     topP: 0.1,
-    groundingTool: "google_search",
     systemPromptChars: systemPrompt.length,
+    hasVisionHints: Boolean(evidence),
   });
 
   let resp: Response;
@@ -168,16 +286,12 @@ CRITICAL ACCURACY RULES:
   }
 
   const payload = await resp.json().catch(() => null) as {
-    candidates?: {
-      content?: { parts?: { text?: string }[] };
-      groundingMetadata?: unknown;
-    }[];
+    candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
   } | null;
 
   const rawText = payload?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
-  const groundingMetadata = payload?.candidates?.[0]?.groundingMetadata;
+  console.log("[identify-artwork] GEMINI_FINISH_REASON", payload?.candidates?.[0]?.finishReason ?? "(none)");
   console.log("[identify-artwork] GEMINI_RAW_TEXT", rawText);
-  console.log("[identify-artwork] GEMINI_GROUNDING_METADATA", JSON.stringify(groundingMetadata ?? null));
 
   let parsed: { title?: string; artist?: string; year?: string; medium?: string; confidence?: unknown; confident?: unknown } = {};
   const jsonSlice = extractJson(rawText);
