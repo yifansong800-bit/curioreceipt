@@ -40,8 +40,27 @@ interface RequestBody {
 interface VisionEvidence {
   bestGuessLabels: string[];
   webEntities: { description: string; score: number }[];
-  pageTitles: string[];
+  pages: { title: string; url: string }[];
+  fullMatchUrls: string[];
+  partialMatchUrls: string[];
   ocrText: string;
+}
+
+function urlHint(url: string): string {
+  try {
+    const u = new URL(url);
+    const slug = decodeURIComponent(u.pathname)
+      .replace(/\.(html?|php|aspx?|jpe?g|png|webp)$/i, "")
+      .split("/")
+      .filter(Boolean)
+      .slice(-2)
+      .join(" / ")
+      .replace(/[-_+]+/g, " ")
+      .trim();
+    return slug ? `${u.hostname} — ${slug}` : u.hostname;
+  } catch {
+    return url;
+  }
 }
 
 function normalize(v: unknown): string {
