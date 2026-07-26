@@ -181,7 +181,9 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
-  const visionKey = Deno.env.get("GOOGLE_VISION_API_KEY") ?? Deno.env.get("GEMINI_API_KEY");
+  const visionKey = Deno.env.get("VISION_API_KEY")
+    ?? Deno.env.get("GOOGLE_VISION_API_KEY")
+    ?? Deno.env.get("GEMINI_API_KEY");
   if (!geminiKey) {
     console.error("[identify-artwork] Missing GEMINI_API_KEY");
     return json(500, { error: "Missing GEMINI_API_KEY" });
