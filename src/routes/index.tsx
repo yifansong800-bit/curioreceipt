@@ -122,9 +122,9 @@ function Index() {
           ***** www.curioreceipt.com *****
         </p>
         <p className="text-center mt-6 text-xs sm:text-sm" style={{ color: "var(--ink-soft)" }}>
-          A thermal receipt for your favorite art piece.
+          A thermal receipt for your museum visit.
           <br />
-          Turn your favorite view into a print.
+          Snap, upload & print your favorite piece.
         </p>
 
         <form
