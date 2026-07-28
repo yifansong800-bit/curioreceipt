@@ -109,12 +109,33 @@ export function Receipt({
       )}
 
       <div style={{ marginTop: 12, ...lineStyle }}>{DASH_ROW}</div>
-      <Row label="SUBTOTAL ITEM" value={String(artworks.length)} />
-      <Row label="TOTAL TIME SPENT" value={totalTimeValue} />
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 12,
+        }}
+      >
+        <span style={{ flexShrink: 0 }}>I WAS...</span>
+        <span style={{ textAlign: "right", minWidth: 0, flex: 1 }}>
+          {!piece || piece.emotions.length === 0
+            ? "—"
+            : piece.emotions.map((e) => `[${e}]`).join(" ")}
+        </span>
+      </div>
+      <Row label="RATING" value={renderStars(piece?.rating ?? 0)} />
+      {piece?.note ? (
+        <div style={{ marginTop: 6 }}>
+          <div>NOTE:</div>
+          <div style={{ fontStyle: "italic" }}>“{piece.note}”</div>
+        </div>
+      ) : null}
       <div style={{ marginTop: 12, ...lineStyle }}>{STAR_ROW}</div>
       <div style={{ textAlign: "center", marginTop: 10, letterSpacing: 1 }}>
-        THANK YOU FOR VISTING!
+        THANK YOU FOR VISITING!
       </div>
+
     </div>
   );
 }
