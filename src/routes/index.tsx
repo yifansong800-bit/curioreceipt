@@ -202,7 +202,17 @@ function Index() {
           </p>
           <p>If you love it, print it. Let's keep our favorite art close.</p>
           <p style={{ color: "var(--ink-soft)" }}>
-            Built with ♡ by{" "}
+            Built on{" "}
+            <a
+              href="https://lovable.dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-bold"
+              style={{ color: "var(--ink)" }}
+            >
+              Lovable
+            </a>{" "}
+            by{" "}
             <a
               href="https://cassiesong.lovable.app/"
               target="_blank"
@@ -211,8 +221,8 @@ function Index() {
               style={{ color: "var(--ink)" }}
             >
               Cassie
-            </a>{" "}
-            (Northwestern ’29) on Lovable.
+            </a>
+            &nbsp;(Northwestern ’29).
           </p>
           <p>
             <Link
