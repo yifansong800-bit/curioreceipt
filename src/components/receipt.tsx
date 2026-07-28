@@ -167,39 +167,23 @@ function ArtworkBlock({ art }: { art: ReceiptArtwork }) {
         {art.artist ? ` - ${art.artist}` : ""}
       </div>
       <Row
-        label="* LINGER TIME"
-        value={formatLingerShort(art.linger_seconds)}
-      />
-      <Row
         label="* MEDIUM"
         value={(art.medium || "—").toUpperCase()}
       />
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: 12,
-        }}
-      >
-        <span style={{ flexShrink: 0 }}>I WAS...</span>
-        <span style={{ textAlign: "right", minWidth: 0, flex: 1 }}>
-          {art.emotions.length === 0
-            ? "—"
-            : art.emotions.map((e) => `[${e}]`).join(" ")}
-        </span>
-      </div>
       <Row
-        label="* RATING"
-        value={renderStars(art.rating ?? 0)}
+        label="* LINGER TIME"
+        value={formatLingerShort(art.linger_seconds)}
       />
     </div>
   );
 }
 
 function renderStars(n: number) {
-  const filled = Math.max(0, Math.min(5, Math.round(n)));
-  return "★".repeat(filled) + "☆".repeat(5 - filled);
+  const clamped = Math.max(0, Math.min(5, Math.round(n * 2) / 2));
+  const full = Math.floor(clamped);
+  const half = clamped - full >= 0.5;
+  return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(5 - full - (half ? 1 : 0));
+
 }
 
 function ImageGrid({ artworks }: { artworks: ReceiptArtwork[] }) {
