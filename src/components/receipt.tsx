@@ -46,11 +46,10 @@ export function Receipt({
   date,
   artworks,
 }: ReceiptProps) {
-  const loggedArtworks = artworks.filter((a) => a.linger_seconds >= 0);
-  const totalSeconds = loggedArtworks.reduce((sum, a) => sum + a.linger_seconds, 0);
-  const totalTimeValue = loggedArtworks.length === 0 ? "-" : formatTotalTime(totalSeconds);
   const sess = String(sessionNumber).padStart(2, "0");
   const location = [city, country].filter(Boolean).join(", ").toUpperCase();
+  const piece = artworks[0] ?? null;
+
 
   return (
     <div
