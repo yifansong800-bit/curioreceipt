@@ -25,7 +25,8 @@ const artworkFields = z.object({
   emotions: z.array(z.string().trim().min(1).max(40)).max(12).default([]),
   photoTakenAt: z.string().nullable().optional(),
   palette: z.array(z.string().max(32)).max(6).default([]),
-  rating: z.number().int().min(0).max(5).default(0),
+  rating: z.number().min(0).max(5).multipleOf(0.5).default(0),
+  note: z.string().max(60).default(""),
 });
 
 
@@ -65,6 +66,7 @@ export const addArtwork = createServerFn({ method: "POST" })
         photo_taken_at: data.photoTakenAt ?? null,
         palette: data.palette,
         rating: data.rating,
+        note: data.note,
       })
       .select("*")
       .single();
@@ -90,6 +92,7 @@ export const updateArtwork = createServerFn({ method: "POST" })
       linger_seconds?: number;
       emotions?: string[];
       rating?: number;
+      note?: string;
     } = {};
     if (data.title !== undefined) patch.title = data.title;
     if (data.artist !== undefined) patch.artist = data.artist;
@@ -98,6 +101,7 @@ export const updateArtwork = createServerFn({ method: "POST" })
     if (data.lingerSeconds !== undefined) patch.linger_seconds = data.lingerSeconds;
     if (data.emotions !== undefined) patch.emotions = data.emotions;
     if (data.rating !== undefined) patch.rating = data.rating;
+    if (data.note !== undefined) patch.note = data.note;
 
     const { data: row, error } = await supabaseAdmin
       .from("artworks")
