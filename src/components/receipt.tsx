@@ -14,7 +14,9 @@ export type ReceiptArtwork = {
   emotions: string[];
   palette?: string[] | null;
   rating?: number | null;
+  note?: string | null;
 };
+
 
 export type ReceiptProps = {
   visitorName: string;
