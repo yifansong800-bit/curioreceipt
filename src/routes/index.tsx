@@ -201,13 +201,13 @@ function Index() {
             Curio helps art lovers and casual visitors capture their favorite piece from every museum visit — so the one that moved you never gets lost in a camera roll or Notes app.
           </p>
           <p>If you love it, print it. Let's keep our favorite art close.</p>
-          <p style={{ color: "var(--ink-soft)" }}>
+          <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--ink-soft)" }}>
             Built on{" "}
             <a
               href="https://lovable.dev"
               target="_blank"
               rel="noopener noreferrer"
-              className="underline font-bold"
+              className="underline"
               style={{ color: "var(--ink)" }}
             >
               Lovable
