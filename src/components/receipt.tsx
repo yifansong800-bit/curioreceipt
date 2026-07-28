@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ditherImage, getCachedDither } from "@/lib/dither";
-import { formatLingerShort, formatReceiptDate, formatTotalTime } from "@/lib/format";
+import { formatLingerShort, formatReceiptDate } from "@/lib/format";
 
 export type ReceiptArtwork = {
   id: string;
@@ -14,7 +14,9 @@ export type ReceiptArtwork = {
   emotions: string[];
   palette?: string[] | null;
   rating?: number | null;
+  note?: string | null;
 };
+
 
 export type ReceiptProps = {
   visitorName: string;
@@ -44,11 +46,10 @@ export function Receipt({
   date,
   artworks,
 }: ReceiptProps) {
-  const loggedArtworks = artworks.filter((a) => a.linger_seconds >= 0);
-  const totalSeconds = loggedArtworks.reduce((sum, a) => sum + a.linger_seconds, 0);
-  const totalTimeValue = loggedArtworks.length === 0 ? "-" : formatTotalTime(totalSeconds);
   const sess = String(sessionNumber).padStart(2, "0");
   const location = [city, country].filter(Boolean).join(", ").toUpperCase();
+  const piece = artworks[0] ?? null;
+
 
   return (
     <div
@@ -108,12 +109,33 @@ export function Receipt({
       )}
 
       <div style={{ marginTop: 12, ...lineStyle }}>{DASH_ROW}</div>
-      <Row label="SUBTOTAL ITEM" value={String(artworks.length)} />
-      <Row label="TOTAL TIME SPENT" value={totalTimeValue} />
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 12,
+        }}
+      >
+        <span style={{ flexShrink: 0 }}>I WAS...</span>
+        <span style={{ textAlign: "right", minWidth: 0, flex: 1 }}>
+          {!piece || piece.emotions.length === 0
+            ? "—"
+            : piece.emotions.map((e) => `[${e}]`).join(" ")}
+        </span>
+      </div>
+      <Row label="RATING" value={renderStars(piece?.rating ?? 0)} />
+      {piece?.note ? (
+        <div style={{ marginTop: 6 }}>
+          <div>NOTE:</div>
+          <div style={{ fontStyle: "italic" }}>“{piece.note}”</div>
+        </div>
+      ) : null}
       <div style={{ marginTop: 12, ...lineStyle }}>{STAR_ROW}</div>
       <div style={{ textAlign: "center", marginTop: 10, letterSpacing: 1 }}>
-        THANK YOU FOR VISTING!
+        THANK YOU FOR VISITING!
       </div>
+
     </div>
   );
 }
@@ -145,39 +167,23 @@ function ArtworkBlock({ art }: { art: ReceiptArtwork }) {
         {art.artist ? ` - ${art.artist}` : ""}
       </div>
       <Row
-        label="* LINGER TIME"
-        value={formatLingerShort(art.linger_seconds)}
-      />
-      <Row
         label="* MEDIUM"
         value={(art.medium || "—").toUpperCase()}
       />
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: 12,
-        }}
-      >
-        <span style={{ flexShrink: 0 }}>I WAS...</span>
-        <span style={{ textAlign: "right", minWidth: 0, flex: 1 }}>
-          {art.emotions.length === 0
-            ? "—"
-            : art.emotions.map((e) => `[${e}]`).join(" ")}
-        </span>
-      </div>
       <Row
-        label="* RATING"
-        value={renderStars(art.rating ?? 0)}
+        label="* LINGER TIME"
+        value={formatLingerShort(art.linger_seconds)}
       />
     </div>
   );
 }
 
 function renderStars(n: number) {
-  const filled = Math.max(0, Math.min(5, Math.round(n)));
-  return "★".repeat(filled) + "☆".repeat(5 - filled);
+  const clamped = Math.max(0, Math.min(5, Math.round(n * 2) / 2));
+  const full = Math.floor(clamped);
+  const half = clamped - full >= 0.5;
+  return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(5 - full - (half ? 1 : 0));
+
 }
 
 function ImageGrid({ artworks }: { artworks: ReceiptArtwork[] }) {

@@ -23,6 +23,7 @@ export type Database = {
           image_url: string | null
           linger_seconds: number
           medium: string
+          note: string
           palette: string[]
           photo_taken_at: string | null
           position: number
@@ -40,6 +41,7 @@ export type Database = {
           image_url?: string | null
           linger_seconds?: number
           medium?: string
+          note?: string
           palette?: string[]
           photo_taken_at?: string | null
           position?: number
@@ -57,6 +59,7 @@ export type Database = {
           image_url?: string | null
           linger_seconds?: number
           medium?: string
+          note?: string
           palette?: string[]
           photo_taken_at?: string | null
           position?: number

@@ -162,6 +162,7 @@ function VisitPage() {
     lingerSeconds: number;
     emotions: string[];
     rating: number;
+    note: string;
   }) {
     const tempId = `temp-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
 
@@ -186,6 +187,7 @@ function VisitPage() {
       emotions: payload.emotions,
       palette,
       rating: payload.rating,
+      note: payload.note,
     };
     qc.setQueryData(["visit", visitId, sessionId], (old: unknown) => {
       if (!old || typeof old !== "object") return old;
@@ -240,6 +242,7 @@ function VisitPage() {
           photoTakenAt,
           palette,
           rating: payload.rating,
+          note: payload.note,
         },
       });
       await qc.invalidateQueries({ queryKey: ["visit", visitId] });
@@ -892,6 +895,7 @@ type PiecePayload = {
   lingerSeconds: number;
   emotions: string[];
   rating: number;
+  note: string;
 };
 
 function PieceForm({
@@ -935,6 +939,7 @@ function PieceForm({
   const [emotions, setEmotions] = useState<string[]>([]);
   const [customEmotion, setCustomEmotion] = useState("");
   const [rating, setRating] = useState<number>(0);
+  const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -1118,6 +1123,7 @@ function PieceForm({
         lingerSeconds,
         emotions,
         rating,
+        note: note.trim(),
       });
     } catch (err) {
       console.error("[curio] save piece failed", err);
@@ -1364,33 +1370,7 @@ function PieceForm({
             <div className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--ink-soft)" }}>
               RATING
             </div>
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map((n) => {
-                const on = rating >= n;
-                return (
-                  <button
-                    type="button"
-                    key={n}
-                    onClick={() => setRating(rating === n ? 0 : n)}
-                    aria-label={`${n} star${n === 1 ? "" : "s"}`}
-                    className="text-2xl leading-none px-1"
-                    style={{ color: on ? "var(--ink)" : "var(--ink-soft)", opacity: on ? 1 : 0.5 }}
-                  >
-                    {on ? "★" : "☆"}
-                  </button>
-                );
-              })}
-              {rating > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => setRating(0)}
-                  className="ml-2 text-xs uppercase tracking-widest underline"
-                  style={{ color: "var(--ink-soft)" }}
-                >
-                  clear
-                </button>
-              ) : null}
-            </div>
+            <StarRating value={rating} onChange={setRating} />
           </div>
 
           <div>
@@ -1456,6 +1436,24 @@ function PieceForm({
               >
                 add
               </button>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--ink-soft)" }}>
+              QUICK NOTE{" "}
+              <span style={{ textTransform: "none", letterSpacing: 0, fontStyle: "italic" }}>optional</span>
+            </div>
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="one line on how it felt"
+              maxLength={NOTE_MAX}
+              className="w-full bg-transparent border-b py-1 text-sm outline-none"
+              style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}
+            />
+            <div className="text-[10px] mt-1 tabular-nums" style={{ color: "var(--ink-soft)" }}>
+              {note.length}/{NOTE_MAX}
             </div>
           </div>
 
@@ -1621,6 +1619,7 @@ type EditPatch = {
   lingerSeconds: number;
   emotions: string[];
   rating: number;
+  note: string;
 };
 
 function EditArtworkForm({
@@ -1646,6 +1645,7 @@ function EditArtworkForm({
   const [emotions, setEmotions] = useState<string[]>(artwork.emotions ?? []);
   const [customEmotion, setCustomEmotion] = useState("");
   const [rating, setRating] = useState<number>(artwork.rating ?? 0);
+  const [note, setNote] = useState(artwork.note ?? "");
   const [busy, setBusy] = useState(false);
 
   function toggleEmotion(e: string) {
@@ -1680,6 +1680,7 @@ function EditArtworkForm({
         lingerSeconds,
         emotions,
         rating,
+        note: note.trim(),
       });
     } catch (err) {
       console.error("[curio] update artwork failed", err);
@@ -1770,33 +1771,7 @@ function EditArtworkForm({
         <div className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--ink-soft)" }}>
           RATING
         </div>
-        <div className="flex items-center gap-1">
-          {[1, 2, 3, 4, 5].map((n) => {
-            const on = rating >= n;
-            return (
-              <button
-                type="button"
-                key={n}
-                onClick={() => setRating(rating === n ? 0 : n)}
-                aria-label={`${n} star${n === 1 ? "" : "s"}`}
-                className="text-2xl leading-none px-1"
-                style={{ color: on ? "var(--ink)" : "var(--ink-soft)", opacity: on ? 1 : 0.5 }}
-              >
-                {on ? "★" : "☆"}
-              </button>
-            );
-          })}
-          {rating > 0 ? (
-            <button
-              type="button"
-              onClick={() => setRating(0)}
-              className="ml-2 text-xs uppercase tracking-widest underline"
-              style={{ color: "var(--ink-soft)" }}
-            >
-              clear
-            </button>
-          ) : null}
-        </div>
+        <StarRating value={rating} onChange={setRating} />
       </div>
 
       <div>
@@ -1865,6 +1840,24 @@ function EditArtworkForm({
         </div>
       </div>
 
+        <div>
+          <div className="text-xs uppercase tracking-widest mb-2" style={{ color: "var(--ink-soft)" }}>
+            QUICK NOTE{" "}
+            <span style={{ textTransform: "none", letterSpacing: 0, fontStyle: "italic" }}>optional</span>
+          </div>
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="one line on how it felt"
+            maxLength={NOTE_MAX}
+            className="w-full bg-transparent border-b py-1 text-sm outline-none"
+            style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}
+          />
+          <div className="text-[10px] mt-1 tabular-nums" style={{ color: "var(--ink-soft)" }}>
+            {note.length}/{NOTE_MAX}
+          </div>
+        </div>
+
       <div className="flex gap-2">
         <button
           type="submit"
@@ -1890,5 +1883,68 @@ function EditArtworkForm({
         </button>
       </div>
     </form>
+  );
+}
+
+
+const NOTE_MAX = 48;
+
+function StarRating({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((n) => {
+        const full = value >= n;
+        const half = !full && value >= n - 0.5;
+        return (
+          <span key={n} className="relative inline-flex text-2xl leading-none px-1">
+            <span
+              aria-hidden
+              style={{ color: full ? "var(--ink)" : "var(--ink-soft)", opacity: full ? 1 : 0.5 }}
+            >
+              {full ? "\u2605" : "\u2606"}
+            </span>
+            {half ? (
+              <span
+                aria-hidden
+                className="absolute inset-0 overflow-hidden pointer-events-none px-1"
+                style={{ width: "50%", color: "var(--ink)" }}
+              >
+                {"\u2605"}
+              </span>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => onChange(value === n - 0.5 ? 0 : n - 0.5)}
+              aria-label={`${n - 0.5} stars`}
+              className="absolute inset-y-0 left-0 w-1/2"
+              style={{ touchAction: "manipulation" }}
+            />
+            <button
+              type="button"
+              onClick={() => onChange(value === n ? 0 : n)}
+              aria-label={`${n} star${n === 1 ? "" : "s"}`}
+              className="absolute inset-y-0 right-0 w-1/2"
+              style={{ touchAction: "manipulation" }}
+            />
+          </span>
+        );
+      })}
+      {value > 0 ? (
+        <button
+          type="button"
+          onClick={() => onChange(0)}
+          className="ml-2 text-xs uppercase tracking-widest underline"
+          style={{ color: "var(--ink-soft)" }}
+        >
+          clear
+        </button>
+      ) : null}
+    </div>
   );
 }
