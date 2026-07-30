@@ -26,7 +26,9 @@ export type ReceiptProps = {
   sessionNumber: number;
   date: string | Date;
   artworks: ReceiptArtwork[];
+  colorMode?: "bw" | "color";
 };
+
 
 const DASH_ROW = "- ".repeat(40).trim();
 const STAR_ROW = "*".repeat(80);
