@@ -815,6 +815,52 @@ function VisitPage() {
         </div>
       </div>
     ) : null}
+    {cropping && artworks[0]?.image_url ? (
+      <PhotoCropper
+        src={artworks[0].image_url}
+        busy={cropBusy}
+        onCancel={() => setCropping(false)}
+        onConfirm={async (blob) => {
+          if (cropBusy) return;
+          setCropBusy(true);
+          try {
+            const file = new File([blob], "crop.jpg", { type: "image/jpeg" });
+            let palette: string[] = [];
+            try {
+              palette = await extractPalette(file, 3);
+            } catch {
+              /* optional */
+            }
+            const dataBase64 = await fileToBase64(blob);
+            const { path } = await uploadFn({
+              data: {
+                sessionId,
+                visitId,
+                contentType: "image/jpeg",
+                ext: "jpg",
+                dataBase64,
+              },
+            });
+            await updateFn({
+              data: {
+                sessionId,
+                visitId,
+                artworkId: artworks[0].id,
+                imagePath: path,
+                palette,
+              },
+            });
+            await qc.invalidateQueries({ queryKey: ["visit", visitId] });
+            setCropping(false);
+          } catch (err) {
+            console.error("[curio] crop failed", err);
+            toast.error("Couldn't update the photo.");
+          } finally {
+            setCropBusy(false);
+          }
+        }}
+      />
+    ) : null}
     <Footer />
   </>
   );
