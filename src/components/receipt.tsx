@@ -206,9 +206,7 @@ function StarRating({ value }: { value: number }) {
             lineHeight: 1,
           }}
         >
-          <span style={{ position: "absolute", inset: 0, opacity: 0.35 }}>
-            ☆
-          </span>
+          <span style={{ position: "absolute", inset: 0 }}>☆</span>
           <span
             style={{
               position: "absolute",
@@ -222,9 +220,7 @@ function StarRating({ value }: { value: number }) {
         </span>
       )}
       {Array.from({ length: empty }).map((_, i) => (
-        <span key={`empty-${i}`} style={{ opacity: 0.35 }}>
-          ☆
-        </span>
+        <span key={`empty-${i}`}>☆</span>
       ))}
     </span>
   );
