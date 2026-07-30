@@ -108,7 +108,6 @@ export function Receipt({
         <ImageGrid artworks={artworks.filter((a) => a.image_url)} />
       )}
 
-      <div style={{ marginTop: 12, ...lineStyle }}>{DASH_ROW}</div>
       <div
         style={{
           display: "flex",
@@ -124,7 +123,7 @@ export function Receipt({
             : piece.emotions.map((e) => `[${e}]`).join(" ")}
         </span>
       </div>
-      <Row label="RATING" value={renderStars(piece?.rating ?? 0)} />
+      <Row label="RATING" value={<StarRating value={piece?.rating ?? 0} />} />
       {piece?.note ? (
         <div style={{ marginTop: 6 }}>
           <div>NOTE:</div>
@@ -140,7 +139,7 @@ export function Receipt({
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div
       style={{
@@ -178,12 +177,53 @@ function ArtworkBlock({ art }: { art: ReceiptArtwork }) {
   );
 }
 
-function renderStars(n: number) {
-  const clamped = Math.max(0, Math.min(5, Math.round(n * 2) / 2));
+function StarRating({ value }: { value: number }) {
+  const clamped = Math.max(0, Math.min(5, Math.round(value * 2) / 2));
   const full = Math.floor(clamped);
   const half = clamped - full >= 0.5;
-  return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(5 - full - (half ? 1 : 0));
+  const empty = 5 - full - (half ? 1 : 0);
 
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        letterSpacing: 1,
+        lineHeight: 1,
+      }}
+    >
+      {Array.from({ length: full }).map((_, i) => (
+        <span key={`full-${i}`}>★</span>
+      ))}
+      {half && (
+        <span
+          key="half"
+          style={{
+            position: "relative",
+            display: "inline-block",
+            width: "1ch",
+            height: "1em",
+            lineHeight: 1,
+          }}
+        >
+          <span style={{ position: "absolute", inset: 0 }}>☆</span>
+          <span
+            style={{
+              position: "absolute",
+              inset: 0,
+              overflow: "hidden",
+              width: "50%",
+            }}
+          >
+            ★
+          </span>
+        </span>
+      )}
+      {Array.from({ length: empty }).map((_, i) => (
+        <span key={`empty-${i}`}>☆</span>
+      ))}
+    </span>
+  );
 }
 
 function ImageGrid({ artworks }: { artworks: ReceiptArtwork[] }) {
