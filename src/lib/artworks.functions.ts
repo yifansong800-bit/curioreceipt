@@ -85,6 +85,8 @@ export const updateArtwork = createServerFn({ method: "POST" })
     await assertOwns(data.sessionId, data.visitId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const patch: {
+      image_url?: string | null;
+      palette?: string[];
       title?: string;
       artist?: string;
       year?: string;
@@ -94,6 +96,8 @@ export const updateArtwork = createServerFn({ method: "POST" })
       rating?: number;
       note?: string;
     } = {};
+    if (data.imagePath !== undefined) patch.image_url = data.imagePath ?? null;
+    if (data.palette !== undefined) patch.palette = data.palette;
     if (data.title !== undefined) patch.title = data.title;
     if (data.artist !== undefined) patch.artist = data.artist;
     if (data.year !== undefined) patch.year = data.year;
