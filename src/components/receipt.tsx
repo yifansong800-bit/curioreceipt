@@ -26,7 +26,9 @@ export type ReceiptProps = {
   sessionNumber: number;
   date: string | Date;
   artworks: ReceiptArtwork[];
+  colorMode?: "bw" | "color";
 };
+
 
 const DASH_ROW = "- ".repeat(40).trim();
 const STAR_ROW = "*".repeat(80);
@@ -45,6 +47,7 @@ export function Receipt({
   sessionNumber,
   date,
   artworks,
+  colorMode = "bw",
 }: ReceiptProps) {
   const sess = String(sessionNumber).padStart(2, "0");
   const location = [city, country].filter(Boolean).join(", ").toUpperCase();
@@ -105,7 +108,10 @@ export function Receipt({
       )}
 
       {artworks.some((a) => a.image_url) && (
-        <ImageGrid artworks={artworks.filter((a) => a.image_url)} />
+        <ImageGrid
+          artworks={artworks.filter((a) => a.image_url)}
+          colorMode={colorMode}
+        />
       )}
 
       <div
@@ -226,7 +232,13 @@ function StarRating({ value }: { value: number }) {
   );
 }
 
-function ImageGrid({ artworks }: { artworks: ReceiptArtwork[] }) {
+function ImageGrid({
+  artworks,
+  colorMode,
+}: {
+  artworks: ReceiptArtwork[];
+  colorMode: "bw" | "color";
+}) {
   const cols = artworks.length === 1 ? 1 : 2;
   const cellW = cols === 1 ? 280 : 140;
   return (
@@ -241,10 +253,27 @@ function ImageGrid({ artworks }: { artworks: ReceiptArtwork[] }) {
     >
       {artworks.map((a) => (
         <div key={a.id} style={{ textAlign: "center" }}>
-          <DitheredImage src={a.image_url!} size={cellW} />
+          {colorMode === "color" ? (
+            <ColorImage src={a.image_url!} size={cellW} />
+          ) : (
+            <DitheredImage src={a.image_url!} size={cellW} />
+          )}
           <div style={{ marginTop: 4 }}>{String(a.position).padStart(2, "0")}</div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function ColorImage({ src, size }: { src: string; size: number }) {
+  return (
+    <div style={{ width: size, display: "block", background: "transparent" }}>
+      <img
+        src={src}
+        alt=""
+        crossOrigin="anonymous"
+        style={{ width: "100%", height: "auto", display: "block" }}
+      />
     </div>
   );
 }
