@@ -63,7 +63,7 @@ export function PrinterStage({
   const receiptScale = (printerWidth * (SLOT_WIDTH_PCT / 100)) / receiptNaturalWidth;
 
   // The housing is pure CSS, so there is nothing to wait on.
-  const printerLoaded = true;
+  const printerLoaded = measured;
 
   // Gate the receipt behind a two-rAF paint so the CSS keyframe's starting
   // transform (translateY(-100%)) is fully committed before the receipt
@@ -119,7 +119,10 @@ export function PrinterStage({
         }
       `}</style>
 
-      <div className="mx-auto flex flex-col items-center" style={{ width: printerWidth }}>
+      <div
+        className="mx-auto flex flex-col items-center"
+        style={{ width: printerWidth, visibility: measured ? "visible" : "hidden" }}
+      >
         {/* Flat printer housing, drawn to match the design. */}
         <div
           style={{
