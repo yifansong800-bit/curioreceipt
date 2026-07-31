@@ -22,15 +22,20 @@ const FEED_DURATION_MS = 8000;
 export function PrinterStage({
   mode,
   onPrintComplete,
+  feedDurationMs: feedDurationOverride,
   children,
 }: {
   mode: Mode;
   /** Retained for API compatibility; no longer rendered. */
   warmupDuration?: number;
   onPrintComplete?: () => void;
+  /** Override the stepped feed duration (used by the homepage demo). */
+  feedDurationMs?: number;
   children: ReactNode;
 }) {
   const reduce = useReducedMotion();
+  const feedMs = feedDurationOverride ?? FEED_DURATION_MS;
+
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [printerWidth, setPrinterWidth] = useState<number>(MAX_PRINTER_WIDTH);
