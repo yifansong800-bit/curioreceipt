@@ -58,8 +58,8 @@ export function DemoPreview({
       role="dialog"
       aria-modal="true"
       aria-label={`${mode} demo`}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(20,20,20,0.55)" }}
+      className="curio-overlay-in fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(20,20,20,0.55)", touchAction: "manipulation" }}
       onClick={onClose}
     >
       <div
@@ -74,7 +74,7 @@ export function DemoPreview({
           }
           setTouchX(null);
         }}
-        className="relative flex w-full flex-col overflow-hidden"
+        className="curio-card-in relative flex w-full flex-col overflow-hidden"
         style={{
           aspectRatio: "578 / 1026",
           maxWidth: 360,
@@ -83,6 +83,7 @@ export function DemoPreview({
           color: INK[mode],
           border: "1px solid var(--ink)",
           boxShadow: "0 24px 48px -18px rgba(20,20,20,0.5)",
+          transition: "background-color 240ms ease",
         }}
       >
         <button
