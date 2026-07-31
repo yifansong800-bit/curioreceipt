@@ -948,11 +948,13 @@ type PiecePayload = {
 };
 
 function PieceForm({
+  captureMode,
   museum,
   city,
   country,
   onSave,
 }: {
+  captureMode: "snap" | "upload";
   museum: string;
   city: string | null;
   country: string | null;
@@ -981,6 +983,7 @@ function PieceForm({
   } | null>(null);
   const identifyAbortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   // Step 2: the reflection
   const [lingerMin, setLingerMin] = useState<string>("");
@@ -1115,6 +1118,10 @@ function PieceForm({
     } else {
       ready = picked;
     }
+    acceptFile(ready);
+  }
+
+  function acceptFile(ready: File) {
     setFile(ready);
     // Reset identified fields whenever a new photo replaces the old one.
     setTitle("");
@@ -1236,16 +1243,20 @@ function PieceForm({
               </div>
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() =>
+                  captureMode === "snap" ? setCameraOpen(true) : fileInputRef.current?.click()
+                }
                 className="text-xs uppercase tracking-widest underline"
               >
-                change
+                {captureMode === "snap" ? "retake" : "change"}
               </button>
             </div>
           ) : (
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() =>
+                captureMode === "snap" ? setCameraOpen(true) : fileInputRef.current?.click()
+              }
               disabled={converting}
               className="w-full block border-2 border-dashed p-6 text-center disabled:opacity-60"
               style={{
@@ -1255,7 +1266,11 @@ function PieceForm({
               }}
             >
               <div className="text-sm" style={{ color: "var(--ink)" }}>
-                {converting ? "Converting photo…" : "✦ Upload a photo of your favorite piece"}
+                {converting
+                  ? "Converting photo…"
+                  : captureMode === "snap"
+                    ? "✦ Snap the piece in front of you"
+                    : "✦ Upload a photo of your favorite piece"}
               </div>
               <div className="text-xs mt-2" style={{ color: "var(--ink-soft)" }}>
                 Fill in the details yourself, or ask us to try identifying it.
