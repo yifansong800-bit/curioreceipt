@@ -1,7 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMutation } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 import { Info } from "lucide-react";
 
 import {
@@ -10,9 +8,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { createVisit, suggestMuseums } from "@/lib/visits.functions";
-import { getSessionId } from "@/lib/session";
 import { Footer } from "@/components/Footer";
+import { CurioDoodle } from "@/components/curio-doodle";
+import { DemoPreview } from "@/components/demo-previews";
+import type { CurioMode } from "@/components/pixel-icons";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -21,71 +20,28 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Turn your favorite piece from a museum visit into a thermal receipt keepsake. One piece. One memory. Printed.",
+          "Turn your favorite piece from a museum visit into a thermal receipt keepsake. Snap it, log it, print it.",
       },
       { property: "og:title", content: "Curio — Your favorite art piece, on receipt paper" },
       {
         property: "og:description",
-        content:
-          "A printable memento of your favorite piece from every museum trip.",
+        content: "A printable memento of your favorite piece from every museum trip.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Index,
 });
 
-type Suggestion = { name: string; city: string | null; country: string | null };
-
 function Index() {
   const navigate = useNavigate();
-  const createFn = useServerFn(createVisit);
-  const suggestFn = useServerFn(suggestMuseums);
-  const [visitor, setVisitor] = useState("");
-  const [museum, setMuseum] = useState("");
-  const [picked, setPicked] = useState<Suggestion | null>(null);
-  const [rememberedVisitor, setRememberedVisitor] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState(false);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("curio:visitor");
-      if (stored && stored.trim()) {
-        setRememberedVisitor(stored);
-        setVisitor(stored);
-      }
-    } catch {}
-  }, []);
-
-  const mut = useMutation({
-    mutationFn: async () => {
-      const sessionId = getSessionId();
-      const name = visitor.trim();
-      try {
-        localStorage.setItem("curio:visitor", name);
-      } catch {}
-      return createFn({
-        data: {
-          sessionId,
-          visitorName: name,
-          museum: museum.trim(),
-          city: picked?.city ?? null,
-          country: picked?.country ?? null,
-        },
-      });
-    },
-    onSuccess: (visit) => {
-      if (visit) navigate({ to: "/visit/$visitId", params: { visitId: visit.id } });
-    },
-  });
-
-  const opening = mut.isPending || mut.isSuccess;
-  const canSubmit = visitor.trim().length > 0 && museum.trim().length > 0 && !opening;
-  const showNameField = !rememberedVisitor || editingName;
+  const [demo, setDemo] = useState<CurioMode | null>(null);
 
   return (
     <Dialog>
       <div
-        className="relative h-[100dvh] overflow-hidden flex flex-col items-center justify-center pl-[max(2rem,env(safe-area-inset-left))] pr-[max(2rem,env(safe-area-inset-right))] sm:pl-[max(1.75rem,env(safe-area-inset-left))] sm:pr-[max(1.75rem,env(safe-area-inset-right))] sm:h-auto sm:min-h-screen"
+        className="relative h-[100dvh] overflow-hidden flex flex-col items-center justify-center px-[max(1.5rem,env(safe-area-inset-left))]"
         style={{
           paddingTop: "max(1.5rem, env(safe-area-inset-top))",
           paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
@@ -99,330 +55,94 @@ function Index() {
             style={{
               top: "max(1rem, env(safe-area-inset-top))",
               right: "max(1rem, env(safe-area-inset-right))",
+              touchAction: "manipulation",
             }}
           >
             <Info className="h-5 w-5" />
           </button>
         </DialogTrigger>
-        <div className="w-full max-w-md">
-        <div
-          className="text-center leading-none"
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "clamp(48px, 14vw, 72px)",
-            letterSpacing: 3,
-          }}
-        >
-          CURIO
-        </div>
-        <p
-          className="text-center mt-4 text-sm sm:text-base tracking-wide"
-          style={{ color: "var(--ink-soft)" }}
-        >
-          ***** www.curioreceipt.com *****
-        </p>
-        <p className="text-center mt-6 text-xs sm:text-sm" style={{ color: "var(--ink-soft)" }}>
-          A thermal receipt for your museum visit.
-          <br />
-          Snap, upload & print your favorite piece.
-        </p>
 
-        <form
-          className="mt-10 space-y-5"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (canSubmit) mut.mutate();
-          }}
-        >
-          {showNameField ? (
-            <Field
-              label="YOUR NAME"
-              value={visitor}
-              onChange={setVisitor}
-              placeholder="Michael Scott"
-              maxLength={60}
-            />
-          ) : (
-            <div
-              className="text-xs uppercase tracking-widest flex items-center gap-2 flex-wrap"
-              style={{ color: "var(--ink-soft)", fontFamily: "var(--font-mono)" }}
-            >
-              <span>VISITING AS {(rememberedVisitor ?? "").toUpperCase()}</span>
-              <button
-                type="button"
-                onClick={() => setEditingName(true)}
-                className="underline"
-              >
-                not you?
-              </button>
-            </div>
-          )}
-          <MuseumAutocomplete
-            value={museum}
-            onChange={(v) => {
-              setMuseum(v);
-              setPicked(null);
-            }}
-            onPick={(s) => {
-              setMuseum(s.name);
-              setPicked(s);
-            }}
-            picked={picked}
-            suggest={suggestFn}
-          />
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            className="w-full uppercase tracking-widest text-sm py-3 border transition-colors disabled:opacity-40"
+        <div className="w-full max-w-md">
+          <div
+            className="text-center leading-none"
             style={{
-              borderColor: "var(--ink)",
-              backgroundColor: "var(--ink)",
-              color: "var(--paper)",
-              fontFamily: "var(--font-mono)",
-              fontWeight: 700,
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(44px, 13vw, 68px)",
+              letterSpacing: 3,
             }}
           >
-            {opening ? "Opening receipt..." : "Begin visit →"}
-          </button>
-          {mut.isError ? (
-            <p className="text-sm" style={{ color: "var(--destructive)" }}>
-              Couldn't start visit. Try again.
+            CURIO
+          </div>
+          <p
+            className="text-center mt-3 text-xs sm:text-sm tracking-wide"
+            style={{ color: "var(--ink-soft)" }}
+          >
+            ***** www.curioreceipt.com *****
+          </p>
+
+          <div className="mt-2">
+            <CurioDoodle onPick={setDemo} />
+          </div>
+
+          <p
+            className="text-center -mt-2 text-[10px] uppercase tracking-[0.2em]"
+            style={{ color: "var(--ink-soft)" }}
+          >
+            tap an icon to see how it works
+          </p>
+
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => navigate({ to: "/begin" })}
+              className="uppercase tracking-[0.3em] text-sm px-10 py-3 border"
+              style={{
+                borderColor: "var(--ink)",
+                backgroundColor: "var(--ink)",
+                color: "var(--paper)",
+                fontFamily: "var(--font-mono)",
+                fontWeight: 700,
+                touchAction: "manipulation",
+              }}
+            >
+              begin.
+            </button>
+          </div>
+        </div>
+
+        <Footer className="absolute bottom-0" />
+
+        <DialogContent
+          className="max-w-[calc(100%-4rem)] sm:max-w-md border text-left"
+          style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}
+        >
+          <DialogTitle className="text-lg tracking-tight">About Curio</DialogTitle>
+          <div className="space-y-4 text-sm sm:text-base leading-relaxed" style={{ color: "var(--ink)" }}>
+            <p>
+              Curio helps art lovers and casual visitors capture their favorite piece from every
+              museum visit — so the one that moved you never gets lost in a camera roll or Notes
+              app.
             </p>
-          ) : null}
-        </form>
+            <p>If you love it, print it. Let's keep our favorite art close.</p>
+            <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--ink-soft)" }}>
+              Built on Lovable by Cassie (Northwestern ’29).
+            </p>
+            <p>
+              <Link
+                to="/privacy"
+                className="text-[10px] uppercase tracking-widest underline"
+                style={{ color: "var(--ink-soft)" }}
+              >
+                Privacy Policy
+              </Link>
+            </p>
+          </div>
+        </DialogContent>
       </div>
 
-      <Footer className="absolute bottom-0" />
-
-      <DialogContent className="max-w-[calc(100%-4rem)] sm:max-w-md border text-left" style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}>
-        <DialogTitle className="text-lg tracking-tight">About Curio</DialogTitle>
-        <div className="space-y-4 text-sm sm:text-base leading-relaxed" style={{ color: "var(--ink)" }}>
-          <p>
-            Curio helps art lovers and casual visitors capture their favorite piece from every museum visit — so the one that moved you never gets lost in a camera roll or Notes app.
-          </p>
-          <p>If you love it, print it. Let's keep our favorite art close.</p>
-          <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--ink-soft)" }}>
-            Built on Lovable by Cassie (Northwestern ’29).
-          </p>
-          <p>
-            <Link
-              to="/privacy"
-              className="text-[10px] uppercase tracking-widest underline"
-              style={{ color: "var(--ink-soft)" }}
-            >
-              Privacy Policy
-            </Link>
-          </p>
-        </div>
-      </DialogContent>
-    </div>
-  </Dialog>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  maxLength,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  maxLength?: number;
-}) {
-  return (
-    <label className="block">
-      <div
-        className="text-xs uppercase tracking-widest mb-1"
-        style={{ color: "var(--ink-soft)" }}
-      >
-        {label}
-      </div>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        className="w-full bg-transparent border-b px-0 py-2 text-sm sm:text-base outline-none focus:border-b-2"
-        style={{
-          borderColor: "var(--ink)",
-          fontFamily: "var(--font-mono)",
-          color: "var(--ink)",
-        }}
-      />
-    </label>
-  );
-}
-
-function MuseumAutocomplete({
-  value,
-  onChange,
-  onPick,
-  picked,
-  suggest,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  onPick: (s: Suggestion) => void;
-  picked: Suggestion | null;
-  suggest: (opts: { data: { query: string } }) => Promise<{ suggestions: Suggestion[] }>;
-}) {
-  const [items, setItems] = useState<Suggestion[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(0);
-  const reqRef = useRef(0);
-  const wrapRef = useRef<HTMLDivElement | null>(null);
-
-  const q = value.trim();
-  const shouldSearch = q.length >= 2 && !picked;
-
-  useEffect(() => {
-    if (!shouldSearch) {
-      setItems([]);
-      setLoading(false);
-      return;
-    }
-    const myReq = ++reqRef.current;
-    setLoading(true);
-    const t = setTimeout(async () => {
-      try {
-        const res = await suggest({ data: { query: q } });
-        if (reqRef.current !== myReq) return;
-        setItems(res.suggestions ?? []);
-        setActive(0);
-      } catch {
-        if (reqRef.current !== myReq) return;
-        setItems([]);
-      } finally {
-        if (reqRef.current === myReq) setLoading(false);
-      }
-    }, 300);
-    return () => clearTimeout(t);
-  }, [q, shouldSearch, suggest]);
-
-  useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      if (!wrapRef.current) return;
-      if (!wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
-
-  const showList = open && shouldSearch && (loading || items.length > 0);
-
-  const locationLabel = useMemo(() => {
-    if (!picked) return null;
-    const parts = [picked.city, picked.country].filter(Boolean);
-    return parts.length ? parts.join(", ") : null;
-  }, [picked]);
-
-  return (
-    <div className="relative" ref={wrapRef}>
-      <div
-        className="text-xs uppercase tracking-widest mb-1"
-        style={{ color: "var(--ink-soft)" }}
-      >
-        MUSEUM VISITED
-      </div>
-      <input
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        onKeyDown={(e) => {
-          if (!showList) return;
-          if (e.key === "ArrowDown") {
-            e.preventDefault();
-            setActive((i) => Math.min(items.length - 1, i + 1));
-          } else if (e.key === "ArrowUp") {
-            e.preventDefault();
-            setActive((i) => Math.max(0, i - 1));
-          } else if (e.key === "Enter" && items[active]) {
-            e.preventDefault();
-            onPick(items[active]);
-            setOpen(false);
-          } else if (e.key === "Escape") {
-            setOpen(false);
-          }
-        }}
-        placeholder="e.g. The Art Institute of Chicago"
-        maxLength={80}
-        autoComplete="off"
-        className="w-full bg-transparent border-b px-0 py-2 text-sm sm:text-base outline-none focus:border-b-2"
-        style={{
-          borderColor: "var(--ink)",
-          fontFamily: "var(--font-mono)",
-          color: "var(--ink)",
-        }}
-      />
-      {locationLabel ? (
-        <div
-          className="text-xs mt-1 uppercase tracking-widest"
-          style={{ color: "var(--ink-soft)", fontFamily: "var(--font-mono)" }}
-        >
-          ↳ {locationLabel}
-        </div>
+      {demo ? (
+        <DemoPreview mode={demo} onChange={setDemo} onClose={() => setDemo(null)} />
       ) : null}
-      {showList ? (
-        <ul
-          className="absolute left-0 right-0 z-20 mt-1 border max-h-72 overflow-auto"
-          style={{
-            backgroundColor: "var(--paper)",
-            borderColor: "var(--ink)",
-            fontFamily: "var(--font-mono)",
-          }}
-        >
-          {loading && items.length === 0 ? (
-            <li
-              className="px-3 py-2 text-xs uppercase tracking-widest"
-              style={{ color: "var(--ink-soft)" }}
-            >
-              searching…
-            </li>
-          ) : null}
-          {items.map((s, i) => {
-            const loc = [s.city, s.country].filter(Boolean).join(", ");
-            const isActive = i === active;
-            return (
-              <li key={`${s.name}-${i}`}>
-                <button
-                  type="button"
-                  onMouseEnter={() => setActive(i)}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    onPick(s);
-                    setOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm"
-                  style={{
-                    backgroundColor: isActive ? "var(--ink)" : "transparent",
-                    color: isActive ? "var(--paper)" : "var(--ink)",
-                  }}
-                >
-                  <div className="truncate">{s.name}</div>
-                  {loc ? (
-                    <div
-                      className="text-[10px] uppercase tracking-widest mt-0.5 truncate"
-                      style={{
-                        color: isActive ? "var(--paper)" : "var(--ink-soft)",
-                      }}
-                    >
-                      {loc}
-                    </div>
-                  ) : null}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-    </div>
+    </Dialog>
   );
 }
