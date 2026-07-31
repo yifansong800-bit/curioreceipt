@@ -266,18 +266,31 @@ function Dashes() {
   );
 }
 
-/** The real printer, with the receipt already fed out. */
+/** The real printer, looping the stepped feed animation. */
 function ShareDemo() {
+  const [phase, setPhase] = useState<"idle" | "printing" | "printed">("idle");
+  useEffect(() => {
+    let alive = true;
+    const start = window.setTimeout(() => alive && setPhase("printing"), 400);
+    return () => {
+      alive = false;
+      window.clearTimeout(start);
+    };
+  }, []);
+
   return (
-    <div className="w-full" style={{ maxWidth: 260 }}>
-      <PrinterStage mode="printed">
+    <div className="w-full">
+      <PrinterStage
+        mode={phase}
+        feedDurationMs={3200}
+        onPrintComplete={() => setPhase("printed")}
+      >
         <img
           src={demoReceipt.url}
           alt="Example Curio receipt"
-          style={{ width: 260, display: "block" }}
+          style={{ width: 360, display: "block" }}
         />
       </PrinterStage>
     </div>
   );
-
 }
