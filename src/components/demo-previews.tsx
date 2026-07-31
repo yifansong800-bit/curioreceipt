@@ -270,32 +270,13 @@ function ShareDemo() {
   return (
     <div className="w-full" style={{ maxWidth: 260 }}>
       <PrinterStage mode="printed">
-        <div className="receipt-paper grain px-4 py-6 text-[9px] leading-relaxed" style={{ color: "var(--ink)", width: 360 }}>
-          <div className="text-center tracking-widest">****** www.curioreceipt.com ******</div>
-          <div className="mt-3">MUSEUM: M+</div>
-          <div>LOCATION: HONG KONG</div>
-          <div>CURATOR: CASSIE (SESH #11)</div>
-          <Dashes />
-          <div className="font-bold">
-            01 <span className="italic">Gun</span> (2001) - Liu Ye
-          </div>
-          <Row label="★ MEDIUM" value="OIL ON CANVAS" />
-          <Row label="★ LINGER TIME" value="2:45" />
-          <div
-            className="my-3"
-            style={{
-              height: 90,
-              background:
-                "repeating-conic-gradient(var(--ink) 0% 25%, transparent 0% 50%) 0 0 / 3px 3px",
-              opacity: 0.55,
-            }}
-          />
-          <Row label="I WAS..." value="[in awe] [moved]" />
-          <Row label="RATING" value="★★★★☆" />
-          <Dashes />
-          <div className="text-center tracking-widest">THANK YOU FOR VISITING!</div>
-        </div>
+        <img
+          src={demoReceipt.url}
+          alt="Example Curio receipt"
+          style={{ width: 260, display: "block" }}
+        />
       </PrinterStage>
     </div>
   );
+
 }
