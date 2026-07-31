@@ -1215,6 +1215,16 @@ function PieceForm({
         <span>{step === "piece" ? "○ ●" : "● ○"}</span>
       </div>
 
+      {cameraOpen ? (
+        <CameraCapture
+          onClose={() => setCameraOpen(false)}
+          onCapture={(f) => {
+            setCameraOpen(false);
+            acceptFile(f);
+          }}
+        />
+      ) : null}
+
       {step === "piece" ? (
         <>
           <input
