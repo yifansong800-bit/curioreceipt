@@ -289,18 +289,22 @@ function ShareDemo() {
   }, []);
 
   return (
-    <div className="w-full">
-      <PrinterStage
-        mode={phase}
-        feedDurationMs={3200}
-        onPrintComplete={() => setPhase("printed")}
-      >
-        <img
-          src={demoReceipt.url}
-          alt="Example Curio receipt"
-          style={{ width: 360, display: "block" }}
-        />
-      </PrinterStage>
+    // Top-anchored so the printer stays put while the receipt feeds downward.
+    <div className="flex h-full w-full flex-col items-center justify-start self-start overflow-hidden">
+      <div className="w-full" style={{ maxWidth: 210 }}>
+        <PrinterStage
+          mode={phase}
+          feedDurationMs={3200}
+          onPrintComplete={() => setPhase("printed")}
+        >
+          <img
+            src={demoReceipt.url}
+            alt="Example Curio receipt"
+            style={{ width: 360, display: "block" }}
+          />
+        </PrinterStage>
+      </div>
     </div>
   );
+
 }
