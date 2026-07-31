@@ -27,7 +27,7 @@ const VW = 1200;
 const VH = 1050;
 
 const ICON_SIZE = 112;
-const ICON_CY = 748;
+const ICON_CY = 768;
 const CAPTION_Y = 875;
 
 export function CurioDoodle({ onPick }: { onPick: (mode: CurioMode) => void }) {
