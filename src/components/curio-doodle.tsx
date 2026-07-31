@@ -47,7 +47,7 @@ export function CurioDoodle({ onPick }: { onPick: (mode: CurioMode) => void }) {
             }}
           >
             <div style={{ width: "9.4vw", maxWidth: 48 }}>
-              <Icon size={undefined as unknown as number} className="h-auto w-full" />
+              <Icon size="100%" className="block h-auto w-full" />
             </div>
           </button>
         );

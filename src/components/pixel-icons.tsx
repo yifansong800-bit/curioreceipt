@@ -5,7 +5,7 @@
  *   SHARE = 3x3 dot grid
  * Rendered as SVG so they stay crisp at every size.
  */
-type IconProps = { size?: number; className?: string; color?: string };
+type IconProps = { size?: number | string; className?: string; color?: string };
 
 export function SnapIcon({ size = 24, className, color = "currentColor" }: IconProps) {
   return (
