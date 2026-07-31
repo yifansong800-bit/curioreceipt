@@ -14,9 +14,9 @@ const BG: Record<CurioMode, string> = {
 };
 
 const CAPTION: Record<CurioMode, string> = {
-  snap: "SNAP THE ART IN FRONT OF YOU",
-  log: "LOG WHAT THE ART MEANT TO YOU",
-  share: "SHARE YOUR MEMORY WITH THE WORLD",
+  snap: "Show me the piece you couldn't walk past. Point and... shoot (or upload a photo of it)!",
+  log: "Tell me what it made you think, feel, or question.",
+  share: "I’ll print our little receipt—so you can share your memory with the world.",
 };
 
 const INK: Record<CurioMode, string> = {
