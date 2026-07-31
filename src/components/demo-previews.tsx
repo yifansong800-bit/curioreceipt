@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { ModeMark, type CurioMode } from "@/components/pixel-icons";
 import { PrinterStage } from "@/components/printer-stage";
 import snapDemo from "@/assets/snap-demo.jpg";
+import demoReceipt from "@/assets/demo-receipt.png.asset.json";
 
 const BG: Record<CurioMode, string> = {
   snap: "var(--ochre)",
