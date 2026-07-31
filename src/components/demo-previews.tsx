@@ -103,12 +103,13 @@ export function DemoPreview({
           </div>
 
           <div className="relative flex flex-1 items-center justify-center overflow-hidden py-5">
-            <div className="flex w-full justify-center" style={{ maxHeight: "100%" }}>
+            <div className="flex h-full w-full items-center justify-center">
               {mode === "snap" ? <SnapDemo /> : null}
               {mode === "log" ? <LogDemo /> : null}
               {mode === "share" ? <ShareDemo /> : null}
             </div>
           </div>
+
 
           <div className="shrink-0">
             <p className="text-center text-[11px] tracking-[0.18em]">{CAPTION[mode]}</p>
