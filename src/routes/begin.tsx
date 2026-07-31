@@ -153,7 +153,6 @@ function BeginPage() {
             <div className="grid gap-3">
               <ChoiceButton
                 label="Yes — I'm standing in front of it"
-                hint="You'll snap the piece with your camera."
                 onClick={() => {
                   setStillHere(true);
                   setStep("museum");
@@ -161,7 +160,6 @@ function BeginPage() {
               />
               <ChoiceButton
                 label="No — I've already left"
-                hint="You'll upload a photo from your camera roll."
                 onClick={() => {
                   setStillHere(false);
                   setStep("museum");
