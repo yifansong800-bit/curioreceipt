@@ -41,7 +41,7 @@ function Index() {
   return (
     <Dialog>
       <div
-        className="relative h-[100dvh] overflow-hidden flex flex-col items-center justify-center px-[max(1.5rem,env(safe-area-inset-left))]"
+        className="relative h-[100dvh] overflow-hidden flex flex-col items-center justify-center px-[max(2.25rem,env(safe-area-inset-left))]"
         style={{
           paddingTop: "max(1.5rem, env(safe-area-inset-top))",
           paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
@@ -62,7 +62,7 @@ function Index() {
           </button>
         </DialogTrigger>
 
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md -mt-10">
           <div
             className="text-center leading-none"
             style={{
@@ -74,38 +74,32 @@ function Index() {
             CURIO
           </div>
           <p
-            className="text-center mt-3 text-xs sm:text-sm tracking-wide"
-            style={{ color: "var(--ink-soft)" }}
+            className="text-center mt-4 text-xs sm:text-sm leading-relaxed tracking-wide"
+            style={{ color: "var(--ink)" }}
           >
-            ***** www.curioreceipt.com *****
+            A thermal receipt for
+            <br />
+            your art museum visit.
           </p>
 
-          <div className="mt-2">
+          <div className="mt-6">
             <CurioDoodle onPick={setDemo} />
           </div>
 
-          <p
-            className="text-center -mt-2 text-[10px] uppercase tracking-[0.2em]"
-            style={{ color: "var(--ink-soft)" }}
-          >
-            tap an icon to see how it works
-          </p>
-
-          <div className="mt-6 flex justify-center">
+          <div className="mt-8 flex justify-center">
             <button
               type="button"
               onClick={() => navigate({ to: "/begin" })}
-              className="uppercase tracking-[0.3em] text-sm px-10 py-3 border"
+              className="uppercase tracking-[0.2em] text-xs px-7 py-2.5"
               style={{
-                borderColor: "var(--ink)",
-                backgroundColor: "var(--ink)",
-                color: "var(--paper)",
+                backgroundColor: "var(--teal)",
+                color: "var(--yellow)",
                 fontFamily: "var(--font-mono)",
-                fontWeight: 700,
+                fontWeight: 500,
                 touchAction: "manipulation",
               }}
             >
-              begin.
+              begin
             </button>
           </div>
         </div>
