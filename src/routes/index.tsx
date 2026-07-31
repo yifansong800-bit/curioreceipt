@@ -12,6 +12,7 @@ import { Footer } from "@/components/Footer";
 import { CurioDoodle } from "@/components/curio-doodle";
 import { DemoPreview } from "@/components/demo-previews";
 import type { CurioMode } from "@/components/pixel-icons";
+import wordmark from "@/assets/curio-wordmark.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -64,16 +65,11 @@ function Index() {
         </DialogTrigger>
 
         <div className="w-full max-w-md -mt-10">
-          <div
-            className="text-center leading-none"
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "clamp(44px, 13vw, 68px)",
-              letterSpacing: 3,
-            }}
-          >
-            CURIO
-          </div>
+          <img
+            src={wordmark.url}
+            alt="CURIO"
+            className="mx-auto block w-[62%] max-w-[280px]"
+          />
           <p
             className="text-center mt-4 text-xs sm:text-sm leading-relaxed tracking-wide"
             style={{ color: "var(--ink)" }}
@@ -83,7 +79,7 @@ function Index() {
             your art museum visit.
           </p>
 
-          <div className="mt-6">
+          <div className="mt-6 -mx-3">
             <CurioDoodle onPick={setDemo} />
           </div>
 
