@@ -676,8 +676,8 @@ function VisitPage() {
                 className="mt-10 w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
                 style={{
                   borderColor: "var(--ink)",
-                  backgroundColor: "var(--ink)",
-                  color: "var(--paper)",
+                  backgroundColor: "var(--teal)",
+                  color: "var(--yellow)",
                   fontWeight: 700,
                   WebkitTapHighlightColor: "transparent",
                   touchAction: "manipulation",
@@ -830,7 +830,7 @@ function VisitPage() {
               type="button"
               onClick={proceedToPrint}
               className="flex-1 uppercase tracking-widest text-xs py-2 border"
-              style={{ borderColor: "var(--ink)", backgroundColor: "var(--ink)", color: "var(--paper)", fontWeight: 700 }}
+              style={{ borderColor: "var(--ink)", backgroundColor: "var(--teal)", color: "var(--yellow)", fontWeight: 700 }}
             >
               Print anyway
             </button>
@@ -1366,8 +1366,8 @@ function PieceForm({
                     className="px-2 py-1 text-xs border"
                     style={{
                       borderColor: "var(--ink)",
-                      backgroundColor: on ? "var(--ink)" : "transparent",
-                      color: on ? "var(--paper)" : "var(--ink)",
+                      backgroundColor: on ? "var(--teal)" : "transparent",
+                      color: on ? "var(--yellow)" : "var(--ink)",
                     }}
                   >
                     [{m}]
@@ -1384,8 +1384,8 @@ function PieceForm({
             className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
             style={{
               borderColor: "var(--ink)",
-              backgroundColor: "var(--ink)",
-              color: "var(--paper)",
+              backgroundColor: "var(--teal)",
+              color: "var(--yellow)",
               fontWeight: 700,
               WebkitTapHighlightColor: "transparent",
               touchAction: "manipulation",
@@ -1462,8 +1462,8 @@ function PieceForm({
                     className="px-2 py-1 text-xs border"
                     style={{
                       borderColor: "var(--ink)",
-                      backgroundColor: on ? "var(--ink)" : "transparent",
-                      color: on ? "var(--paper)" : "var(--ink)",
+                      backgroundColor: on ? "var(--teal)" : "transparent",
+                      color: on ? "var(--yellow)" : "var(--ink)",
                     }}
                   >
                     [{e}]
@@ -1480,8 +1480,8 @@ function PieceForm({
                     className="px-2 py-1 text-xs border"
                     style={{
                       borderColor: "var(--ink)",
-                      backgroundColor: "var(--ink)",
-                      color: "var(--paper)",
+                      backgroundColor: "var(--teal)",
+                      color: "var(--yellow)",
                     }}
                   >
                     [{e}] ×
