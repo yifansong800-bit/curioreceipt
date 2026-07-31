@@ -51,7 +51,7 @@ function Index() {
           <button
             type="button"
             aria-label="About Curio"
-            className="absolute z-10 inline-flex items-center justify-center rounded-full border border-ink bg-paper p-2 text-ink transition-all duration-100 hover:bg-ink hover:text-paper active:scale-90"
+            className="absolute z-10 inline-flex items-center justify-center rounded-full border border-ink bg-paper p-2 text-ink transition-all duration-100 hover:bg-[var(--teal)] hover:text-[var(--yellow)] active:scale-90"
             style={{
               top: "max(1rem, env(safe-area-inset-top))",
               right: "max(1rem, env(safe-area-inset-right))",
