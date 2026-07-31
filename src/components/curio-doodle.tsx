@@ -26,7 +26,7 @@ const VY = 55;
 const VW = 1200;
 const VH = 1050;
 
-const ICON_SIZE = 132;
+const ICON_SIZE = 152;
 const ICON_CY = 748;
 const CAPTION_Y = 875;
 

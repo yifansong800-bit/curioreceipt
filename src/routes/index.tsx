@@ -79,7 +79,7 @@ function Index() {
             your art museum visit.
           </p>
 
-          <div className="mt-6">
+          <div className="mt-6 -mx-3">
             <CurioDoodle onPick={setDemo} />
           </div>
 
