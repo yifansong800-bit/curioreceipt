@@ -1,19 +1,18 @@
 // ============================================================
-// DO NOT MODIFY — printer asset (`@/assets/printer.png`),
-// SLOT_Y_PCT (60), and SLOT_WIDTH_PCT (62) are LOCKED and tuned
-// to the current printer artwork. Changing them will misalign
-// the receipt with the printer's output slot.
+// The printer housing is drawn in CSS to replicate the flat
+// white unit in the Curio design: a rounded slab with a dark
+// output slot that the receipt feeds out of.
+// SLOT_Y_PCT / SLOT_WIDTH_PCT are measured against that design.
 // ============================================================
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
-import printerImg from "@/assets/printer.png";
-
 type Mode = "idle" | "printing" | "printed";
 
-// LOCKED — measured against src/assets/printer.png (1024x1024).
-const SLOT_Y_PCT = 60;
-const SLOT_WIDTH_PCT = 62;
+// Housing proportions, measured from the printing-page design.
+const HOUSING_RATIO = 0.196; // height / width
+const SLOT_Y_PCT = 44; // % of housing height
+const SLOT_WIDTH_PCT = 86; // % of housing width
 const MAX_PRINTER_WIDTH = 460;
 
 // Stepped feed: 8 discrete "clicks" ≈ 1 inch each.
@@ -48,18 +47,15 @@ export function PrinterStage({
     return () => ro.disconnect();
   }, []);
 
-  const printerHeight = printerWidth;
+  const printerHeight = Math.round(printerWidth * HOUSING_RATIO);
   const slotY = (printerHeight * SLOT_Y_PCT) / 100;
   const pullUp = printerHeight - slotY;
 
   const receiptNaturalWidth = 360;
   const receiptScale = (printerWidth * (SLOT_WIDTH_PCT / 100)) / receiptNaturalWidth;
 
-  // Track whether the printer image has finished loading. On the published
-  // site the CDN-hosted printer PNG can arrive after the receipt is ready,
-  // causing the receipt to visually appear before the printer. We gate the
-  // receipt on this flag so the two always render together.
-  const [printerLoaded, setPrinterLoaded] = useState(false);
+  // The housing is pure CSS, so there is nothing to wait on.
+  const printerLoaded = true;
 
   // Gate the receipt behind a two-rAF paint so the CSS keyframe's starting
   // transform (translateY(-100%)) is fully committed before the receipt
@@ -116,37 +112,37 @@ export function PrinterStage({
       `}</style>
 
       <div className="mx-auto flex flex-col items-center" style={{ width: printerWidth }}>
+        {/* Flat printer housing, drawn to match the design. */}
         <div
           style={{
             width: printerWidth,
-            aspectRatio: "1 / 1",
+            height: printerHeight,
             position: "relative",
             zIndex: 1,
             isolation: "isolate",
+            borderRadius: `${Math.round(printerWidth * 0.028)}px ${Math.round(printerWidth * 0.028)}px ${Math.round(printerWidth * 0.012)}px ${Math.round(printerWidth * 0.012)}px`,
+            background:
+              "linear-gradient(180deg, #fdfdfd 0%, #f4f4f4 38%, #e6e6e6 62%, #f7f7f7 82%, #ededed 100%)",
+            boxShadow:
+              "0 14px 26px -12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.9)",
           }}
         >
-          <img
-            src={printerImg}
-            alt=""
-            width={1024}
-            height={1024}
+          {/* Output slot */}
+          <div
+            aria-hidden
             style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              display: "block",
-              userSelect: "none",
-              pointerEvents: "none",
-              filter: "drop-shadow(0 18px 28px rgba(53, 46, 35, 0.18))",
-            }}
-            draggable={false}
-            onLoad={() => setPrinterLoaded(true)}
-            ref={(el) => {
-              // Handle cached images where onLoad may not fire.
-              if (el && el.complete && el.naturalWidth > 0) setPrinterLoaded(true);
+              position: "absolute",
+              top: slotY,
+              left: `${(100 - SLOT_WIDTH_PCT) / 2}%`,
+              width: `${SLOT_WIDTH_PCT}%`,
+              height: Math.max(3, Math.round(printerWidth * 0.008)),
+              backgroundColor: "#1d1d1d",
+              borderRadius: 1,
+              boxShadow: "0 1px 2px rgba(0,0,0,0.35)",
             }}
           />
         </div>
+
 
 
 

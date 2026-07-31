@@ -1,52 +1,88 @@
 ## Goal
 
-Turn the post-logging state on the visit page from a folded "PIECE LOGGED" box into a proper **proof sheet**: a mini receipt preview of everything entered, inline field editing, a crop tool for the photo, and a black-and-white / color ink toggle.
+Rebuild Curio's look and flow to match the five uploaded designs exactly, while keeping every existing execution intact: artwork identification, receipt rendering, dither/color ink, crop editor, proof sheet, the print animation, and export.
 
-## 1. "Proof" panel replaces the folded box
+---
 
-Replace the `Piece logged — ready to print.` box + `Your piece` list with a single composed section styled as a torn receipt proof:
+## 1. Color system + assets
 
-```text
-┌─ paper edge (zigzag top) ──────────────┐
-│  DOES THIS LOOK RIGHT?        [edit ✎] │
-│  ------------------------------------  │
-│  01  Gun (2010) — Liu Ye               │
-│  * MEDIUM        OIL ON CANVAS      ✎  │
-│  * LINGER TIME   1:50               ✎  │
-│  I WAS...        [awe] [calm]       ✎  │
-│  RATING          ★★★★☆              ✎  │
-│  NOTE            "quiet and red"    ✎  │
-│  ------------------------------------  │
-│  [ photo thumb ]   crop / adjust →     │
-│  INK:  [ B&W ]  [ COLOR ]              │
-└─ zigzag bottom ────────────────────────┘
-        READY TO PRINT? →
-```
+New palette tokens in `src/styles.css` (replacing the current cream/ink scheme):
 
-Details:
-- Same monospace receipt typography and paper texture as `Receipt` — it reads as a shorter pre-print draft, not a form.
-- Each row is tappable; tapping (or the small ✎) flips **only that row** in place into its input (text field, linger picker, emotion chips, half-star rating, 48-char note), with Save / Cancel on the row. No modal, no full-form re-entry.
-- Rows animate with a short height/opacity transition so it feels like the paper adjusting.
-- Empty fields show a faded `— add` affordance rather than being hidden.
-- Keeps existing `remove` action, moved to a small link under the panel.
+- Cream `#EDEAE4` (the homepage background from the design)
+- Ochre `#BE5103`, Yellow `#FFCE1B`, Teal `#069494`, Rust `#B7410E`
+- Ink stays near-black; receipt paper and printed receipts use the new cream`#EDEAE4 color.`
 
-## 2. Ink mode: black & white vs color
+Per-page background is set by mode: homepage cream, SNAP ochre, LOG yellow, SHARE/print teal.
 
-- A two-option `INK` toggle in the proof panel; **black & white is the default** (current dithered thermal look).
-- Selecting `COLOR` renders the artwork photo in its original colors on the receipt while the rest of the receipt stays thermal-mono.
-- The choice is stored in page state and passed to `Receipt`, so the printer animation, the on-screen receipt, and the downloaded PNG all use the same mode. The export compositor already draws images itself, so it will draw the raw photo instead of the dithered data URL when color is on.
-- Ink mode is a print preference only — not persisted to the database.
+Assets cropped from the uploads and pushed to CDN as `.asset.json` pointers:
 
-## 3. Crop / adjust photo
+- The doodle blob figure (homepage)
+- The three pixel marks: SNAP `+`, LOG `■`, SHARE `⠿` dot-grid
+- The flat printer housing (from the share/print design), replacing `printer.png`
 
-- The thumbnail in the proof panel opens a full-screen editor sheet: dark backdrop, photo centered, **free-form draggable/resizable crop rectangle** with rule-of-thirds guides, plus rotate-90 and reset. Confirm / Cancel in the receipt-style bar at the bottom.
-- Live preview strip under the photo shows how the crop will look dithered on the receipt.
-- On confirm, the cropped result is encoded via canvas, uploaded through the existing photo-upload server function, and the artwork's `image_url` is updated — that becomes the image used everywhere (receipt, print, download). The original is left in storage untouched.
+The CURIO wordmark is still the same google font as now. No need to crop from upload.
+
+---
+
+## 2. Homepage (`src/routes/index.tsx`)
+
+Complete rewrite to the sketch:
+
+- Cream background, wordmark, tagline "A thermal receipt for your art museum visit."
+- Doodle blob containing the three icons with `SNAP / LOG / SHARE` captions
+- Yellow-on-teal `BEGIN` button
+- Info button stays top-right (About dialog + privacy link unchanged)
+- No name/museum inputs here anymore
+
+Tapping any icon opens a card-style pop up (like the info pop up) **animated demo preview** replicating that upload:
+
+- SNAP: ochre bg, sketch photo frame, "SNAP THE ART IN FRONT OF YOU", shutter circle with a tap pulse. should display a quick video of an artwork being snapped in the frame and the camera lens closing. I will upload a video to use later. 
+- LOG: yellow bg, proof-sheet receipt draft, "LOG WHAT THE ART MEANT TO YOU"
+- SHARE: teal bg, printer feeding the receipt (reusing the real feed animation), "SHARE YOUR MEMORY WITH THE WORLD"
+
+These are static mock content — no DB writes, dismissible, swipeable between the three. There's an "X" on these pop-ups so user can close it anytime.
+
+---
+
+## 3. Onboarding survey (new route `src/routes/begin.tsx`)
+
+One question per screen, cream background, back/next:
+
+1. **Name** — prefilled from `localStorage` if remembered
+2. **"Are you still at the museum?"** — Still here / Already left
+3. **Museum name** — existing autocomplete component, moved here
+
+On finish: creates the visit exactly as today and navigates to `/visit/$visitId`, carrying the capture mode (`snap` or `upload`) in search params so the visit page opens the right entry path.
+
+---
+
+## 4. Snap mode (new `src/components/camera-capture.tsx`)
+
+For "still at the museum": a live in-page camera in the sketch style — `getUserMedia` with rear camera preference, sketch-border viewfinder, hand-drawn shutter circle. Captured frame becomes a File handed to the **existing** upload/identify pipeline — no change to identification, cropping, palette extraction, or proof sheet. Use the ochre bg color for this mode.
+
+Falls back to the current file picker if permission is denied or the API is unavailable. "Already left" keeps today's upload flow unchanged.
+
+---
+
+## 5. Print page redesign (`visit.$visitId.tsx` print view + `printer-stage.tsx`)
+
+- Teal background, SHARE pixel mark at the top
+- Flat printer housing swapped in; slot geometry re-measured against the new artwork so the receipt still emerges from the slot
+- Feed animation, timing, crumple/grain texture, receipt layout, and export logic all unchanged
+- Two buttons stay: `SAVE TO CAMERA ROLL` and `LOG NEW MUSEUM`, restyled yellow-on-teal per the design
+
+---
+
+## 6. Global pixel-icon header
+
+A small `ModeMark` component renders the single relevant pixel icon centered at the top of each screen: `+` on snap, `■` on the artwork entry/proof pages, `⠿` on the print page. Homepage shows all three inside the doodle as in its design.
+
+---
 
 ## Technical notes
 
-- All work lives in `src/routes/visit.$visitId.tsx` (compose view), a new `src/components/piece-proof.tsx` (proof panel + inline row editors) and `src/components/photo-cropper.tsx` (crop sheet, plain canvas + pointer events, no new dependency).
-- `src/components/receipt.tsx` gains a `colorMode: "bw" | "color"` prop that bypasses `DitheredImage` when color; `src/lib/dither.ts` untouched.
-- Crop uses the existing `downscaleImage`/canvas pattern; upload reuses `uploadArtworkPhoto`, update reuses `updateArtwork` (needs `imagePath` added to its patch handling in `src/lib/artworks.functions.ts`).
-- Palette re-extraction runs on the cropped image so the entry-row gradient stays in sync.
-- No schema change required.
+- Receipt component, `dither.ts`, `renderReceiptBlob`, edge function, and all server functions are untouched.
+- Slot alignment constants in `printer-stage.tsx` are currently locked; they will be re-derived for the new flat printer image and the lock comment updated.
+- Camera code is client-only (`useEffect` + `<ClientOnly>` gating) so SSR is unaffected.
+- Each new route gets its own `head()` metadata.
+- Visual verification via a headless browser pass over homepage, each demo, survey steps, and the print page at mobile width.

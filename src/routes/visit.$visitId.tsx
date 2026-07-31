@@ -17,6 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Receipt, type ReceiptArtwork } from "@/components/receipt";
 import { PrinterStage } from "@/components/printer-stage";
+import { ModeMark } from "@/components/pixel-icons";
+import { CameraCapture } from "@/components/camera-capture";
 import { PieceProof } from "@/components/piece-proof";
 import { PhotoCropper } from "@/components/photo-cropper";
 import { StarRating } from "@/components/star-rating";
@@ -31,6 +33,9 @@ const PRINTER_WARMUP_MS = 1000;
 const MAX_ARTWORKS = 1;
 
 export const Route = createFileRoute("/visit/$visitId")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    mode: search.mode === "snap" ? ("snap" as const) : ("upload" as const),
+  }),
   head: () => ({
     meta: [
       { title: "Your Curio receipt" },
@@ -38,6 +43,13 @@ export const Route = createFileRoute("/visit/$visitId")({
         name: "description",
         content: "Add artworks to your Curio museum visit receipt.",
       },
+      { property: "og:title", content: "Your Curio receipt" },
+      {
+        property: "og:description",
+        content: "Log your favorite piece and print it as a thermal receipt keepsake.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: VisitPage,
@@ -76,6 +88,7 @@ const MEDIUM_PRESETS = [
 function VisitPage() {
   const { visitId } = Route.useParams();
   const navigate = useNavigate();
+  const { mode: captureMode } = Route.useSearch();
   const qc = useQueryClient();
   const getFn = useServerFn(getVisit);
   const addFn = useServerFn(addArtwork);
@@ -561,7 +574,12 @@ function VisitPage() {
 
   return (
     <>
-      <div className="min-h-screen">
+      <div
+        className="min-h-screen transition-colors duration-500"
+        style={{
+          backgroundColor: view === "print" ? "var(--teal)" : "var(--paper)",
+        }}
+      >
         <div
           className="mx-auto"
           style={{
@@ -581,6 +599,7 @@ function VisitPage() {
               exit={{ opacity: 0 }}
               transition={{ duration: fadeDuration }}
             >
+              <ModeMark mode="log" size={22} className="mb-5" />
               <div className="flex items-center justify-between">
                 <Link to="/" className="text-xs uppercase tracking-widest underline">
                   ← New visit
@@ -620,6 +639,7 @@ function VisitPage() {
 
               {!atCap ? (
                 <PieceForm
+                  captureMode={captureMode}
                   museum={visit.museum}
                   city={visit.city ?? null}
                   country={visit.country ?? null}
@@ -676,6 +696,7 @@ function VisitPage() {
               exit={{ opacity: 0 }}
               transition={{ duration: fadeDuration }}
             >
+              <ModeMark mode="share" size={22} className="mb-5" color="#141414" />
               <div className="flex items-center justify-between">
                 <button
                   onClick={goToCompose}
@@ -731,12 +752,13 @@ function VisitPage() {
                     <button
                       onClick={saved ? () => {} : handleSaveToCameraRoll}
                       disabled={saving}
-                      className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
+                      className="w-full uppercase tracking-widest text-sm py-3 disabled:opacity-40"
                       style={{
-                        borderColor: "var(--ink)",
-                        backgroundColor: "var(--ink)",
-                        color: "var(--paper)",
+                        backgroundColor: "var(--yellow)",
+                        color: "var(--teal)",
                         fontWeight: 700,
+                        WebkitTapHighlightColor: "transparent",
+                        touchAction: "manipulation",
                       }}
                     >
                       {saved
@@ -750,13 +772,14 @@ function VisitPage() {
                             : "Download receipt"}
                     </button>
                     <Link
-                      to="/"
-                      className="block w-full text-center uppercase tracking-widest text-sm py-3 border"
+                      to="/begin"
+                      className="block w-full text-center uppercase tracking-widest text-sm py-3"
                       style={{
-                        borderColor: "var(--ink)",
-                        backgroundColor: "var(--paper)",
-                        color: "var(--ink)",
+                        backgroundColor: "var(--yellow)",
+                        color: "var(--teal)",
                         fontWeight: 700,
+                        WebkitTapHighlightColor: "transparent",
+                        touchAction: "manipulation",
                       }}
                     >
                       Log another museum
@@ -925,11 +948,13 @@ type PiecePayload = {
 };
 
 function PieceForm({
+  captureMode,
   museum,
   city,
   country,
   onSave,
 }: {
+  captureMode: "snap" | "upload";
   museum: string;
   city: string | null;
   country: string | null;
@@ -958,6 +983,7 @@ function PieceForm({
   } | null>(null);
   const identifyAbortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   // Step 2: the reflection
   const [lingerMin, setLingerMin] = useState<string>("");
@@ -1092,6 +1118,10 @@ function PieceForm({
     } else {
       ready = picked;
     }
+    acceptFile(ready);
+  }
+
+  function acceptFile(ready: File) {
     setFile(ready);
     // Reset identified fields whenever a new photo replaces the old one.
     setTitle("");
@@ -1185,6 +1215,16 @@ function PieceForm({
         <span>{step === "piece" ? "○ ●" : "● ○"}</span>
       </div>
 
+      {cameraOpen ? (
+        <CameraCapture
+          onClose={() => setCameraOpen(false)}
+          onCapture={(f) => {
+            setCameraOpen(false);
+            acceptFile(f);
+          }}
+        />
+      ) : null}
+
       {step === "piece" ? (
         <>
           <input
@@ -1213,16 +1253,20 @@ function PieceForm({
               </div>
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() =>
+                  captureMode === "snap" ? setCameraOpen(true) : fileInputRef.current?.click()
+                }
                 className="text-xs uppercase tracking-widest underline"
               >
-                change
+                {captureMode === "snap" ? "retake" : "change"}
               </button>
             </div>
           ) : (
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() =>
+                captureMode === "snap" ? setCameraOpen(true) : fileInputRef.current?.click()
+              }
               disabled={converting}
               className="w-full block border-2 border-dashed p-6 text-center disabled:opacity-60"
               style={{
@@ -1232,7 +1276,11 @@ function PieceForm({
               }}
             >
               <div className="text-sm" style={{ color: "var(--ink)" }}>
-                {converting ? "Converting photo…" : "✦ Upload a photo of your favorite piece"}
+                {converting
+                  ? "Converting photo…"
+                  : captureMode === "snap"
+                    ? "✦ Snap the piece in front of you"
+                    : "✦ Upload a photo of your favorite piece"}
               </div>
               <div className="text-xs mt-2" style={{ color: "var(--ink-soft)" }}>
                 Fill in the details yourself, or ask us to try identifying it.
