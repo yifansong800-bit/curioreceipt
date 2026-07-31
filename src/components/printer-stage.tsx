@@ -92,7 +92,7 @@ export function PrinterStage({
   }, [mode, printerLoaded]);
 
   // Unlock Download exactly when the stepped feed animation ends.
-  const feedDurationMs = reduce ? 250 : FEED_DURATION_MS;
+  const feedDurationMs = reduce ? 250 : feedMs;
   useEffect(() => {
     if (mode !== "printing" || !armed) return;
     const t = window.setTimeout(() => {
@@ -182,7 +182,7 @@ export function PrinterStage({
                     visibility: armed ? "visible" : "hidden",
                     ...(mode === "printing" && armed && !reduce
                       ? {
-                          animation: `curio-feed ${FEED_DURATION_MS}ms steps(${FEED_STEPS}, end) forwards`,
+                          animation: `curio-feed ${feedMs}ms steps(${FEED_STEPS}, end) forwards`,
                         }
                       : mode === "printing" && armed && reduce
                         ? { transform: "translateY(0)" }
