@@ -17,6 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Receipt, type ReceiptArtwork } from "@/components/receipt";
 import { PrinterStage } from "@/components/printer-stage";
+import { ModeMark } from "@/components/pixel-icons";
+import { CameraCapture } from "@/components/camera-capture";
 import { PieceProof } from "@/components/piece-proof";
 import { PhotoCropper } from "@/components/photo-cropper";
 import { StarRating } from "@/components/star-rating";
@@ -86,6 +88,7 @@ const MEDIUM_PRESETS = [
 function VisitPage() {
   const { visitId } = Route.useParams();
   const navigate = useNavigate();
+  const { mode: captureMode } = Route.useSearch();
   const qc = useQueryClient();
   const getFn = useServerFn(getVisit);
   const addFn = useServerFn(addArtwork);
@@ -571,7 +574,12 @@ function VisitPage() {
 
   return (
     <>
-      <div className="min-h-screen">
+      <div
+        className="min-h-screen transition-colors duration-500"
+        style={{
+          backgroundColor: view === "print" ? "var(--teal)" : "var(--paper)",
+        }}
+      >
         <div
           className="mx-auto"
           style={{
@@ -591,6 +599,7 @@ function VisitPage() {
               exit={{ opacity: 0 }}
               transition={{ duration: fadeDuration }}
             >
+              <ModeMark mode="log" size={22} className="mb-5" />
               <div className="flex items-center justify-between">
                 <Link to="/" className="text-xs uppercase tracking-widest underline">
                   ← New visit
@@ -630,6 +639,7 @@ function VisitPage() {
 
               {!atCap ? (
                 <PieceForm
+                  captureMode={captureMode}
                   museum={visit.museum}
                   city={visit.city ?? null}
                   country={visit.country ?? null}
@@ -686,6 +696,7 @@ function VisitPage() {
               exit={{ opacity: 0 }}
               transition={{ duration: fadeDuration }}
             >
+              <ModeMark mode="share" size={22} className="mb-5" color="#141414" />
               <div className="flex items-center justify-between">
                 <button
                   onClick={goToCompose}
@@ -741,12 +752,13 @@ function VisitPage() {
                     <button
                       onClick={saved ? () => {} : handleSaveToCameraRoll}
                       disabled={saving}
-                      className="w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
+                      className="w-full uppercase tracking-widest text-sm py-3 disabled:opacity-40"
                       style={{
-                        borderColor: "var(--ink)",
-                        backgroundColor: "var(--ink)",
-                        color: "var(--paper)",
+                        backgroundColor: "var(--yellow)",
+                        color: "var(--teal)",
                         fontWeight: 700,
+                        WebkitTapHighlightColor: "transparent",
+                        touchAction: "manipulation",
                       }}
                     >
                       {saved
@@ -760,13 +772,14 @@ function VisitPage() {
                             : "Download receipt"}
                     </button>
                     <Link
-                      to="/"
-                      className="block w-full text-center uppercase tracking-widest text-sm py-3 border"
+                      to="/begin"
+                      className="block w-full text-center uppercase tracking-widest text-sm py-3"
                       style={{
-                        borderColor: "var(--ink)",
-                        backgroundColor: "var(--paper)",
-                        color: "var(--ink)",
+                        backgroundColor: "var(--yellow)",
+                        color: "var(--teal)",
                         fontWeight: 700,
+                        WebkitTapHighlightColor: "transparent",
+                        touchAction: "manipulation",
                       }}
                     >
                       Log another museum
