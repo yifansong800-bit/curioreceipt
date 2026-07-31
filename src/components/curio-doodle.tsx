@@ -83,7 +83,7 @@ export function CurioDoodle({ onPick }: { onPick: (mode: CurioMode) => void }) {
               background: "transparent",
             }}
           >
-            <Icon size={pct(ICON_SIZE, VW * 1.8 / 1.8) } color="var(--ink)" />
+            <Icon size="56%" color="var(--ink)" />
           </button>
         );
       })}
