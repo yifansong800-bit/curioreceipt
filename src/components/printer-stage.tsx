@@ -1,19 +1,18 @@
 // ============================================================
-// DO NOT MODIFY — printer asset (`@/assets/printer.png`),
-// SLOT_Y_PCT (60), and SLOT_WIDTH_PCT (62) are LOCKED and tuned
-// to the current printer artwork. Changing them will misalign
-// the receipt with the printer's output slot.
+// The printer housing is drawn in CSS to replicate the flat
+// white unit in the Curio design: a rounded slab with a dark
+// output slot that the receipt feeds out of.
+// SLOT_Y_PCT / SLOT_WIDTH_PCT are measured against that design.
 // ============================================================
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
-import printerImg from "@/assets/printer.png";
-
 type Mode = "idle" | "printing" | "printed";
 
-// LOCKED — measured against src/assets/printer.png (1024x1024).
-const SLOT_Y_PCT = 60;
-const SLOT_WIDTH_PCT = 62;
+// Housing proportions, measured from the printing-page design.
+const HOUSING_RATIO = 0.196; // height / width
+const SLOT_Y_PCT = 44; // % of housing height
+const SLOT_WIDTH_PCT = 86; // % of housing width
 const MAX_PRINTER_WIDTH = 460;
 
 // Stepped feed: 8 discrete "clicks" ≈ 1 inch each.
