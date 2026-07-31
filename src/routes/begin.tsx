@@ -108,12 +108,12 @@ function BeginPage() {
         <ArrowLeft className="h-5 w-5" />
       </button>
 
-      <ModeMark
-        mode={step === "where" ? "snap" : "log"}
-        size={22}
-        className="absolute"
-        // centred at the top of the page
-      />
+      <div
+        className="absolute left-0 right-0 flex justify-center"
+        style={{ top: "max(1.1rem, env(safe-area-inset-top))" }}
+      >
+        <ModeMark mode={step === "where" ? "snap" : "log"} size={22} />
+      </div>
 
       <div className="w-full max-w-md">
         <div
