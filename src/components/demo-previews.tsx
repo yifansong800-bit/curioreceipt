@@ -95,32 +95,42 @@ export function DemoPreview({
           <X className="h-4 w-4" />
         </button>
 
-        <div className="flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto px-5 py-7">
+        {/* Fixed three-band layout so the mark and caption sit in exactly the
+            same place in all three demos, whatever the content does. */}
+        <div className="flex flex-1 flex-col overflow-hidden px-5 py-7">
+          <div className="shrink-0">
+            <ModeMark mode={mode} size={22} color={INK[mode]} />
+          </div>
 
-          <ModeMark mode={mode} size={22} color={INK[mode]} />
+          <div className="relative flex flex-1 items-center justify-center overflow-hidden py-5">
+            <div className="flex w-full justify-center" style={{ maxHeight: "100%" }}>
+              {mode === "snap" ? <SnapDemo /> : null}
+              {mode === "log" ? <LogDemo /> : null}
+              {mode === "share" ? <ShareDemo /> : null}
+            </div>
+          </div>
 
-          {mode === "snap" ? <SnapDemo /> : null}
-          {mode === "log" ? <LogDemo /> : null}
-          {mode === "share" ? <ShareDemo /> : null}
+          <div className="shrink-0">
+            <p className="text-center text-[11px] tracking-[0.18em]">{CAPTION[mode]}</p>
 
-          <p className="text-center text-[11px] tracking-[0.18em]">{CAPTION[mode]}</p>
-
-          <div className="flex items-center gap-2 pt-1">
-            {ORDER.map((m) => (
-              <button
-                key={m}
-                type="button"
-                aria-label={`Show ${m} demo`}
-                onClick={() => onChange(m)}
-                className="h-2 w-2"
-                style={{
-                  backgroundColor: m === mode ? INK[mode] : "transparent",
-                  border: `1px solid ${INK[mode]}`,
-                }}
-              />
-            ))}
+            <div className="flex items-center justify-center gap-2 pt-4">
+              {ORDER.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  aria-label={`Show ${m} demo`}
+                  onClick={() => onChange(m)}
+                  className="h-2 w-2"
+                  style={{
+                    backgroundColor: m === mode ? INK[mode] : "transparent",
+                    border: `1px solid ${INK[mode]}`,
+                  }}
+                />
+              ))}
+            </div>
           </div>
         </div>
+
       </div>
     </div>
   );
