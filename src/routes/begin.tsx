@@ -95,9 +95,9 @@ function BeginPage() {
     >
       <button
         type="button"
-        onClick={back}
+        onPointerDown={back}
         aria-label="Back"
-        className="absolute -m-2 p-4 transition-transform duration-100 active:scale-90"
+        className="absolute z-20 -m-2 p-4 transition-transform duration-100 active:scale-90"
         style={{
           top: "max(1rem, env(safe-area-inset-top))",
           left: "max(1rem, env(safe-area-inset-left))",
@@ -110,7 +110,7 @@ function BeginPage() {
       </button>
 
       <div
-        className="absolute left-0 right-0 flex justify-center"
+        className="pointer-events-none absolute left-0 right-0 z-0 flex justify-center"
         style={{ top: "max(1.1rem, env(safe-area-inset-top))" }}
       >
         <ModeMark mode={step === "where" ? "snap" : "log"} size={22} />
