@@ -228,11 +228,40 @@ function SketchFrame() {
   );
 }
 
-/** Miniature proof sheet, matching the log-mode design. */
+/** Miniature proof sheet: types out the note, then flips the ink toggle. */
+const NOTE_TEXT = "overwhelming but beautiful";
+
 function LogDemo() {
+  const [typed, setTyped] = useState(0);
+  const [color, setColor] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    const timers: number[] = [];
+    const run = () => {
+      if (!alive) return;
+      setTyped(0);
+      setColor(false);
+      for (let i = 1; i <= NOTE_TEXT.length; i++) {
+        timers.push(window.setTimeout(() => alive && setTyped(i), 400 + i * 70));
+      }
+      const end = 400 + NOTE_TEXT.length * 70;
+      timers.push(window.setTimeout(() => alive && setColor(true), end + 700));
+      timers.push(window.setTimeout(() => alive && setColor(false), end + 2200));
+      timers.push(window.setTimeout(run, end + 3400));
+    };
+    run();
+    return () => {
+      alive = false;
+      timers.forEach((t) => window.clearTimeout(t));
+    };
+  }, []);
+
+  const done = typed >= NOTE_TEXT.length;
+
   return (
     <div className="w-full" style={{ maxWidth: 250 }}>
-      <div className="receipt-paper grain px-4 py-6 text-[10px] leading-relaxed" style={{ color: "var(--ink)" }}>
+      <div className="receipt-paper grain px-4 py-5 text-[10px] leading-relaxed" style={{ color: "var(--ink)" }}>
         <div className="text-center tracking-widest">****** RECEIPT DRAFT ******</div>
         <Dashes />
         <div className="font-bold">
@@ -245,15 +274,53 @@ function LogDemo() {
         <Row label="RATING" value="★★★★☆" />
         <div className="mt-1 flex gap-2">
           <span>NOTE</span>
-          <span className="flex-1 text-right italic">“overwhelming but beautiful”</span>
+          <span className="flex-1 text-right italic">
+            “{NOTE_TEXT.slice(0, typed)}
+            {done ? "" : <span style={{ opacity: 0.6 }}>|</span>}”
+          </span>
         </div>
         <Dashes />
-        <div className="flex items-center gap-2">
+
+        {/* Crop / adjust strip */}
+        <div className="flex items-center gap-3">
+          <div
+            className="shrink-0 overflow-hidden"
+            style={{ width: 52, height: 60, border: "1px solid var(--ink)" }}
+          >
+            <img
+              src={snapDemo}
+              alt="Crop preview of the artwork"
+              className="h-full w-full object-cover transition-[filter] duration-500"
+              style={{ filter: color ? "none" : "grayscale(1) contrast(1.5)" }}
+              loading="lazy"
+            />
+          </div>
+          <div className="min-w-0">
+            <div className="underline tracking-widest">CROP / ADJUST →</div>
+            <div className="mt-1 opacity-70">this crop prints on the receipt</div>
+          </div>
+        </div>
+
+        <div className="mt-3 flex items-center gap-2">
           <span className="tracking-widest">INK</span>
-          <span className="px-2 py-0.5" style={{ backgroundColor: "var(--ink)", color: "var(--paper)" }}>
+          <span
+            className="px-2 py-0.5 transition-colors duration-300"
+            style={{
+              border: "1px solid var(--ink)",
+              backgroundColor: color ? "transparent" : "var(--ink)",
+              color: color ? "var(--ink)" : "var(--paper)",
+            }}
+          >
             B&amp;W
           </span>
-          <span className="border px-2 py-0.5" style={{ borderColor: "var(--ink)" }}>
+          <span
+            className="px-2 py-0.5 transition-colors duration-300"
+            style={{
+              border: "1px solid var(--ink)",
+              backgroundColor: color ? "var(--ink)" : "transparent",
+              color: color ? "var(--paper)" : "var(--ink)",
+            }}
+          >
             COLOR
           </span>
         </div>

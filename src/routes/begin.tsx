@@ -95,9 +95,9 @@ function BeginPage() {
     >
       <button
         type="button"
-        onClick={back}
+        onPointerDown={back}
         aria-label="Back"
-        className="absolute -m-2 p-4 transition-transform duration-100 active:scale-90"
+        className="absolute z-20 -m-2 p-4 transition-transform duration-100 active:scale-90"
         style={{
           top: "max(1rem, env(safe-area-inset-top))",
           left: "max(1rem, env(safe-area-inset-left))",
@@ -110,7 +110,7 @@ function BeginPage() {
       </button>
 
       <div
-        className="absolute left-0 right-0 flex justify-center"
+        className="pointer-events-none absolute left-0 right-0 z-0 flex justify-center"
         style={{ top: "max(1.1rem, env(safe-area-inset-top))" }}
       >
         <ModeMark mode={step === "where" ? "snap" : "log"} size={22} />
@@ -153,7 +153,6 @@ function BeginPage() {
             <div className="grid gap-3">
               <ChoiceButton
                 label="Yes — I'm standing in front of it"
-                hint="You'll snap the piece with your camera."
                 onClick={() => {
                   setStillHere(true);
                   setStep("museum");
@@ -161,7 +160,6 @@ function BeginPage() {
               />
               <ChoiceButton
                 label="No — I've already left"
-                hint="You'll upload a photo from your camera roll."
                 onClick={() => {
                   setStillHere(false);
                   setStep("museum");
@@ -237,29 +235,26 @@ function PrimaryButton({
   );
 }
 
-function ChoiceButton({
-  label,
-  hint,
-  onClick,
-}: {
-  label: string;
-  hint: string;
-  onClick: () => void;
-}) {
+function ChoiceButton({ label, onClick }: { label: string; onClick: () => void }) {
+  const [on, setOn] = useState(false);
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full border px-4 py-4 text-left transition-all duration-100 hover:bg-ink hover:text-paper active:scale-[0.99] active:bg-ink active:text-paper"
+      onPointerEnter={() => setOn(true)}
+      onPointerLeave={() => setOn(false)}
+      onPointerDown={() => setOn(true)}
+      className="w-full border px-4 py-4 text-left transition-all duration-100 active:scale-[0.99]"
       style={{
-        borderColor: "var(--ink)",
+        borderColor: on ? "var(--teal)" : "var(--ink)",
+        backgroundColor: on ? "var(--teal)" : "transparent",
+        color: on ? "var(--yellow)" : "var(--ink)",
         fontFamily: "var(--font-mono)",
         touchAction: "manipulation",
         WebkitTapHighlightColor: "transparent",
       }}
     >
       <div className="text-sm">{label}</div>
-      <div className="text-[11px] mt-1 opacity-70">{hint}</div>
     </button>
   );
 }
