@@ -75,7 +75,7 @@ export function PieceProof({
     <div className="mt-8">
       <div className="flex items-baseline justify-between gap-3 mb-3">
         <h2 className="text-xs uppercase tracking-widest" style={{ color: "var(--ink-soft)" }}>
-          Proof · does this look right?
+          DOES THIS LOOK RIGHT?
         </h2>
         <span className="text-[10px] uppercase tracking-widest" style={{ color: "var(--ink-soft)" }}>
           tap a line to edit
@@ -93,7 +93,7 @@ export function PieceProof({
         }}
       >
         <div style={{ textAlign: "center", letterSpacing: 1, fontSize: 11 }}>
-          ****** DRAFT — NOT YET PRINTED ******
+          ****** RECEIPT DRAFT ******
         </div>
 
         <div
