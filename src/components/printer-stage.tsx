@@ -45,7 +45,10 @@ export function PrinterStage({
     const el = wrapRef.current;
     if (!el) return;
     const measure = () => {
-      const w = el.getBoundingClientRect().width;
+      // clientWidth is the untransformed layout width. getBoundingClientRect()
+      // would include any ancestor scale (e.g. the card entrance animation),
+      // which made the printer render small and then jump larger mid-animation.
+      const w = el.clientWidth;
       if (w > 0) setPrinterWidth(Math.min(MAX_PRINTER_WIDTH, Math.floor(w)));
     };
     measure();
