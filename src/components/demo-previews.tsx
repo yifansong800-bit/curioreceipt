@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { ModeMark, type CurioMode } from "@/components/pixel-icons";
 import { PrinterStage } from "@/components/printer-stage";
 import snapDemo from "@/assets/snap-demo.jpg";
+import demoReceipt from "@/assets/demo-receipt.png.asset.json";
 
 const BG: Record<CurioMode, string> = {
   snap: "var(--ochre)",
@@ -73,10 +74,11 @@ export function DemoPreview({
           }
           setTouchX(null);
         }}
-        className="relative w-full overflow-hidden"
+        className="relative flex w-full flex-col overflow-hidden"
         style={{
-          maxWidth: 340,
-          maxHeight: "88dvh",
+          aspectRatio: "578 / 1026",
+          maxWidth: 360,
+          maxHeight: "92dvh",
           backgroundColor: BG[mode],
           color: INK[mode],
           border: "1px solid var(--ink)",
@@ -93,7 +95,8 @@ export function DemoPreview({
           <X className="h-4 w-4" />
         </button>
 
-        <div className="flex flex-col items-center gap-5 overflow-y-auto px-5 py-7" style={{ maxHeight: "88dvh" }}>
+        <div className="flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto px-5 py-7">
+
           <ModeMark mode={mode} size={22} color={INK[mode]} />
 
           {mode === "snap" ? <SnapDemo /> : null}
@@ -268,32 +271,13 @@ function ShareDemo() {
   return (
     <div className="w-full" style={{ maxWidth: 260 }}>
       <PrinterStage mode="printed">
-        <div className="receipt-paper grain px-4 py-6 text-[9px] leading-relaxed" style={{ color: "var(--ink)", width: 360 }}>
-          <div className="text-center tracking-widest">****** www.curioreceipt.com ******</div>
-          <div className="mt-3">MUSEUM: M+</div>
-          <div>LOCATION: HONG KONG</div>
-          <div>CURATOR: CASSIE (SESH #11)</div>
-          <Dashes />
-          <div className="font-bold">
-            01 <span className="italic">Gun</span> (2001) - Liu Ye
-          </div>
-          <Row label="★ MEDIUM" value="OIL ON CANVAS" />
-          <Row label="★ LINGER TIME" value="2:45" />
-          <div
-            className="my-3"
-            style={{
-              height: 90,
-              background:
-                "repeating-conic-gradient(var(--ink) 0% 25%, transparent 0% 50%) 0 0 / 3px 3px",
-              opacity: 0.55,
-            }}
-          />
-          <Row label="I WAS..." value="[in awe] [moved]" />
-          <Row label="RATING" value="★★★★☆" />
-          <Dashes />
-          <div className="text-center tracking-widest">THANK YOU FOR VISITING!</div>
-        </div>
+        <img
+          src={demoReceipt.url}
+          alt="Example Curio receipt"
+          style={{ width: 260, display: "block" }}
+        />
       </PrinterStage>
     </div>
   );
+
 }
