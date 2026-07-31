@@ -74,7 +74,7 @@ function Index() {
             className="text-center mt-4 text-xs sm:text-sm leading-relaxed tracking-wide"
             style={{ color: "var(--ink)" }}
           >
-            A pocket&nbsp; for
+            A pocket companion for
             <br />
             your art museum visit.
           </p>
