@@ -285,13 +285,13 @@ function LogDemo() {
         {/* Crop / adjust strip */}
         <div className="flex items-center gap-3">
           <div
-            className="shrink-0 overflow-hidden"
-            style={{ width: 52, height: 60, border: "1px solid var(--ink)" }}
+            className="flex shrink-0 items-center justify-center overflow-hidden"
+            style={{ width: 88, height: 52, border: "1px solid var(--ink)" }}
           >
             <img
               src={logDemo.url}
               alt="Crop preview of the artwork"
-              className="h-full w-full object-cover transition-[filter] duration-500"
+              className="max-h-full max-w-full object-contain transition-[filter] duration-500"
               style={{ filter: color ? "none" : "grayscale(1) contrast(1.5)" }}
               loading="lazy"
             />
