@@ -74,7 +74,7 @@ function Index() {
             className="text-center mt-4 text-xs sm:text-sm leading-relaxed tracking-wide"
             style={{ color: "var(--ink)" }}
           >
-            A thermal receipt for
+            A pocket&nbsp; for
             <br />
             your art museum visit.
           </p>
