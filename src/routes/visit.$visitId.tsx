@@ -884,7 +884,13 @@ function VisitPage() {
         }}
       />
     ) : null}
-    <Footer />
+    <Footer
+      style={
+        view === "print"
+          ? { backgroundColor: "var(--teal)", color: "var(--yellow)" }
+          : undefined
+      }
+    />
   </>
   );
 }
