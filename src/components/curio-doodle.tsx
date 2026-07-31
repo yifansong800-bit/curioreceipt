@@ -1,4 +1,4 @@
-import doodleAsset from "@/assets/curio-doodle-2.png.asset.json";
+import doodleAsset from "@/assets/curio-doodle-3.png.asset.json";
 import type { CurioMode } from "@/components/pixel-icons";
 
 // Positions measured against the source sketch (percentages of the doodle box).
