@@ -64,16 +64,11 @@ function Index() {
         </DialogTrigger>
 
         <div className="w-full max-w-md -mt-10">
-          <div
-            className="text-center leading-none"
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "clamp(44px, 13vw, 68px)",
-              letterSpacing: 3,
-            }}
-          >
-            CURIO
-          </div>
+          <img
+            src={wordmark.url}
+            alt="CURIO"
+            className="mx-auto block w-[62%] max-w-[280px]"
+          />
           <p
             className="text-center mt-4 text-xs sm:text-sm leading-relaxed tracking-wide"
             style={{ color: "var(--ink)" }}
