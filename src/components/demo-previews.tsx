@@ -73,10 +73,11 @@ export function DemoPreview({
           }
           setTouchX(null);
         }}
-        className="relative w-full overflow-hidden"
+        className="relative flex w-full flex-col overflow-hidden"
         style={{
-          maxWidth: 340,
-          maxHeight: "88dvh",
+          aspectRatio: "578 / 1026",
+          maxWidth: 360,
+          maxHeight: "92dvh",
           backgroundColor: BG[mode],
           color: INK[mode],
           border: "1px solid var(--ink)",
@@ -93,7 +94,8 @@ export function DemoPreview({
           <X className="h-4 w-4" />
         </button>
 
-        <div className="flex flex-col items-center gap-5 overflow-y-auto px-5 py-7" style={{ maxHeight: "88dvh" }}>
+        <div className="flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto px-5 py-7">
+
           <ModeMark mode={mode} size={22} color={INK[mode]} />
 
           {mode === "snap" ? <SnapDemo /> : null}
