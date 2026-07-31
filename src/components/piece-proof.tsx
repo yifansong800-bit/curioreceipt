@@ -740,6 +740,11 @@ function Stars({ value }: { value: number }) {
 
 function PhotoThumb({ src, ink }: { src: string | null; ink: InkMode }) {
   const [dithered, setDithered] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    setLoaded(false);
+  }, [src]);
 
   useEffect(() => {
     let cancelled = false;
@@ -770,14 +775,26 @@ function PhotoThumb({ src, ink }: { src: string | null; ink: InkMode }) {
 
   return (
     <div
-      className="shrink-0 overflow-hidden"
+      className="shrink-0 overflow-hidden relative"
       style={{ width: 72, height: 72, border: "1px solid var(--ink)" }}
     >
       <img
         src={ink === "bw" ? (dithered ?? src) : src}
         alt="Your piece"
         className="w-full h-full object-contain"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        onError={() => setLoaded(true)}
+        style={{ opacity: loaded ? 1 : 0, transition: "opacity 0.2s ease" }}
       />
+      {!loaded ? (
+        <div
+          className="absolute inset-0 flex items-center justify-center text-[9px] uppercase tracking-widest"
+          style={{ color: "var(--ink-soft)" }}
+        >
+          loading…
+        </div>
+      ) : null}
     </div>
   );
 }
