@@ -104,7 +104,7 @@ export function DemoPreview({
           </div>
 
           <div className="relative flex flex-1 items-center justify-center overflow-hidden py-5">
-            <div className="flex h-full w-full items-center justify-center">
+            <div key={mode} className="curio-card-in flex h-full w-full items-center justify-center">
               {mode === "snap" ? <SnapDemo /> : null}
               {mode === "log" ? <LogDemo /> : null}
               {mode === "share" ? <ShareDemo /> : null}
@@ -122,10 +122,11 @@ export function DemoPreview({
                   type="button"
                   aria-label={`Show ${m} demo`}
                   onClick={() => onChange(m)}
-                  className="h-2 w-2"
+                  className="h-2 w-2 transition-transform active:scale-90"
                   style={{
                     backgroundColor: m === mode ? INK[mode] : "transparent",
                     border: `1px solid ${INK[mode]}`,
+                    touchAction: "manipulation",
                   }}
                 />
               ))}
