@@ -1,13 +1,6 @@
 import type { CurioMode } from "@/components/pixel-icons";
 import { SnapIcon, LogIcon, ShareIcon } from "@/components/pixel-icons";
 
-// Outline vectorized from the original Curio sketch so it stays crisp at any
-// size. Icons + captions are drawn live (not baked into the artwork).
-const BODY_PATHS = [
-  "M1846 3774 c-61 -22 -72 -38 -80 -106 -7 -74 -6 -73 -43 -52 -72 42 -105 -7 -187 -281 -91 -301 -72 -429 66 -451 47 -8 51 -23 46 -206 -4 -181 6 -173 -219 -182 -279 -11 -526 -62 -689 -143 -184 -92 -329 -275 -573 -723 -54 -99 -93 -245 -103 -379 -22 -316 280 -713 701 -924 220 -109 541 -180 1055 -232 170 -17 233 -14 328 17 35 11 64 18 66 17 1 -2 6 -17 12 -34 14 -45 53 -50 308 -37 482 24 673 83 1016 310 358 237 547 423 655 645 117 243 127 415 35 613 -83 180 -154 254 -404 423 -247 166 -466 287 -652 361 -160 64 -551 150 -680 150 -35 0 -64 2 -64 4 0 2 -12 59 -26 127 -24 117 -26 146 -32 521 -8 455 -1 421 -108 493 -115 78 -316 110 -428 69z m164 -76 c-19 -5 -57 -18 -83 -28 -42 -16 -49 -17 -54 -4 -11 30 20 42 112 42 56 0 58 -1 25 -10z m178 -44 c98 -48 117 -81 71 -124 -18 -16 -45 -34 -60 -39 l-27 -9 5 57 c6 63 -16 102 -82 143 -47 30 3 15 93 -28z m-140 0 c42 -12 22 -24 -40 -24 -60 1 -62 1 -38 15 28 16 44 18 78 9z m-163 -99 c22 -8 75 -14 118 -15 l77 0 0 -31 0 -32 -66 6 c-75 7 -174 48 -174 71 0 19 -4 19 45 1z m-47 -109 c119 -60 317 -73 412 -27 l40 19 0 -91 c1 -217 21 -568 38 -664 l18 -103 -56 -45 c-128 -104 -245 -119 -461 -57 l-116 34 10 51 c5 29 7 124 4 212 -5 157 -6 160 -31 182 -22 19 -34 22 -70 17 -39 -6 -45 -4 -56 16 -27 50 17 247 115 528 3 9 15 6 43 -12 21 -13 70 -40 110 -60z m952 -1005 c314 -62 579 -174 910 -384 276 -175 375 -268 450 -422 100 -207 96 -361 -15 -590 -101 -208 -286 -385 -665 -639 -307 -206 -471 -251 -948 -262 -210 -4 -234 -3 -206 9 17 8 46 37 66 64 48 67 127 106 363 182 201 64 399 138 440 165 32 21 34 70 5 86 -15 8 -30 5 -71 -15 -85 -43 -244 -102 -433 -161 -184 -57 -230 -76 -305 -127 -42 -28 -44 -29 -54 -11 -55 99 -256 226 -472 301 -61 21 -81 23 -156 17 -101 -7 -168 8 -239 56 -50 33 -81 38 -100 15 -22 -27 -3 -64 53 -99 85 -55 134 -67 265 -65 106 1 123 -1 182 -26 222 -92 409 -220 384 -262 -16 -27 -121 -81 -184 -94 -63 -13 -206 -4 -556 36 -505 58 -792 174 -1045 424 -427 423 -421 712 25 1366 219 321 432 411 991 417 l240 3 85 -28 c66 -23 110 -30 201 -34 141 -7 195 7 299 74 l73 48 131 -7 c81 -4 190 -18 286 -37z",
-  "M1840 3248 c-78 -40 -90 -57 -67 -92 55 -84 218 -115 331 -63 62 28 80 54 71 98 -20 90 -208 122 -335 57z m235 -61 c17 -13 17 -14 -3 -19 -14 -4 -22 0 -25 13 -6 22 2 24 28 6z m-142 -17 c6 -23 -2 -25 -38 -8 -18 8 -22 14 -13 20 23 14 46 9 51 -12z",
-];
-
 const SPOTS: { mode: CurioMode; label: string; cx: number }[] = [
   { mode: "snap", label: "SNAP", cx: 112.5 },
   { mode: "log", label: "LOG", cx: 203 },
@@ -21,6 +14,11 @@ const ICON_SIZE = 43;
 const ICON_TOP = 219;
 const CAPTION_Y = 285;
 
+/**
+ * Hand-drawn Curio figure, redrawn as thin sketch strokes so it reads as ink on
+ * paper (matching the wordmark) instead of a heavy filled silhouette.
+ * The two arms make a camera-frame gesture around the SNAP / LOG / SHARE icons.
+ */
 export function CurioDoodle({ onPick }: { onPick: (mode: CurioMode) => void }) {
   return (
     <div className="relative mx-auto w-full select-none" style={{ aspectRatio: "435 / 386" }}>
@@ -28,15 +26,46 @@ export function CurioDoodle({ onPick }: { onPick: (mode: CurioMode) => void }) {
         viewBox="0 0 435 386"
         className="absolute inset-0 h-full w-full"
         role="img"
-        aria-label="Curio figure holding the snap, log and share tools"
+        aria-label="Curio figure framing the snap, log and share tools"
       >
-        <g transform="translate(0,386) scale(0.1,-0.1)" fill="var(--ink)" stroke="none">
-          <path d={BODY_PATHS[0]} />
-          {/* Eye — blinks softly while the visitor lingers on the page. */}
-          <g className="curio-blink">
-            <path d={BODY_PATHS[1]} />
+        <g
+          fill="none"
+          stroke="var(--ink)"
+          strokeWidth={3.4}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          {/* Head — paper-roll block, left profile with nose notch */}
+          <path d="M184 44 C181 62 179 78 178 93 C176 96 172 97 172 99 C173 103 182 103 187 106 C186 116 187 127 186 135 C199 139 222 142 249 143 C254 141 256 136 256 130 C255 105 253 74 248 50" />
+          {/* Rolled top of the head */}
+          <path d="M184 44 C186 34 197 26 214 24 C233 22 247 30 249 41 C250 45 249 48 248 50" />
+          <path d="M196 33 C201 27 213 24 224 26 C235 28 240 34 237 40 C233 46 220 48 209 45 C201 43 196 38 196 33 Z" />
+          <path d="M199 40 C205 44 217 46 228 44" />
+
+          {/* Eye — small ink wedge, blinks while the visitor lingers */}
+          <g className="curio-blink" style={{ transformOrigin: "212px 83px" }}>
+            <path d="M220 76 C214 79 209 81 203 83 C209 85 214 86 220 88" strokeWidth={3.8} />
           </g>
+
+          {/* Right arm sweeping out from the shoulder */}
+          <path d="M256 130 C284 126 320 126 352 133 C382 140 400 152 402 167" />
+          {/* Right hand, fingers folded, thumb dropping down */}
+          <path d="M402 167 C400 186 391 205 375 218 C365 226 355 229 350 224 C346 219 348 209 352 199" />
+          <path d="M352 199 C340 202 318 204 300 202 C288 200 282 196 283 191 C285 185 296 182 310 182" />
+          <path d="M292 191 C306 190 322 188 337 186" />
+          <path d="M294 183 C308 181 324 179 338 178" />
+          <path d="M300 176 C314 173 330 171 344 171" />
+
+          {/* Left arm rising from the lower-left corner */}
+          <path d="M50 240 C44 268 43 300 50 320 C55 333 66 338 84 339 C104 340 126 338 143 335" />
+          {/* Left hand, thumb up, fingers pointing right */}
+          <path d="M75 336 C90 331 105 322 115 306 C119 299 123 296 126 299 C129 303 128 313 124 320" />
+          <path d="M124 320 C138 316 152 313 165 312 C172 312 176 315 174 319 C172 324 162 327 150 329" />
+          <path d="M139 320 C150 322 160 324 168 327" />
+          <path d="M136 327 C146 329 156 331 164 334" />
+          <path d="M130 333 C140 336 150 338 158 340" />
         </g>
+
         {SPOTS.map(({ label, cx }) => (
           <text
             key={label}
