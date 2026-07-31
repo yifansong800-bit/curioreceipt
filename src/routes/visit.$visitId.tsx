@@ -31,6 +31,9 @@ const PRINTER_WARMUP_MS = 1000;
 const MAX_ARTWORKS = 1;
 
 export const Route = createFileRoute("/visit/$visitId")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    mode: search.mode === "snap" ? ("snap" as const) : ("upload" as const),
+  }),
   head: () => ({
     meta: [
       { title: "Your Curio receipt" },
@@ -38,6 +41,13 @@ export const Route = createFileRoute("/visit/$visitId")({
         name: "description",
         content: "Add artworks to your Curio museum visit receipt.",
       },
+      { property: "og:title", content: "Your Curio receipt" },
+      {
+        property: "og:description",
+        content: "Log your favorite piece and print it as a thermal receipt keepsake.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: VisitPage,
