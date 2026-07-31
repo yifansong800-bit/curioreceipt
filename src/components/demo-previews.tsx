@@ -292,7 +292,7 @@ function ShareDemo() {
   return (
     // Top-anchored so the printer stays put while the receipt feeds downward.
     <div className="flex h-full w-full flex-col items-center justify-start self-start overflow-hidden">
-      <div className="w-full" style={{ maxWidth: 210 }}>
+      <div className="w-full" style={{ maxWidth: 240 }}>
         <PrinterStage
           mode={phase}
           feedDurationMs={3200}
