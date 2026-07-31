@@ -51,11 +51,12 @@ function Index() {
           <button
             type="button"
             aria-label="About Curio"
-            className="absolute z-10 inline-flex items-center justify-center rounded-full border border-ink bg-paper p-2 text-ink transition-colors hover:bg-ink hover:text-paper"
+            className="absolute z-10 inline-flex items-center justify-center rounded-full border border-ink bg-paper p-2 text-ink transition-all duration-100 hover:bg-ink hover:text-paper active:scale-90"
             style={{
               top: "max(1rem, env(safe-area-inset-top))",
               right: "max(1rem, env(safe-area-inset-right))",
               touchAction: "manipulation",
+              WebkitTapHighlightColor: "transparent",
             }}
           >
             <Info className="h-5 w-5" />
@@ -90,13 +91,14 @@ function Index() {
             <button
               type="button"
               onClick={() => navigate({ to: "/begin" })}
-              className="uppercase tracking-[0.2em] text-xs px-7 py-2.5"
+              className="uppercase tracking-[0.2em] text-xs px-7 py-2.5 transition-transform duration-100 active:scale-95"
               style={{
                 backgroundColor: "var(--teal)",
                 color: "var(--yellow)",
                 fontFamily: "var(--font-mono)",
                 fontWeight: 500,
                 touchAction: "manipulation",
+                WebkitTapHighlightColor: "transparent",
               }}
             >
               begin
