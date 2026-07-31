@@ -47,18 +47,15 @@ export function PrinterStage({
     return () => ro.disconnect();
   }, []);
 
-  const printerHeight = printerWidth;
+  const printerHeight = Math.round(printerWidth * HOUSING_RATIO);
   const slotY = (printerHeight * SLOT_Y_PCT) / 100;
   const pullUp = printerHeight - slotY;
 
   const receiptNaturalWidth = 360;
   const receiptScale = (printerWidth * (SLOT_WIDTH_PCT / 100)) / receiptNaturalWidth;
 
-  // Track whether the printer image has finished loading. On the published
-  // site the CDN-hosted printer PNG can arrive after the receipt is ready,
-  // causing the receipt to visually appear before the printer. We gate the
-  // receipt on this flag so the two always render together.
-  const [printerLoaded, setPrinterLoaded] = useState(false);
+  // The housing is pure CSS, so there is nothing to wait on.
+  const printerLoaded = true;
 
   // Gate the receipt behind a two-rAF paint so the CSS keyframe's starting
   // transform (translateY(-100%)) is fully committed before the receipt
