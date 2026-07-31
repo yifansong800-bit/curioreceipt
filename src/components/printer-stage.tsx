@@ -38,8 +38,10 @@ export function PrinterStage({
 
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  const [printerWidth, setPrinterWidth] = useState<number>(MAX_PRINTER_WIDTH);
-  useEffect(() => {
+  // Measured synchronously before paint so the housing never renders at the
+  // fallback max width first and then snaps down (that jump read as a glitch).
+  const [printerWidth, setPrinterWidth] = useState<number>(0);
+  useLayoutEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
     const measure = () => {
@@ -51,6 +53,7 @@ export function PrinterStage({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  const measured = printerWidth > 0;
 
   const printerHeight = Math.round(printerWidth * HOUSING_RATIO);
   const slotY = (printerHeight * SLOT_Y_PCT) / 100;

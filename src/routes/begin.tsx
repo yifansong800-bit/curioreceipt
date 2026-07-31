@@ -113,7 +113,7 @@ function BeginPage() {
         className="pointer-events-none absolute left-0 right-0 z-0 flex justify-center"
         style={{ top: "max(1.1rem, env(safe-area-inset-top))" }}
       >
-        <ModeMark mode={step === "where" ? "snap" : "log"} size={22} />
+        <ModeMark mode="snap" size={22} />
       </div>
 
       <div className="w-full max-w-md">
