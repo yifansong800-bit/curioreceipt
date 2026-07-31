@@ -17,8 +17,11 @@ export function SnapIcon({ size = 24, className, color = "currentColor" }: IconP
       className={className}
       aria-hidden
     >
-      <rect x="8.5" y="0" width="7" height="24" />
-      <rect x="0" y="8.5" width="24" height="7" />
+      {/* Plus with a hollow square at the centre */}
+      <rect x="8.5" y="0" width="7" height="8.5" />
+      <rect x="8.5" y="15.5" width="7" height="8.5" />
+      <rect x="0" y="8.5" width="8.5" height="7" />
+      <rect x="15.5" y="8.5" width="8.5" height="7" />
     </svg>
   );
 }

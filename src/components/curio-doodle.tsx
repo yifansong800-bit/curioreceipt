@@ -31,9 +31,11 @@ export function CurioDoodle({ onPick }: { onPick: (mode: CurioMode) => void }) {
         aria-label="Curio figure holding the snap, log and share tools"
       >
         <g transform="translate(0,386) scale(0.1,-0.1)" fill="var(--ink)" stroke="none">
-          {BODY_PATHS.map((d) => (
-            <path key={d.slice(0, 24)} d={d} />
-          ))}
+          <path d={BODY_PATHS[0]} />
+          {/* Eye — blinks softly while the visitor lingers on the page. */}
+          <g className="curio-blink">
+            <path d={BODY_PATHS[1]} />
+          </g>
         </g>
         {SPOTS.map(({ label, cx }) => (
           <text

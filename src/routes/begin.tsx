@@ -97,12 +97,13 @@ function BeginPage() {
         type="button"
         onClick={back}
         aria-label="Back"
-        className="absolute p-2"
+        className="absolute -m-2 p-4 transition-transform duration-100 active:scale-90"
         style={{
           top: "max(1rem, env(safe-area-inset-top))",
           left: "max(1rem, env(safe-area-inset-left))",
           color: "var(--ink)",
           touchAction: "manipulation",
+          WebkitTapHighlightColor: "transparent",
         }}
       >
         <ArrowLeft className="h-5 w-5" />
@@ -221,14 +222,14 @@ function PrimaryButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="w-full uppercase tracking-widest text-sm py-3 border transition-colors disabled:opacity-40"
+      className="w-full uppercase tracking-widest text-sm py-3 transition-transform duration-100 active:scale-[0.98] disabled:opacity-40"
       style={{
-        borderColor: "var(--ink)",
-        backgroundColor: "var(--ink)",
-        color: "var(--paper)",
+        backgroundColor: "var(--teal)",
+        color: "var(--yellow)",
         fontFamily: "var(--font-mono)",
-        fontWeight: 700,
+        fontWeight: 500,
         touchAction: "manipulation",
+        WebkitTapHighlightColor: "transparent",
       }}
     >
       {label}
@@ -249,11 +250,12 @@ function ChoiceButton({
     <button
       type="button"
       onClick={onClick}
-      className="w-full border px-4 py-4 text-left transition-colors hover:bg-ink hover:text-paper"
+      className="w-full border px-4 py-4 text-left transition-all duration-100 hover:bg-ink hover:text-paper active:scale-[0.99] active:bg-ink active:text-paper"
       style={{
         borderColor: "var(--ink)",
         fontFamily: "var(--font-mono)",
         touchAction: "manipulation",
+        WebkitTapHighlightColor: "transparent",
       }}
     >
       <div className="text-sm">{label}</div>
