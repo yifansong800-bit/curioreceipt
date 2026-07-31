@@ -104,7 +104,7 @@ export function DemoPreview({
             <ModeMark mode={mode} size={22} color={INK[mode]} />
           </div>
 
-          <div className="relative flex flex-1 items-center justify-center overflow-hidden py-5">
+          <div className="relative flex flex-1 items-center justify-center overflow-hidden pb-2 pt-5">
             <div key={mode} className="curio-card-in flex h-full w-full items-center justify-center">
               {mode === "snap" ? <SnapDemo /> : null}
               {mode === "log" ? <LogDemo /> : null}
@@ -114,7 +114,7 @@ export function DemoPreview({
 
 
           <div className="shrink-0">
-            <p className="text-center text-[11px] tracking-[0.18em]">{CAPTION[mode]}</p>
+            <p className="mx-auto max-w-[240px] text-center text-[11px] tracking-[0.18em]">{CAPTION[mode]}</p>
 
             <div className="flex items-center justify-center gap-2 pt-4">
               {ORDER.map((m) => (
@@ -163,7 +163,7 @@ function SnapDemo() {
   }, []);
 
   return (
-    <div className="flex w-full flex-col items-center gap-5">
+    <div className="flex h-full w-full flex-col items-center justify-end gap-5">
       <div className="relative w-full" style={{ maxWidth: 240 }}>
         <div className="relative overflow-hidden" style={{ aspectRatio: "4 / 5" }}>
           <img
