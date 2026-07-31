@@ -12,6 +12,7 @@ import { Footer } from "@/components/Footer";
 import { CurioDoodle } from "@/components/curio-doodle";
 import { DemoPreview } from "@/components/demo-previews";
 import type { CurioMode } from "@/components/pixel-icons";
+import wordmark from "@/assets/curio-wordmark.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
