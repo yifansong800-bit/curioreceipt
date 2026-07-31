@@ -38,8 +38,10 @@ export function PrinterStage({
 
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  const [printerWidth, setPrinterWidth] = useState<number>(MAX_PRINTER_WIDTH);
-  useEffect(() => {
+  // Measured synchronously before paint so the housing never renders at the
+  // fallback max width first and then snaps down (that jump read as a glitch).
+  const [printerWidth, setPrinterWidth] = useState<number>(0);
+  useLayoutEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
     const measure = () => {
@@ -51,6 +53,7 @@ export function PrinterStage({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  const measured = printerWidth > 0;
 
   const printerHeight = Math.round(printerWidth * HOUSING_RATIO);
   const slotY = (printerHeight * SLOT_Y_PCT) / 100;
@@ -60,7 +63,7 @@ export function PrinterStage({
   const receiptScale = (printerWidth * (SLOT_WIDTH_PCT / 100)) / receiptNaturalWidth;
 
   // The housing is pure CSS, so there is nothing to wait on.
-  const printerLoaded = true;
+  const printerLoaded = measured;
 
   // Gate the receipt behind a two-rAF paint so the CSS keyframe's starting
   // transform (translateY(-100%)) is fully committed before the receipt
@@ -116,7 +119,10 @@ export function PrinterStage({
         }
       `}</style>
 
-      <div className="mx-auto flex flex-col items-center" style={{ width: printerWidth }}>
+      <div
+        className="mx-auto flex flex-col items-center"
+        style={{ width: printerWidth, visibility: measured ? "visible" : "hidden" }}
+      >
         {/* Flat printer housing, drawn to match the design. */}
         <div
           style={{

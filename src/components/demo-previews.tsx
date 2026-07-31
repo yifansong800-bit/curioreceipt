@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { ModeMark, type CurioMode } from "@/components/pixel-icons";
 import { PrinterStage } from "@/components/printer-stage";
 import snapDemo from "@/assets/snap-demo.jpg";
+import logDemo from "@/assets/log-demo.jpg.asset.json";
 import demoReceipt from "@/assets/demo-receipt.png.asset.json";
 
 const BG: Record<CurioMode, string> = {
@@ -288,7 +289,7 @@ function LogDemo() {
             style={{ width: 52, height: 60, border: "1px solid var(--ink)" }}
           >
             <img
-              src={snapDemo}
+              src={logDemo.url}
               alt="Crop preview of the artwork"
               className="h-full w-full object-cover transition-[filter] duration-500"
               style={{ filter: color ? "none" : "grayscale(1) contrast(1.5)" }}
