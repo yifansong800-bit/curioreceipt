@@ -1,69 +1,48 @@
 import type { CurioMode } from "@/components/pixel-icons";
 import { SnapIcon, LogIcon, ShareIcon } from "@/components/pixel-icons";
 
+// Vectorized directly from the Curio sketch (1344 x 1190 source units) so the
+// figure is identical to the drawing and stays crisp at any size.
+// Icons + captions are drawn live, not baked into the artwork.
+const BODY = "M6315 11160 c-148 -39 -275 -96 -301 -135 -28 -43 -35 -98 -19 -151 13 -45 13 -49 -5 -61 -23 -16 -40 -72 -40 -131 l0 -43 -42 29 c-60 41 -104 62 -128 62 -18 0 -78 -24 -150 -59 -52 -25 -264 -637 -369 -1067 -43 -177 -53 -278 -49 -469 3 -152 6 -175 27 -222 13 -29 43 -71 68 -94 68 -62 121 -82 235 -87 88 -4 97 -6 102 -26 27 -95 31 -767 5 -888 -9 -41 -16 -51 -44 -62 -61 -26 -81 -85 -50 -146 20 -39 97 -75 321 -149 361 -120 506 -149 799 -158 155 -5 205 -3 272 11 105 21 220 60 303 101 129 65 414 267 499 355 l36 37 415 6 c228 4 489 11 580 17 518 35 1051 2 1555 -96 458 -89 996 -245 1203 -349 275 -138 460 -370 518 -648 13 -63 13 -71 -4 -110 -53 -119 -280 -369 -435 -478 -149 -105 -237 -138 -507 -189 -91 -17 -194 -40 -230 -51 -106 -33 -234 -116 -326 -211 -175 -181 -235 -312 -280 -613 -9 -60 -23 -123 -31 -138 -14 -28 -15 -28 -34 -11 -35 32 -50 109 -56 289 -2 94 0 231 5 305 11 150 3 185 -49 223 -26 19 -33 19 -215 6 -230 -17 -1083 -15 -1155 2 -26 6 -57 21 -69 34 l-23 24 33 31 c40 38 97 54 280 81 120 18 209 23 523 28 l379 6 19 24 c26 31 24 64 -5 98 l-24 28 -239 6 c-131 4 -260 12 -288 18 -27 6 -79 16 -114 21 -82 12 -96 25 -48 45 56 23 149 33 452 46 257 10 282 13 302 31 25 23 33 54 20 84 -18 44 -41 48 -242 49 -157 0 -201 3 -253 19 -35 10 -61 24 -59 30 5 18 131 55 259 76 272 46 623 49 896 10 75 -11 181 -20 235 -20 l98 0 15 36 c8 20 14 43 12 52 -7 35 -270 91 -453 96 -55 2 -183 7 -285 11 -305 12 -562 -15 -774 -82 -61 -19 -90 -35 -125 -68 l-46 -44 1 -74 0 -75 -39 -6 c-76 -12 -162 -70 -193 -128 -18 -35 -18 -108 1 -135 14 -21 13 -21 -38 -28 -185 -23 -364 -113 -413 -206 -33 -64 -3 -184 54 -213 69 -36 337 -53 997 -63 l421 -6 -8 -66 c-10 -90 -9 -381 1 -461 11 -83 65 -216 106 -256 21 -22 48 -35 87 -44 52 -12 59 -11 103 10 54 26 91 77 113 153 8 29 23 84 34 122 11 39 28 106 38 150 67 288 165 429 360 517 36 17 97 45 135 63 43 20 122 43 205 60 279 57 370 94 545 224 172 128 354 329 442 486 52 92 32 235 -57 423 -67 141 -124 223 -217 315 -180 177 -316 245 -751 378 -413 125 -917 229 -1367 281 -132 16 -850 16 -1540 2 -253 -6 -461 -10 -462 -9 -1 0 -11 43 -22 95 -11 52 -33 158 -50 235 -16 77 -35 187 -41 245 -13 135 -28 755 -35 1509 -3 326 -8 605 -12 620 -17 73 -154 224 -273 302 -131 87 -311 158 -519 205 -139 31 -395 34 -506 4z m460 -222 c168 -39 367 -120 478 -197 55 -37 125 -116 133 -148 9 -36 -13 -77 -72 -133 -51 -48 -164 -110 -226 -124 -27 -6 -27 -5 -21 26 4 18 7 89 8 158 0 108 -3 131 -22 170 -31 64 -147 171 -232 215 -81 41 -338 -13 -533 -113 -11 -5 -48 60 -48 85 0 46 48 67 188 83 104 11 238 3 347 -22z m-10 -137 c22 -10 46 -25 53 -33 11 -14 8 -18 -20 -28 -65 -24 -368 -25 -368 -1 0 4 33 23 73 44 64 32 80 36 147 36 51 1 88 -5 115 -18z m-457 -263 c75 -26 246 -41 395 -35 l127 6 0 -94 0 -95 -60 0 c-82 0 -263 28 -334 51 -78 27 -252 115 -258 131 -3 7 -3 30 0 50 l4 37 37 -16 c20 -9 60 -24 89 -35z m-443 -123 c108 -70 291 -169 395 -215 170 -74 357 -103 627 -98 170 4 197 7 276 31 92 28 141 50 200 86 l35 21 6 -487 c8 -567 21 -925 42 -1143 15 -157 73 -548 98 -652 l13 -58 -146 -121 c-170 -141 -246 -188 -368 -228 -222 -75 -446 -67 -780 29 -328 94 -444 133 -438 149 28 70 37 164 42 445 6 315 -7 571 -32 661 -19 69 -90 135 -145 135 -11 0 -39 -10 -62 -21 -72 -37 -157 -13 -198 54 -23 38 -25 98 -10 293 11 138 29 214 110 469 174 545 232 715 243 708 7 -4 48 -30 92 -58z";
+const EYE = "M6355 9730 c-58 -12 -166 -54 -212 -83 -41 -26 -81 -71 -127 -144 -34 -56 -37 -132 -4 -163 45 -42 125 -16 151 49 15 37 80 111 99 111 4 0 8 -55 8 -122 0 -174 25 -255 95 -317 31 -27 43 -31 93 -31 76 0 137 38 181 112 18 30 23 57 28 168 l6 132 29 -80 c45 -123 92 -156 167 -117 50 25 54 69 15 177 -60 166 -118 248 -207 292 -46 24 -61 26 -166 25 -64 -1 -134 -5 -156 -9z";
+const LEFT_ARM = "M1496 4621 c-22 -25 -58 -190 -100 -466 -57 -374 -59 -411 -53 -914 6 -483 12 -580 53 -811 50 -288 120 -446 259 -585 131 -132 267 -198 484 -236 108 -19 141 -20 459 -14 527 11 893 8 1167 -9 293 -19 474 -20 530 -5 22 6 57 24 79 40 51 37 144 147 154 181 4 15 25 39 48 55 55 37 96 86 155 185 45 73 50 89 48 133 -1 28 -1 71 -1 98 l2 47 96 0 c100 0 166 12 198 35 23 18 37 87 25 131 -16 56 -59 89 -146 112 -114 30 -304 60 -503 77 -172 16 -490 71 -581 101 -26 8 -54 23 -62 32 -26 29 -37 106 -47 321 -12 266 -38 374 -117 479 -22 29 -29 32 -76 32 -61 0 -109 -25 -131 -68 -8 -16 -24 -78 -36 -138 -45 -233 -136 -444 -241 -558 -119 -129 -236 -223 -344 -277 -133 -65 -226 -87 -420 -101 -182 -12 -205 -20 -205 -73 0 -67 44 -81 212 -71 177 11 437 90 558 170 67 44 212 171 291 253 125 131 217 331 258 562 25 144 40 161 76 90 25 -47 34 -112 45 -319 16 -297 32 -359 110 -421 65 -52 380 -119 680 -145 172 -14 426 -53 505 -77 36 -10 22 -12 -135 -18 -166 -6 -234 -13 -568 -59 -79 -11 -148 -18 -153 -14 -18 11 -58 -6 -74 -29 -25 -38 -4 -81 48 -101 68 -26 179 -20 402 23 166 31 201 35 203 23 6 -24 -18 -38 -133 -81 -165 -61 -220 -71 -434 -81 -168 -7 -198 -11 -220 -28 -33 -24 -38 -61 -12 -93 17 -21 29 -24 105 -28 194 -7 445 40 650 124 18 8 18 7 0 -21 -41 -67 -86 -113 -129 -133 -68 -32 -259 -61 -440 -68 -183 -6 -205 -13 -205 -67 0 -61 24 -71 164 -69 111 1 268 16 324 30 22 5 23 4 12 -14 -7 -11 -27 -29 -44 -41 -28 -19 -45 -22 -142 -22 -60 0 -183 7 -274 16 -131 13 -323 17 -923 20 -834 3 -868 5 -996 65 -190 88 -306 214 -371 405 -25 71 -62 268 -87 459 -26 207 -27 1074 0 1280 43 333 82 558 103 592 18 29 18 53 -2 81 -19 28 -74 30 -98 3z";
+
+const POTRACE = "translate(0,1190) scale(0.1,-0.1)";
+
 const SPOTS: { mode: CurioMode; label: string; cx: number }[] = [
-  { mode: "snap", label: "SNAP", cx: 112.5 },
-  { mode: "log", label: "LOG", cx: 203 },
-  { mode: "share", label: "SHARE", cx: 297 },
+  { mode: "snap", label: "SNAP", cx: 458 },
+  { mode: "log", label: "LOG", cx: 663 },
+  { mode: "share", label: "SHARE", cx: 872 },
 ];
 
 const ICONS = { snap: SnapIcon, log: LogIcon, share: ShareIcon } as const;
 
-// Geometry measured from the source sketch (435 x 386 units).
-const ICON_SIZE = 43;
-const ICON_TOP = 219;
-const CAPTION_Y = 285;
+const W = 1344;
+const H = 1190;
+const ICON_SIZE = 92;
+const ICON_TOP = 668;
+const CAPTION_Y = 820;
 
-/**
- * Hand-drawn Curio figure, redrawn as thin sketch strokes so it reads as ink on
- * paper (matching the wordmark) instead of a heavy filled silhouette.
- * The two arms make a camera-frame gesture around the SNAP / LOG / SHARE icons.
- */
 export function CurioDoodle({ onPick }: { onPick: (mode: CurioMode) => void }) {
   return (
-    <div className="relative mx-auto w-full select-none" style={{ aspectRatio: "435 / 386" }}>
+    <div className="relative mx-auto w-full select-none" style={{ aspectRatio: `${W} / ${H}` }}>
       <svg
-        viewBox="0 0 435 386"
+        viewBox={`0 0 ${W} ${H}`}
         className="absolute inset-0 h-full w-full"
         role="img"
         aria-label="Curio figure framing the snap, log and share tools"
       >
-        <g
-          fill="none"
-          stroke="var(--ink)"
-          strokeWidth={3.4}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          {/* Head — paper-roll block, left profile with nose notch */}
-          <path d="M184 44 C181 62 179 78 178 93 C176 96 172 97 172 99 C173 103 182 103 187 106 C186 116 187 127 186 135 C199 139 222 142 249 143 C254 141 256 136 256 130 C255 105 253 74 248 50" />
-          {/* Rolled top of the head */}
-          <path d="M184 44 C186 34 197 26 214 24 C233 22 247 30 249 41 C250 45 249 48 248 50" />
-          <path d="M196 33 C201 27 213 24 224 26 C235 28 240 34 237 40 C233 46 220 48 209 45 C201 43 196 38 196 33 Z" />
-          <path d="M199 40 C205 44 217 46 228 44" />
+        <g transform={POTRACE} fill="var(--ink)" stroke="none">
+          <path d={BODY} />
+          <path d={LEFT_ARM} />
+        </g>
 
-          {/* Eye — small ink wedge, blinks while the visitor lingers */}
-          <g className="curio-blink" style={{ transformOrigin: "212px 83px" }}>
-            <path d="M220 76 C214 79 209 81 203 83 C209 85 214 86 220 88" strokeWidth={3.8} />
+        {/* Eye — blinks softly while the visitor lingers on the page. */}
+        <g className="curio-blink" style={{ transformOrigin: "648px 250px" }}>
+          <g transform={POTRACE} fill="var(--ink)" stroke="none">
+            <path d={EYE} />
           </g>
-
-          {/* Right arm sweeping out from the shoulder */}
-          <path d="M256 130 C284 126 320 126 352 133 C382 140 400 152 402 167" />
-          {/* Right hand, fingers folded, thumb dropping down */}
-          <path d="M402 167 C400 186 391 205 375 218 C365 226 355 229 350 224 C346 219 348 209 352 199" />
-          <path d="M352 199 C340 202 318 204 300 202 C288 200 282 196 283 191 C285 185 296 182 310 182" />
-          <path d="M292 191 C306 190 322 188 337 186" />
-          <path d="M294 183 C308 181 324 179 338 178" />
-          <path d="M300 176 C314 173 330 171 344 171" />
-
-          {/* Left arm rising from the lower-left corner */}
-          <path d="M50 240 C44 268 43 300 50 320 C55 333 66 338 84 339 C104 340 126 338 143 335" />
-          {/* Left hand, thumb up, fingers pointing right */}
-          <path d="M75 336 C90 331 105 322 115 306 C119 299 123 296 126 299 C129 303 128 313 124 320" />
-          <path d="M124 320 C138 316 152 313 165 312 C172 312 176 315 174 319 C172 324 162 327 150 329" />
-          <path d="M139 320 C150 322 160 324 168 327" />
-          <path d="M136 327 C146 329 156 331 164 334" />
-          <path d="M130 333 C140 336 150 338 158 340" />
         </g>
 
         {SPOTS.map(({ label, cx }) => (
@@ -75,9 +54,9 @@ export function CurioDoodle({ onPick }: { onPick: (mode: CurioMode) => void }) {
             fill="var(--ink)"
             style={{
               fontFamily: "var(--font-mono)",
-              fontSize: 12,
-              fontWeight: 600,
-              letterSpacing: 0.5,
+              fontSize: 36,
+              fontWeight: 500,
+              letterSpacing: 1.5,
             }}
           >
             {label}
@@ -95,16 +74,16 @@ export function CurioDoodle({ onPick }: { onPick: (mode: CurioMode) => void }) {
             aria-label={`See how ${label.toLowerCase()} works`}
             className="absolute flex items-center justify-center transition-transform duration-150 active:scale-95"
             style={{
-              left: pct(cx - ICON_SIZE, 435),
-              top: pct(ICON_TOP - 10, 386),
-              width: pct(ICON_SIZE * 2, 435),
-              height: pct(ICON_SIZE + 20, 386),
+              left: pct(cx - ICON_SIZE, W),
+              top: pct(ICON_TOP - 24, H),
+              width: pct(ICON_SIZE * 2, W),
+              height: pct(ICON_SIZE + 48, H),
               WebkitTapHighlightColor: "transparent",
               touchAction: "manipulation",
               background: "transparent",
             }}
           >
-            <Icon size="50%" color="var(--ink)" />
+            <Icon size="47%" color="var(--ink)" />
           </button>
         );
       })}
