@@ -289,7 +289,7 @@ function LogDemo() {
             style={{ width: 52, height: 60, border: "1px solid var(--ink)" }}
           >
             <img
-              src={snapDemo}
+              src={logDemo.url}
               alt="Crop preview of the artwork"
               className="h-full w-full object-cover transition-[filter] duration-500"
               style={{ filter: color ? "none" : "grayscale(1) contrast(1.5)" }}
