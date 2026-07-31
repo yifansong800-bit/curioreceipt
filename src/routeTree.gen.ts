@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as BeginRouteImport } from './routes/begin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VisitVisitIdRouteImport } from './routes/visit.$visitId'
 
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BeginRoute = BeginRouteImport.update({
+  id: '/begin',
+  path: '/begin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -31,30 +37,34 @@ const VisitVisitIdRoute = VisitVisitIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/begin': typeof BeginRoute
   '/privacy': typeof PrivacyRoute
   '/visit/$visitId': typeof VisitVisitIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/begin': typeof BeginRoute
   '/privacy': typeof PrivacyRoute
   '/visit/$visitId': typeof VisitVisitIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/begin': typeof BeginRoute
   '/privacy': typeof PrivacyRoute
   '/visit/$visitId': typeof VisitVisitIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/privacy' | '/visit/$visitId'
+  fullPaths: '/' | '/begin' | '/privacy' | '/visit/$visitId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/privacy' | '/visit/$visitId'
-  id: '__root__' | '/' | '/privacy' | '/visit/$visitId'
+  to: '/' | '/begin' | '/privacy' | '/visit/$visitId'
+  id: '__root__' | '/' | '/begin' | '/privacy' | '/visit/$visitId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BeginRoute: typeof BeginRoute
   PrivacyRoute: typeof PrivacyRoute
   VisitVisitIdRoute: typeof VisitVisitIdRoute
 }
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/begin': {
+      id: '/begin'
+      path: '/begin'
+      fullPath: '/begin'
+      preLoaderRoute: typeof BeginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BeginRoute: BeginRoute,
   PrivacyRoute: PrivacyRoute,
   VisitVisitIdRoute: VisitVisitIdRoute,
 }
