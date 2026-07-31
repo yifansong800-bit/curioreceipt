@@ -263,26 +263,11 @@ function Dashes() {
   );
 }
 
-/** The real printer feed animation with a mock receipt. */
+/** The real printer, with the receipt already fed out. */
 function ShareDemo() {
-  const [stage, setStage] = useState<"idle" | "printing" | "printed">("idle");
-  useEffect(() => {
-    const t = window.setTimeout(() => setStage("printing"), 500);
-    return () => window.clearTimeout(t);
-  }, []);
-  useEffect(() => {
-    if (stage !== "printed") return;
-    const t = window.setTimeout(() => setStage("idle"), 1400);
-    const t2 = window.setTimeout(() => setStage("printing"), 1900);
-    return () => {
-      window.clearTimeout(t);
-      window.clearTimeout(t2);
-    };
-  }, [stage]);
-
   return (
     <div className="w-full" style={{ maxWidth: 260 }}>
-      <PrinterStage mode={stage} onPrintComplete={() => setStage("printed")}>
+      <PrinterStage mode="printed">
         <div className="receipt-paper grain px-4 py-6 text-[9px] leading-relaxed" style={{ color: "var(--ink)", width: 360 }}>
           <div className="text-center tracking-widest">****** www.curioreceipt.com ******</div>
           <div className="mt-3">MUSEUM: M+</div>
