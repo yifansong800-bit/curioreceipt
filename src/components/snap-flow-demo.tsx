@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import shutter from "@/assets/curio-button.png.asset.json";
 import liveClip from "@/assets/snap-live.mp4.asset.json";
+import poster from "@/assets/snap-poster.jpg.asset.json";
 import lovers from "@/assets/lovers-ii.jpg.asset.json";
 
 /**
