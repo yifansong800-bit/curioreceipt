@@ -816,11 +816,10 @@ function VisitPage() {
           style={{ backgroundColor: "var(--paper)", color: "var(--ink)", border: "1px solid var(--ink)" }}
         >
           <div className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--ink-soft)" }}>
-            Missing linger time
+            one thing
           </div>
           <p className="text-sm leading-relaxed">
-            You haven't logged linger time for {confirmMissing}{" "}
-            {confirmMissing === 1 ? "artwork" : "artworks"}. Print receipt anyway?
+            you didn't tell me how long you lingered. want me to print it anyway?
           </p>
           <div className="mt-6 flex gap-2">
             <button
@@ -829,7 +828,7 @@ function VisitPage() {
               className="flex-1 uppercase tracking-widest text-xs py-2 border"
               style={{ borderColor: "var(--ink)", color: "var(--ink)", backgroundColor: "transparent" }}
             >
-              Cancel
+              let me add it
             </button>
             <button
               type="button"
@@ -837,8 +836,9 @@ function VisitPage() {
               className="flex-1 uppercase tracking-widest text-xs py-2 border"
               style={{ borderColor: "var(--ink)", backgroundColor: "var(--teal)", color: "var(--yellow)", fontWeight: 700 }}
             >
-              Print anyway
+              print it
             </button>
+
           </div>
         </div>
       </div>
