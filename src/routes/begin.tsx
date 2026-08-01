@@ -13,20 +13,21 @@ import { Footer } from "@/components/Footer";
 export const Route = createFileRoute("/begin")({
   head: () => ({
     meta: [
-      { title: "Begin your visit — Curio" },
+      { title: "Let's begin — Curio" },
       {
         name: "description",
-        content: "Tell Curio who you are and which museum you're in, then snap or upload your favorite piece.",
+        content: "Tell me your name and which museum we're in, and I'll get the printer warm.",
       },
-      { property: "og:title", content: "Begin your visit — Curio" },
+      { property: "og:title", content: "Let's begin — Curio" },
       {
         property: "og:description",
-        content: "Three quick questions, then print your favorite art piece as a thermal receipt.",
+        content: "Two questions from me, one photo from you, one thermal receipt for the piece you couldn't walk past.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
   }),
+
   component: BeginPage,
 });
 
