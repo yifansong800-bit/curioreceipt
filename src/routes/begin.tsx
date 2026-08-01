@@ -249,33 +249,51 @@ function PrimaryButton({
   label,
   onClick,
   disabled,
+  busy,
 }: {
   label: string;
   onClick: () => void;
   disabled?: boolean;
+  busy?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="w-full uppercase tracking-widest text-sm py-3 transition-transform duration-100 active:scale-[0.98] disabled:opacity-40"
+      className="w-full uppercase tracking-widest text-sm py-3 transition-all duration-150 active:scale-[0.98] disabled:opacity-40"
       style={{
         backgroundColor: "var(--teal)",
         color: "var(--yellow)",
         fontFamily: "var(--font-mono)",
         fontWeight: 500,
+        opacity: busy ? 0.85 : undefined,
         touchAction: "manipulation",
         WebkitTapHighlightColor: "transparent",
       }}
     >
-      {label}
+      <span
+        key={label}
+        className="curio-card-in inline-block"
+        style={{ animationDuration: "200ms" }}
+      >
+        {label}
+      </span>
     </button>
   );
 }
 
-function ChoiceButton({ label, onClick }: { label: string; onClick: () => void }) {
+function ChoiceButton({
+  label,
+  onClick,
+  selected,
+}: {
+  label: string;
+  onClick: () => void;
+  selected?: boolean;
+}) {
   const [on, setOn] = useState(false);
+  const active = on || selected;
   return (
     <button
       type="button"
@@ -283,11 +301,11 @@ function ChoiceButton({ label, onClick }: { label: string; onClick: () => void }
       onPointerEnter={() => setOn(true)}
       onPointerLeave={() => setOn(false)}
       onPointerDown={() => setOn(true)}
-      className="w-full border px-4 py-4 text-left transition-all duration-100 active:scale-[0.99]"
+      className="w-full border px-4 py-4 text-left transition-all duration-200 active:scale-[0.99]"
       style={{
-        borderColor: on ? "var(--teal)" : "var(--ink)",
-        backgroundColor: on ? "var(--teal)" : "transparent",
-        color: on ? "var(--yellow)" : "var(--ink)",
+        borderColor: active ? "var(--teal)" : "var(--ink)",
+        backgroundColor: active ? "var(--teal)" : "transparent",
+        color: active ? "var(--yellow)" : "var(--ink)",
         fontFamily: "var(--font-mono)",
         touchAction: "manipulation",
         WebkitTapHighlightColor: "transparent",
@@ -297,3 +315,4 @@ function ChoiceButton({ label, onClick }: { label: string; onClick: () => void }
     </button>
   );
 }
+
