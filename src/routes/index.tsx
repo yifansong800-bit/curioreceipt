@@ -66,30 +66,63 @@ function Index() {
           </button>
         </DialogTrigger>
 
-        <div className="w-full max-w-md -mt-10">
+        <div className="w-full max-w-md flex h-full flex-col justify-center">
           <img
             src={wordmark.url}
             alt="CURIO"
-            className="mx-auto block w-[62%] max-w-[280px]"
+            className="block w-[38%] max-w-[170px]"
           />
-          <p
-            className="text-center mt-4 text-xs sm:text-sm leading-relaxed tracking-wide"
-            style={{ color: "var(--ink)" }}
-          >
-            A pocket companion for
-            <br />
-            your art museum visit.
-          </p>
 
-          <div className="mt-6 -mx-3">
-            <CurioDoodle onPick={setDemo} />
+          <div className="mt-6 flex justify-center">
+            <CurioFigure className="w-[34%] max-w-[190px]" />
           </div>
 
-          <div className="mt-8 flex justify-center">
+          <div
+            className="mt-8 text-center space-y-4 text-[13px] sm:text-sm leading-relaxed"
+            style={{ color: "var(--ink)", fontFamily: "var(--font-mono)" }}
+          >
+            <p>Say hello to curio.</p>
+            <p>
+              A pocket companion for
+              <br />
+              your museum visits.
+            </p>
+            <p>Show me what stopped you.</p>
+            <p>I'll print the memory.</p>
+          </div>
+
+          <div className="mt-9 flex items-start justify-center gap-10">
+            {(
+              [
+                { mode: "snap", label: "SNAP", Icon: SnapIcon },
+                { mode: "log", label: "LOG", Icon: LogIcon },
+                { mode: "share", label: "SHARE", Icon: ShareIcon },
+              ] as const
+            ).map(({ mode, label, Icon }) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setDemo(mode)}
+                aria-label={`See how ${label.toLowerCase()} works`}
+                className="flex flex-col items-center gap-2 transition-transform duration-100 active:scale-90"
+                style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
+              >
+                <Icon size={30} color="var(--ink)" />
+                <span
+                  className="text-[9px] tracking-widest"
+                  style={{ color: "var(--ink)", fontFamily: "var(--font-mono)" }}
+                >
+                  {label}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-9 flex justify-center">
             <button
               type="button"
               onClick={() => navigate({ to: "/begin" })}
-              className="uppercase tracking-[0.2em] text-xs px-7 py-2.5 transition-transform duration-100 active:scale-95"
+              className="w-full uppercase tracking-[0.25em] text-sm py-3.5 transition-transform duration-100 active:scale-[0.98]"
               style={{
                 backgroundColor: "var(--teal)",
                 color: "var(--yellow)",
@@ -103,6 +136,7 @@ function Index() {
             </button>
           </div>
         </div>
+
 
         <Footer className="absolute bottom-0" />
 
