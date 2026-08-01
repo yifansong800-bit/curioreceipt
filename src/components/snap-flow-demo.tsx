@@ -64,16 +64,26 @@ export function SnapFlowDemo() {
     <div className="flex w-full flex-col items-center justify-center gap-4">
       {/* Viewfinder / photo */}
       <div className="relative w-full overflow-hidden" style={{ maxWidth: 240, aspectRatio: "4 / 5" }}>
-
+        {/* First frame as a still, so the viewfinder is visible instantly on
+            phones/Safari where the video needs a moment to decode. */}
+        <img
+          src={poster.url}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover"
+        />
         <video
           src={liveClip.url}
+          poster={poster.url}
           autoPlay
           loop
           muted
           playsInline
-          className="h-full w-full object-cover"
+          preload="auto"
+          className="relative h-full w-full object-cover"
           aria-hidden
         />
+
         {captured ? (
           <img
             src={lovers.url}
