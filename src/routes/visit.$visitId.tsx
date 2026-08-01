@@ -688,8 +688,9 @@ function VisitPage() {
                 }}
               >
                 {artworks.length === 0
-                  ? "Add an artwork first"
-                  : "Ready to print? →"}
+                  ? "show me a piece first"
+                  : "ready? let's print it →"}
+
               </button>
             </motion.div>
           ) : (
