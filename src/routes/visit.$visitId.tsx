@@ -1254,8 +1254,12 @@ function PieceForm({
         className="text-xs uppercase tracking-widest flex items-center justify-between"
         style={{ color: "var(--ink-soft)" }}
       >
-        <span>{step === "piece" ? "Step 1 · The piece" : "Step 2 · Your reflection"}</span>
-        <span>{step === "piece" ? "○ ●" : "● ○"}</span>
+        <span>
+          {step === "capture" ? "PHOTO" : step === "details" ? "DETAILS" : "REFLECTION"}
+        </span>
+        <span>
+          {step === "capture" ? "● ○ ○" : step === "details" ? "○ ● ○" : "○ ○ ●"}
+        </span>
       </div>
 
       {cameraOpen ? (
@@ -1268,126 +1272,130 @@ function PieceForm({
         />
       ) : null}
 
-      {step === "piece" ? (
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.heic,.heif,image/heic,image/heif"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {step === "capture" ? (
         <>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,.heic,.heif,image/heic,image/heif"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-
-          {file && preview ? (
-            <div
-              className="flex items-center gap-3 border p-3"
-              style={{ borderColor: "var(--border)" }}
-            >
-              <img src={preview} alt="" className="w-14 h-14 object-cover" />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs uppercase tracking-widest" style={{ color: "var(--ink-soft)" }}>
-                  {identifying ? "Identifying piece…" : "✓ Photo uploaded"}
-                </div>
-                {identifyFailed && !suggestion ? (
-                  <div className="text-xs italic mt-1" style={{ color: "var(--ink-soft)" }}>
-                    couldn't identify — enter manually
-                  </div>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  captureMode === "snap" ? setCameraOpen(true) : fileInputRef.current?.click()
-                }
-                className="text-xs uppercase tracking-widest underline"
-              >
-                {captureMode === "snap" ? "retake" : "change"}
-              </button>
+          <p className="text-sm" style={{ fontFamily: "var(--font-mono)" }}>
+            show me the piece you couldn't walk past.
+          </p>
+          <button
+            type="button"
+            onClick={() =>
+              captureMode === "snap" ? setCameraOpen(true) : fileInputRef.current?.click()
+            }
+            disabled={converting}
+            className="w-full block border-2 border-dashed p-8 text-center disabled:opacity-60"
+            style={{
+              borderColor: "var(--border)",
+              WebkitTapHighlightColor: "transparent",
+              touchAction: "manipulation",
+            }}
+          >
+            <div className="text-sm" style={{ color: "var(--ink)" }}>
+              {converting
+                ? "reading your photo…"
+                : captureMode === "snap"
+                  ? "✦ open the camera"
+                  : "✦ choose a photo"}
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() =>
-                captureMode === "snap" ? setCameraOpen(true) : fileInputRef.current?.click()
-              }
-              disabled={converting}
-              className="w-full block border-2 border-dashed p-6 text-center disabled:opacity-60"
-              style={{
-                borderColor: "var(--border)",
-                WebkitTapHighlightColor: "transparent",
-                touchAction: "manipulation",
-              }}
-            >
-              <div className="text-sm" style={{ color: "var(--ink)" }}>
-                {converting
-                  ? "Converting photo…"
-                  : captureMode === "snap"
-                    ? "✦ Snap the piece in front of you"
-                    : "✦ Upload a photo of your favorite piece"}
-              </div>
-              <div className="text-xs mt-2" style={{ color: "var(--ink-soft)" }}>
-                Fill in the details yourself, or ask us to try identifying it.
-              </div>
-            </button>
-          )}
-
-          {file ? (
+          </button>
+          {captureMode === "snap" ? (
             <div className="text-center">
               <button
                 type="button"
-                onClick={() => file && runIdentify(file)}
-                disabled={identifying}
-                className="text-xs underline disabled:opacity-50"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs underline"
                 style={{ color: "var(--ink-soft)" }}
               >
-                {identifying
-                  ? "Identifying…"
-                  : suggestion
-                    ? "✦ Try identifying again"
-                    : "Can't remember the details? ✦ Identify for me"}
+                or pick one from your camera roll
+              </button>
+            </div>
+          ) : null}
+        </>
+      ) : step === "details" ? (
+        <>
+          <div className="flex items-start gap-3">
+            {preview ? <ScanThumb src={preview} scanning={identifying} /> : null}
+            <div className="flex-1 min-w-0 text-sm" style={{ fontFamily: "var(--font-mono)" }}>
+              {identifying ? (
+                <ThinkingLines />
+              ) : suggestion ? (
+                <span>did I get it right?</span>
+              ) : identifyFailed ? (
+                <span>I don't know this one. tell me about it?</span>
+              ) : identifyChoice === false ? (
+                <span>all yours — what am I looking at?</span>
+              ) : (
+                <span>got it. want me to try to identify it?</span>
+              )}
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    captureMode === "snap" ? setCameraOpen(true) : fileInputRef.current?.click()
+                  }
+                  className="text-xs uppercase tracking-widest underline"
+                  style={{ color: "var(--ink-soft)" }}
+                >
+                  {captureMode === "snap" ? "retake" : "change photo"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {!identifying && !suggestion && identifyChoice === null ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => chooseIdentify(true)}
+                className="flex-1 text-xs uppercase tracking-widest py-3 border"
+                style={{
+                  borderColor: "var(--ink)",
+                  backgroundColor: "var(--teal)",
+                  color: "var(--yellow)",
+                  fontWeight: 700,
+                  touchAction: "manipulation",
+                }}
+              >
+                ✦ yes, take a look
+              </button>
+              <button
+                type="button"
+                onClick={() => chooseIdentify(false)}
+                className="flex-1 text-xs uppercase tracking-widest py-3 border"
+                style={{ borderColor: "var(--ink)", touchAction: "manipulation" }}
+              >
+                I'll type it myself
               </button>
             </div>
           ) : null}
 
           {suggestion ? (
-            <div
-              className="border p-3 space-y-2"
-              style={{ borderColor: "var(--ink)", backgroundColor: "var(--paper)" }}
-            >
-              <div className="text-xs uppercase tracking-widest" style={{ color: "var(--ink-soft)" }}>
-                ✦ Is this right?
-              </div>
-              <div className="text-sm space-y-0.5">
-                <div>
-                  <span className="italic">{suggestion.title || "—"}</span>
-                  {suggestion.artist ? ` — ${suggestion.artist}` : ""}
-                </div>
-                <div className="text-xs" style={{ color: "var(--ink-soft)" }}>
-                  {[suggestion.year, suggestion.medium].filter(Boolean).join(" · ") || "no year/medium found"}
-                </div>
-              </div>
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={acceptSuggestion}
-                  className="flex-1 text-xs uppercase tracking-widest py-2 border"
-                  style={{
-                    borderColor: "var(--ink)",
-                    backgroundColor: "var(--ink)",
-                    color: "var(--paper)",
-                  }}
-                >
-                  Yes, use these
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSuggestion(null)}
-                  className="flex-1 text-xs uppercase tracking-widest py-2 border"
-                  style={{ borderColor: "var(--ink)", color: "var(--ink)" }}
-                >
-                  No, I'll type it
-                </button>
-              </div>
+            <IdentifyResultCard
+              result={suggestion}
+              onAccept={acceptSuggestion}
+              onDismiss={() => setSuggestion(null)}
+              onRetry={() => file && runIdentify(file)}
+            />
+          ) : null}
+
+          {!identifying && !suggestion && identifyChoice !== null ? (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => file && runIdentify(file)}
+                className="text-xs underline"
+                style={{ color: "var(--ink-soft)" }}
+              >
+                ✦ {identifyFailed ? "take another look" : "let me identify it"}
+              </button>
             </div>
           ) : null}
 
@@ -1434,16 +1442,15 @@ function PieceForm({
               touchAction: "manipulation",
             }}
           >
-            {!file
-              ? "Upload a photo to continue"
-              : identifying
-                ? "Identifying…"
-                : !title.trim()
-                  ? "Add a title to continue"
-                  : "Next → Your reflection"}
+            {identifying
+              ? "one second…"
+              : !title.trim()
+                ? "give it a title first"
+                : "next → how it landed"}
           </button>
         </>
       ) : (
+
         <>
           <div className="text-xs" style={{ color: "var(--ink-soft)", fontStyle: "italic" }}>
             How did this piece land with you?
