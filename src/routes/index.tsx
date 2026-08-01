@@ -66,14 +66,18 @@ function Index() {
           </button>
         </DialogTrigger>
 
-        <div className="w-full max-w-md flex flex-1 flex-col justify-between pt-6 pb-14">
-          <img
-            src={wordmark.url}
-            alt="CURIO"
-            className="block w-[38%] max-w-[170px]"
-          />
+        <img
+          src={wordmark.url}
+          alt="CURIO"
+          className="absolute z-10 block w-[28%] max-w-[120px]"
+          style={{
+            top: "max(1rem, env(safe-area-inset-top))",
+            left: "max(1rem, env(safe-area-inset-left))",
+          }}
+        />
 
-          <div className="mt-6 flex justify-center">
+        <div className="w-full max-w-md flex flex-1 flex-col justify-between pt-14 pb-14">
+          <div className="mt-10 flex justify-center">
             <CurioFigure className="w-[34%] max-w-[190px]" />
           </div>
 

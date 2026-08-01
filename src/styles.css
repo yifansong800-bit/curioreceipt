@@ -186,7 +186,7 @@
   88%, 94% { opacity: 1; }
 }
 .curio-wink {
-  animation: curio-wink 4.6s steps(1, end) infinite;
+  animation: curio-wink 3s steps(1, end) infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .curio-wink { animation: none; opacity: 0; }
