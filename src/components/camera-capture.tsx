@@ -145,7 +145,7 @@ export function CameraCapture({
             className="inline-flex items-center gap-2 border px-4 py-2 text-xs uppercase tracking-widest"
             style={{ borderColor: "#141414", touchAction: "manipulation" }}
           >
-            <RotateCcw className="h-3.5 w-3.5" /> retake
+            <RotateCcw className="h-3.5 w-3.5" /> let me retry
           </button>
           <button
             type="button"
@@ -161,7 +161,7 @@ export function CameraCapture({
               touchAction: "manipulation",
             }}
           >
-            use this photo →
+            this is the one →
           </button>
         </div>
       ) : (
@@ -170,16 +170,41 @@ export function CameraCapture({
           onClick={capture}
           disabled={!ready}
           aria-label="Take photo"
-          className="mt-7 rounded-full transition-transform active:scale-95 disabled:opacity-40"
-          style={{
-            width: 64,
-            height: 64,
-            border: "3px solid #141414",
-            backgroundColor: "transparent",
-            touchAction: "manipulation",
-          }}
-        />
+          className="mt-7 transition-transform active:scale-95 disabled:opacity-40"
+          style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
+        >
+          <ShirtButton />
+        </button>
       )}
     </div>
   );
 }
+
+/**
+ * The shutter, drawn as a stitched shirt button — Curio is a paper-and-thread
+ * companion, so the one control on this screen should feel sewn on.
+ */
+function ShirtButton({ size = 72 }: { size?: number }) {
+  const holes: [number, number][] = [
+    [42, 42],
+    [58, 42],
+    [42, 58],
+    [58, 58],
+  ];
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden>
+      <circle cx="50" cy="50" r="46" fill="var(--paper)" stroke="#141414" strokeWidth="2.5" />
+      <circle cx="50" cy="50" r="35" fill="none" stroke="#141414" strokeWidth="1" opacity="0.45" />
+      <path
+        d="M42 42 L58 58 M58 42 L42 58"
+        stroke="#141414"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      {holes.map(([cx, cy]) => (
+        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="4.6" fill="var(--ochre)" stroke="#141414" strokeWidth="1.6" />
+      ))}
+    </svg>
+  );
+}
+
