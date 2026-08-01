@@ -44,10 +44,12 @@ function Index() {
   return (
     <Dialog>
       <div
-        className="relative h-[100dvh] overflow-hidden flex flex-col items-center justify-center px-[max(2.25rem,env(safe-area-inset-left))]"
+        className="relative h-[100dvh] overflow-hidden flex flex-col items-center justify-center"
         style={{
-          paddingTop: "max(1.5rem, env(safe-area-inset-top))",
+          paddingTop: "max(2rem, env(safe-area-inset-top))",
           paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
+          paddingLeft: "max(2.25rem, env(safe-area-inset-left))",
+          paddingRight: "max(2.25rem, env(safe-area-inset-right))",
         }}
       >
         <DialogTrigger asChild>
@@ -56,8 +58,8 @@ function Index() {
             aria-label="About Curio"
             className="absolute z-10 inline-flex items-center justify-center rounded-full border border-ink bg-paper p-2 text-ink transition-all duration-100 hover:bg-[var(--teal)] hover:text-[var(--yellow)] active:scale-90"
             style={{
-              top: "max(1rem, env(safe-area-inset-top))",
-              right: "max(1rem, env(safe-area-inset-right))",
+              top: "max(2rem, env(safe-area-inset-top))",
+              right: "max(2.25rem, env(safe-area-inset-right))",
               touchAction: "manipulation",
               WebkitTapHighlightColor: "transparent",
             }}
@@ -71,13 +73,13 @@ function Index() {
           alt="CURIO"
           className="absolute z-10 block w-[28%] max-w-[120px]"
           style={{
-            top: "max(1rem, env(safe-area-inset-top))",
-            left: "max(1rem, env(safe-area-inset-left))",
+            top: "max(2rem, env(safe-area-inset-top))",
+            left: "max(2.25rem, env(safe-area-inset-left))",
           }}
         />
 
         <div className="w-full max-w-md flex flex-1 flex-col justify-between pt-14 pb-14">
-          <div className="mt-10 flex justify-center">
+          <div className="mt-16 flex justify-center">
             <CurioFigure className="w-[34%] max-w-[190px]" />
           </div>
 
