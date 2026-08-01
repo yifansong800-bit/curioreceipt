@@ -158,9 +158,9 @@ export function CameraCapture({
         <X className="h-5 w-5" />
       </button>
 
-      <p className="mb-5 text-center text-[11px] tracking-[0.2em]">
-        SHOW ME THE PIECE YOU COULDN'T WALK PAST
-      </p>
+      <div className="mb-5 flex justify-center">
+        <SnapIcon size={30} color="#141414" />
+      </div>
 
       <div className="relative w-full" style={{ maxWidth: 320 }}>
         <div
@@ -176,7 +176,10 @@ export function CameraCapture({
             playsInline
             muted
             autoPlay
-            className="h-full w-full object-cover"
+            controls={false}
+            disablePictureInPicture
+            controlsList="nodownload noplaybackrate noremoteplayback"
+            className="no-media-controls h-full w-full object-cover"
           />
           {shot ? (
             <img
@@ -187,7 +190,26 @@ export function CameraCapture({
           ) : null}
           {flash ? <div className="absolute inset-0" style={{ backgroundColor: "#fff" }} /> : null}
         </div>
+
+        {!shot && zoomRange && zoomRange.max > zoomRange.min ? (
+          <div className="mt-3 flex items-center gap-2 text-[10px] tracking-[0.15em]">
+            <span>1×</span>
+            <input
+              type="range"
+              aria-label="Zoom"
+              min={zoomRange.min}
+              max={zoomRange.max}
+              step={zoomRange.step}
+              value={zoom}
+              onChange={(e) => applyZoom(Number(e.target.value))}
+              className="flex-1"
+              style={{ accentColor: "#141414", touchAction: "manipulation" }}
+            />
+            <span>{zoomRange.max}×</span>
+          </div>
+        ) : null}
       </div>
+
 
       {error ? (
         <p className="mt-6 max-w-xs text-center text-xs leading-relaxed">{error}</p>
