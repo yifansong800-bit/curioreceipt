@@ -46,6 +46,15 @@ export function CameraCapture({
           videoRef.current.srcObject = stream;
           await videoRef.current.play().catch(() => {});
         }
+        // Optical/digital zoom, where the device exposes it.
+        const track = stream.getVideoTracks()[0];
+        const caps = (track?.getCapabilities?.() ?? {}) as { zoom?: { min: number; max: number; step?: number } };
+        if (caps.zoom) {
+          setZoomRange({ min: caps.zoom.min, max: caps.zoom.max, step: caps.zoom.step || 0.1 });
+          setZoom(caps.zoom.min);
+        } else {
+          setZoomRange(null);
+        }
         setReady(true);
         setError(null);
       } catch (err) {
