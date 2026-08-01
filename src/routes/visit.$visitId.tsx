@@ -19,6 +19,8 @@ import { Receipt, type ReceiptArtwork } from "@/components/receipt";
 import { PrinterStage } from "@/components/printer-stage";
 import { ModeMark } from "@/components/pixel-icons";
 import { CameraCapture } from "@/components/camera-capture";
+import { IdentifyResultCard, ScanThumb, ThinkingLines } from "@/components/identify-panel";
+
 import { PieceProof } from "@/components/piece-proof";
 import { PhotoCropper } from "@/components/photo-cropper";
 import { StarRating } from "@/components/star-rating";
