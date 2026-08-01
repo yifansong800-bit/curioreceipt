@@ -11,7 +11,6 @@ type IconProps = { size?: number | string; className?: string; color?: string };
 const T = 4.88; // bar thickness
 const A = 9.65; // arm length
 const S = (24 - T) / 2; // bar start offset = 9.56
-const E = S + T; // 14.44
 
 export function SnapIcon({ size = 24, className, color = "currentColor" }: IconProps) {
   return (
