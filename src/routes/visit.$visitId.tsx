@@ -999,7 +999,7 @@ function PieceForm({
   } | null>(null);
   const identifyAbortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [cameraOpen, setCameraOpen] = useState(captureMode === "snap");
+  const [cameraOpen, setCameraOpen] = useState(false);
 
 
   // Step 2: the reflection
