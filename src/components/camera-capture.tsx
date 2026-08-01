@@ -22,6 +22,19 @@ export function CameraCapture({
   const [shot, setShot] = useState<{ url: string; file: File } | null>(null);
   // Bumped on retry so the stream is re-acquired if the track was released.
   const [session, setSession] = useState(0);
+  const [zoomRange, setZoomRange] = useState<{ min: number; max: number; step: number } | null>(
+    null,
+  );
+  const [zoom, setZoom] = useState(1);
+
+  function applyZoom(value: number) {
+    setZoom(value);
+    const track = streamRef.current?.getVideoTracks()[0];
+    void track
+      ?.applyConstraints({ advanced: [{ zoom: value }] } as MediaTrackConstraints)
+      .catch(() => {});
+  }
+
 
   const stop = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
