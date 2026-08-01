@@ -967,9 +967,11 @@ function PieceForm({
   onSave: (payload: PiecePayload) => Promise<void> | void;
 }) {
   // Identification runs through the `identify-artwork` Supabase Edge Function
-  // (Vision reverse-image → scrape → DeepSeek extraction).
+  // (Vision reverse-image → Gemini reasoning).
 
-  const [step, setStep] = useState<"piece" | "reflection">("piece");
+  // Nothing but the photo prompt shows first — details only appear once
+  // Curio has something to look at.
+  const [step, setStep] = useState<"capture" | "details" | "reflection">("capture");
 
   // Step 1: the piece
   const [file, setFile] = useState<File | null>(null);
@@ -981,15 +983,19 @@ function PieceForm({
   const [medium, setMedium] = useState("");
   const [identifying, setIdentifying] = useState(false);
   const [identifyFailed, setIdentifyFailed] = useState(false);
+  // null = not asked yet (upload mode shows the offer card)
+  const [identifyChoice, setIdentifyChoice] = useState<boolean | null>(null);
   const [suggestion, setSuggestion] = useState<{
     title: string;
     artist: string;
     year: string;
     medium: string;
+    confident: boolean;
   } | null>(null);
   const identifyAbortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(captureMode === "snap");
+
 
   // Step 2: the reflection
   const [lingerMin, setLingerMin] = useState<string>("");
