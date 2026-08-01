@@ -97,8 +97,8 @@ export function SnapFlowDemo() {
 
       {/* Beat-specific caption / UI */}
       <div
-        className="flex w-full flex-1 flex-col items-center justify-start gap-2 text-center"
-        style={{ maxWidth: 216, fontFamily: "var(--font-mono)", minHeight: 118 }}
+        className="flex w-full flex-col items-center justify-start gap-2 text-center"
+        style={{ maxWidth: 240, fontFamily: "var(--font-mono)", minHeight: 104 }}
       >
         {stage === "live" || stage === "flash" ? (
           <div className="flex flex-col items-center gap-2">
