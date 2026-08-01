@@ -131,90 +131,114 @@ function BeginPage() {
       </div>
 
       <div className="w-full max-w-md">
-        <div
-          className="text-xs uppercase tracking-[0.25em] mb-6 text-center"
-          style={{ color: "var(--ink-soft)" }}
-        >
-          {step === "name" ? "01 / 03" : step === "where" ? "02 / 03" : "03 / 03"}
+      <div className="w-full max-w-md">
+        <div className="mb-6">
+          <div
+            className="text-xs uppercase tracking-[0.25em] mb-2 text-center"
+            style={{ color: "var(--ink-soft)" }}
+          >
+            {`0${stepIndex + 1} / 03`}
+          </div>
+          <div
+            className="mx-auto h-[2px] w-full max-w-[220px] overflow-hidden"
+            style={{ backgroundColor: "color-mix(in srgb, var(--ink) 15%, transparent)" }}
+          >
+            <div
+              className="h-full"
+              style={{
+                width: `${((stepIndex + 1) / STEPS.length) * 100}%`,
+                backgroundColor: "var(--teal)",
+                transition: "width 400ms cubic-bezier(0.22, 1, 0.36, 1)",
+              }}
+            />
+          </div>
         </div>
 
-        {step === "name" ? (
-          <div className="space-y-8">
-            <h1 className="text-xl sm:text-2xl" style={{ fontFamily: "var(--font-mono)" }}>
-              hi. what should I call you?
-            </h1>
-            <Field
-              label="YOUR NAME"
-              value={visitor}
-              onChange={setVisitor}
-              placeholder="Michael Scott"
-              maxLength={60}
-              autoFocus
-            />
-            <PrimaryButton
-              disabled={!visitor.trim()}
-              onClick={() => setStep("where")}
-              label="next →"
-            />
-          </div>
-        ) : null}
-
-        {step === "where" ? (
-          <div className="space-y-8">
-            <h1 className="text-xl sm:text-2xl" style={{ fontFamily: "var(--font-mono)" }}>
-              are we still in the museum together?
-            </h1>
-            <div className="grid gap-3">
-              <ChoiceButton
-                label="yes — I'm standing in front of it"
-                onClick={() => {
-                  setStillHere(true);
-                  setStep("museum");
+        <div key={step} className={anim}>
+          {step === "name" ? (
+            <div className="curio-stagger space-y-8">
+              <h1 className="text-xl sm:text-2xl" style={{ fontFamily: "var(--font-mono)" }}>
+                hi. what should I call you?
+              </h1>
+              <Field
+                label="YOUR NAME"
+                value={visitor}
+                onChange={setVisitor}
+                placeholder="Michael Scott"
+                maxLength={60}
+                autoFocus
+                onEnter={() => {
+                  if (visitor.trim()) go("where");
                 }}
               />
-              <ChoiceButton
-                label="no — I've already left"
-                onClick={() => {
-                  setStillHere(false);
-                  setStep("museum");
-                }}
+              <PrimaryButton
+                disabled={!visitor.trim()}
+                onClick={() => go("where")}
+                label="next →"
               />
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        {step === "museum" ? (
-          <div className="space-y-8">
-            <h1 className="text-xl sm:text-2xl" style={{ fontFamily: "var(--font-mono)" }}>
-              {stillHere ? "which museum are we in?" : "where were we?"}
-            </h1>
-            <MuseumAutocomplete
-              value={museum}
-              onChange={(v) => {
-                setMuseum(v);
-                setPicked(null);
-              }}
-              onPick={(s) => {
-                setMuseum(s.name);
-                setPicked(s);
-              }}
-              picked={picked}
-              suggest={suggestFn}
-            />
-            <PrimaryButton
-              disabled={!museum.trim() || opening}
-              onClick={() => mut.mutate()}
-              label={opening ? "warming up the printer…" : "let's go →"}
-            />
-            {mut.isError ? (
-              <p className="text-sm" style={{ color: "var(--destructive)" }}>
-                that didn't take — try me again?
-              </p>
-            ) : null}
-          </div>
-        ) : null}
+          {step === "where" ? (
+            <div className="curio-stagger space-y-8">
+              <h1 className="text-xl sm:text-2xl" style={{ fontFamily: "var(--font-mono)" }}>
+                are we still in the museum together?
+              </h1>
+              <div className="grid gap-3">
+                <ChoiceButton
+                  label="yes — I'm standing in front of it"
+                  selected={stillHere === true}
+                  onClick={() => {
+                    setStillHere(true);
+                    go("museum");
+                  }}
+                />
+                <ChoiceButton
+                  label="no — I've already left"
+                  selected={stillHere === false}
+                  onClick={() => {
+                    setStillHere(false);
+                    go("museum");
+                  }}
+                />
+              </div>
+            </div>
+          ) : null}
 
+          {step === "museum" ? (
+            <div className="curio-stagger space-y-8">
+              <h1 className="text-xl sm:text-2xl" style={{ fontFamily: "var(--font-mono)" }}>
+                {stillHere ? "which museum are we in?" : "where were we?"}
+              </h1>
+              <MuseumAutocomplete
+                value={museum}
+                onChange={(v) => {
+                  setMuseum(v);
+                  setPicked(null);
+                }}
+                onPick={(s) => {
+                  setMuseum(s.name);
+                  setPicked(s);
+                }}
+                picked={picked}
+                suggest={suggestFn}
+              />
+              <PrimaryButton
+                disabled={!museum.trim() || opening}
+                onClick={() => mut.mutate()}
+                label={opening ? "warming up the printer…" : "let's go →"}
+                busy={opening}
+              />
+              {mut.isError ? (
+                <p className="text-sm" style={{ color: "var(--destructive)" }}>
+                  that didn't take — try me again?
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </div>
+
 
       <Footer className="absolute bottom-0" />
     </div>
