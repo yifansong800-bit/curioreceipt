@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 
 import { ModeMark, type CurioMode } from "@/components/pixel-icons";
 import { PrinterStage } from "@/components/printer-stage";
-import snapDemo from "@/assets/snap-demo.jpg";
+import { SnapFlowDemo } from "@/components/snap-flow-demo";
 import logDemo from "@/assets/log-demo.jpg.asset.json";
 import demoReceipt from "@/assets/demo-receipt.png.asset.json";
 
@@ -106,7 +106,7 @@ export function DemoPreview({
 
           <div className="relative flex flex-1 items-center justify-center overflow-hidden pb-2 pt-5">
             <div key={mode} className="curio-card-in flex h-full w-full items-center justify-center">
-              {mode === "snap" ? <SnapDemo /> : null}
+              {mode === "snap" ? <SnapFlowDemo /> : null}
               {mode === "log" ? <LogDemo /> : null}
               {mode === "share" ? <ShareDemo /> : null}
             </div>
@@ -139,96 +139,6 @@ export function DemoPreview({
     </div>
   );
 }
-
-/** Wobbly hand-drawn frame + a shutter that closes on a loop. */
-function SnapDemo() {
-  const [shot, setShot] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    const loop = () => {
-      window.setTimeout(() => {
-        if (!alive) return;
-        setShot(true);
-        window.setTimeout(() => {
-          if (!alive) return;
-          setShot(false);
-          loop();
-        }, 700);
-      }, 1800);
-    };
-    loop();
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  return (
-    <div className="flex h-full w-full flex-col items-center justify-end gap-5">
-      <div className="relative w-full" style={{ maxWidth: 240 }}>
-        <div className="relative overflow-hidden" style={{ aspectRatio: "4 / 5" }}>
-          <img
-            src={snapDemo}
-            alt="Sample artwork framed in the Curio camera"
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-          {/* Shutter blades closing */}
-          <div
-            className="absolute inset-x-0 top-0 transition-transform duration-300 ease-out"
-            style={{
-              height: "50%",
-              backgroundColor: "#141414",
-              transform: shot ? "translateY(0)" : "translateY(-100%)",
-            }}
-          />
-          <div
-            className="absolute inset-x-0 bottom-0 transition-transform duration-300 ease-out"
-            style={{
-              height: "50%",
-              backgroundColor: "#141414",
-              transform: shot ? "translateY(0)" : "translateY(100%)",
-            }}
-          />
-        </div>
-        <SketchFrame />
-      </div>
-
-      <div
-        className="rounded-full transition-transform duration-200"
-        style={{
-          width: 54,
-          height: 54,
-          border: "3px solid #141414",
-          transform: shot ? "scale(0.88)" : "scale(1)",
-        }}
-      />
-    </div>
-  );
-}
-
-/** Loose ink rectangle traced over the photo, as in the sketch. */
-function SketchFrame() {
-  return (
-    <svg
-      className="pointer-events-none absolute"
-      style={{ inset: "-9px" }}
-      viewBox="0 0 100 124"
-      preserveAspectRatio="none"
-      aria-hidden
-    >
-      <path
-        d="M4 6 C 26 3, 62 5, 96 3 C 97 34, 95 78, 97 120 C 66 118, 34 121, 3 119 C 5 84, 2 42, 4 6 Z"
-        fill="none"
-        stroke="#141414"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
-  );
-}
-
 /** Miniature proof sheet: types out the note, then flips the ink toggle. */
 const NOTE_TEXT = "overwhelming but beautiful";
 
