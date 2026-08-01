@@ -31,7 +31,7 @@ export function CameraCapture({
     setZoom(value);
     const track = streamRef.current?.getVideoTracks()[0];
     void track
-      ?.applyConstraints({ advanced: [{ zoom: value }] } as MediaTrackConstraints)
+      ?.applyConstraints({ advanced: [{ zoom: value }] } as unknown as MediaTrackConstraints)
       .catch(() => {});
   }
 
