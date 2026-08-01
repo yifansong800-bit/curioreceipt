@@ -1454,9 +1454,10 @@ function PieceForm({
       ) : (
 
         <>
-          <div className="text-xs" style={{ color: "var(--ink-soft)", fontStyle: "italic" }}>
-            How did this piece land with you?
+          <div className="text-sm" style={{ fontFamily: "var(--font-mono)" }}>
+            so — how did it land with you?
           </div>
+
 
           <div>
             <div
