@@ -433,8 +433,22 @@ function VisitPage() {
           };
         })
         .filter((p): p is NonNullable<typeof p> => p !== null);
-      // Strip the imgs from the clone; we'll draw them in ourselves.
-      imgs.forEach((img) => img.parentElement?.removeChild(img));
+      // Swap each <img> for a same-sized placeholder so the layout stays
+      // identical — removing them outright collapsed the receipt and made
+      // the composited artwork overlap the text in the saved file.
+      imgs.forEach((img) => {
+        const r = img.getBoundingClientRect();
+        const spacer = document.createElement("div");
+        spacer.style.cssText = [
+          `width:${r.width}px`,
+          `height:${r.height}px`,
+          `display:${window.getComputedStyle(img).display === "inline" ? "inline-block" : "block"}`,
+          "background:transparent",
+          "flex-shrink:0",
+        ].join(";");
+        img.parentElement?.replaceChild(spacer, img);
+      });
+
 
       const naturalWidth = node.offsetWidth || 360;
       const naturalHeight = node.offsetHeight || node.scrollHeight;
