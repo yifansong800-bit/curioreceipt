@@ -61,9 +61,10 @@ export function SnapFlowDemo() {
   const shotTaken = stage === "flash";
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-between gap-3">
+    <div className="flex w-full flex-col items-center justify-center gap-4">
       {/* Viewfinder / photo */}
-      <div className="relative w-full overflow-hidden" style={{ maxWidth: 200, aspectRatio: "4 / 5" }}>
+      <div className="relative w-full overflow-hidden" style={{ maxWidth: 240, aspectRatio: "4 / 5" }}>
+
         <video
           src={liveClip.url}
           autoPlay
@@ -96,8 +97,8 @@ export function SnapFlowDemo() {
 
       {/* Beat-specific caption / UI */}
       <div
-        className="flex w-full flex-1 flex-col items-center justify-start gap-2 text-center"
-        style={{ maxWidth: 216, fontFamily: "var(--font-mono)", minHeight: 118 }}
+        className="flex w-full flex-col items-center justify-start gap-2 text-center"
+        style={{ maxWidth: 240, fontFamily: "var(--font-mono)", minHeight: 104 }}
       >
         {stage === "live" || stage === "flash" ? (
           <div className="flex flex-col items-center gap-2">
