@@ -91,7 +91,7 @@ function Index() {
             <p>
               A pocket companion for
               <br />
-              your museum visits.
+              your art museum visits.
             </p>
             <p>Show me what stopped you.</p>
             <p>I'll print the memory.</p>
