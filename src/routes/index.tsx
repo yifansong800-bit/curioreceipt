@@ -66,7 +66,7 @@ function Index() {
           </button>
         </DialogTrigger>
 
-        <div className="w-full max-w-md flex h-full flex-col justify-center">
+        <div className="w-full max-w-md flex h-full flex-col justify-center pt-4 pb-14">
           <img
             src={wordmark.url}
             alt="CURIO"
