@@ -104,13 +104,17 @@ export function CameraCapture({
       </button>
 
       <p className="mb-5 text-center text-[11px] tracking-[0.2em]">
-        SNAP THE ART IN FRONT OF YOU
+        SHOW ME THE PIECE YOU COULDN'T WALK PAST
       </p>
 
       <div className="relative w-full" style={{ maxWidth: 320 }}>
         <div
           className="relative overflow-hidden"
-          style={{ aspectRatio: "3 / 4", backgroundColor: "#141414" }}
+          style={{
+            aspectRatio: "3 / 4",
+            backgroundColor: "#141414",
+            border: "1.5px solid #141414",
+          }}
         >
           {shot ? (
             <img src={shot.url} alt="Captured artwork" className="h-full w-full object-cover" />
@@ -125,24 +129,8 @@ export function CameraCapture({
           )}
           {flash ? <div className="absolute inset-0" style={{ backgroundColor: "#fff" }} /> : null}
         </div>
-        <svg
-          className="pointer-events-none absolute"
-          style={{ inset: "-9px" }}
-          viewBox="0 0 100 133"
-          preserveAspectRatio="none"
-          aria-hidden
-        >
-          <path
-            d="M4 6 C 26 3, 62 5, 96 3 C 97 38, 95 86, 97 129 C 66 127, 34 130, 3 128 C 5 90, 2 46, 4 6 Z"
-            fill="none"
-            stroke="#141414"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
       </div>
+
 
       {error ? (
         <p className="mt-6 max-w-xs text-center text-xs leading-relaxed">{error}</p>
