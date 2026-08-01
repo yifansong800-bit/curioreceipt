@@ -708,7 +708,7 @@ function VisitPage() {
                   className="text-xs uppercase tracking-widest underline"
                   style={{ color: "var(--ink-soft)" }}
                 >
-                  ← Edit entries
+                  ← let me fix something
                 </button>
                 {stage === "printed" ? (
                   <button
