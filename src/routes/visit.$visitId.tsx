@@ -604,8 +604,9 @@ function VisitPage() {
               <ModeMark mode="log" size={22} className="mb-5" />
               <div className="flex items-center justify-between">
                 <Link to="/" className="text-xs uppercase tracking-widest underline">
-                  ← New visit
+                  ← start over
                 </Link>
+
                 <span
                   className="text-xs uppercase tracking-widest"
                   style={{ color: "var(--ink-soft)" }}
