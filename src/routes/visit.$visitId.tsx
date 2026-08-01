@@ -1574,7 +1574,7 @@ function PieceForm({
             <input
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="one line on how it felt"
+              placeholder="what were you thinking, standing there?"
               maxLength={NOTE_MAX}
               className="w-full bg-transparent border-b py-1 text-sm outline-none"
               style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}
@@ -1587,12 +1587,12 @@ function PieceForm({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setStep("piece")}
+              onClick={() => setStep("details")}
               disabled={saving}
               className="uppercase tracking-widest text-sm py-3 px-4 border disabled:opacity-40"
               style={{ borderColor: "var(--ink)" }}
             >
-              ← Back
+              ← back
             </button>
             <button
               type="button"
@@ -1608,9 +1608,10 @@ function PieceForm({
                 touchAction: "manipulation",
               }}
             >
-              {saving ? "Saving…" : "Save piece"}
+              {saving ? "keeping it…" : "that's the one"}
             </button>
           </div>
+
         </>
       )}
     </div>
