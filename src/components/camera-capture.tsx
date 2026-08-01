@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X, RotateCcw } from "lucide-react";
-import star from "@/assets/curio-star.png.asset.json";
+import shutter from "@/assets/curio-button.png.asset.json";
+import { SnapIcon } from "@/components/pixel-icons";
 
 /**
  * In-page camera for "still at the museum" mode. Streams the rear camera
