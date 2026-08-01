@@ -627,8 +627,9 @@ function VisitPage() {
                 {visit.museum}
               </h1>
               <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
-                Curated by {visit.visitor_name}
+                here with {visit.visitor_name}
               </p>
+
               <LocationEditor
                 city={visit.city ?? null}
                 country={visit.country ?? null}
