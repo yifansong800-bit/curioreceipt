@@ -1154,8 +1154,7 @@ function PieceForm({
     setSuggestion(null);
     setStep("details");
 
-    // Snapping means standing in front of the work — Curio looks straight
-    // away. Uploads get asked first (unless already answered this session).
+    // Curio always asks before looking — unless already answered this session.
     let remembered: boolean | null = identifyChoice;
     if (remembered === null) {
       try {
@@ -1164,7 +1163,7 @@ function PieceForm({
         else if (stored === "no") remembered = false;
       } catch {}
     }
-    if (captureMode === "snap" || remembered === true) {
+    if (remembered === true) {
       setIdentifyChoice(true);
       void runIdentify(ready);
     } else {
