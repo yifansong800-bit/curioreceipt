@@ -249,7 +249,7 @@ export function CameraCapture({
           className="mt-7 transition-transform active:scale-95 disabled:opacity-40"
           style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
         >
-          <img src={star.url} alt="" aria-hidden width={78} height={78} draggable={false} />
+          <img src={shutter.url} alt="" aria-hidden width={82} height={82} draggable={false} />
         </button>
       )}
     </div>
