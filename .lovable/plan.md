@@ -1,88 +1,67 @@
-## Goal
+# Curio as a companion: voice, capture-first flow, and AI as a feature
 
-Rebuild Curio's look and flow to match the five uploaded designs exactly, while keeping every existing execution intact: artwork identification, receipt rendering, dither/color ink, crop editor, proof sheet, the print animation, and export.
+Three changes, in one pass: give Curio a consistent first-person voice, split the piece step so the photo comes first, and make identification a visible, delightful moment instead of a small underlined link.
 
----
+## 1. Voice and perspective
 
-## 1. Color system + assets
+Today the app speaks as a neutral system ("Step 1 · The piece", "Upload a photo to continue", "Couldn't identify artwork"). Curio should speak as a small companion who is walking the museum with you: first person, warm, brief, a little wry — never cutesy, never long.
 
-New palette tokens in `src/styles.css` (replacing the current cream/ink scheme):
+Rules to apply everywhere:
+- Curio says "I" and "we"; the user is "you". Never "the user", never "we" meaning the company.
+- One short line per moment. No stacked helper text.
+- Lowercase-friendly mono voice, matching the existing type; keep the ALL-CAPS tracking style only for structural labels.
+- Errors are Curio admitting a limit, not a system failure.
 
-- Cream `#EDEAE4` (the homepage background from the design)
-- Ochre `#BE5103`, Yellow `#FFCE1B`, Teal `#069494`, Rust `#B7410E`
-- Ink stays near-black; receipt paper and printed receipts use the new cream`#EDEAE4 color.`
+Copy pass across the flow (illustrative, final wording tuned while implementing):
 
-Per-page background is set by mode: homepage cream, SNAP ochre, LOG yellow, SHARE/print teal.
+| Where | Now | Curio |
+| --- | --- | --- |
+| Begin q1 | "First — what should we call you?" | "hi. what should I call you?" |
+| Begin q2 | "Are you still at the museum?" | "are we still in the museum together?" / "yes, I'm in front of it" · "no, I've already left" |
+| Begin q3 | "Which museum are you in?" | "which museum are we in?" |
+| Begin CTA | "begin visit →" | "let's go →" |
+| Capture prompt | "✦ Upload a photo of your favorite piece" | "show me the piece you couldn't walk past" |
+| Identify running | "Identifying…" | "let me look…" / "I think I know this one…" |
+| Identify result | "✦ Is this right?" | "I think this is… did I get it right?" |
+| Identify fail | "couldn't identify — enter manually" | "I don't know this one. tell me about it?" |
+| Reflection step | "How did this piece land with you?" | "so — how did it land with you?" |
+| Note field | placeholder | "what were you thinking, standing there?" |
+| Printing | "opening receipt…" | "warming up the printer…" |
+| Done | save/share labels | "here's ours. keep it." |
 
-Assets cropped from the uploads and pushed to CDN as `.asset.json` pointers:
+Also update the begin-page and visit-page `head()` titles/descriptions to the same voice.
 
-- The doodle blob figure (homepage)
-- The three pixel marks: SNAP `+`, LOG `■`, SHARE `⠿` dot-grid
-- The flat printer housing (from the share/print design), replacing `printer.png`
+## 2. Capture-first flow
 
-The CURIO wordmark is still the same google font as now. No need to crop from upload.
+Split the current step 1 into two screens so nothing appears before the photo does.
 
----
+```text
+snap mode:   begin → CAMERA opens immediately → shot taken → identify runs → details screen
+upload mode: begin → single upload prompt (nothing else) → file chosen → "want me to identify it?" → details screen
+                                                                    └ "I'll type it" → details screen
+```
 
-## 2. Homepage (`src/routes/index.tsx`)
+- **Snap mode**: on landing on the visit page with `mode=snap`, the existing `CameraCapture` opens automatically as the first thing the user sees, with a Curio line above the viewfinder. Identification starts automatically the moment the shot is accepted (they're standing in front of the work — this is the magic moment). Closing the camera without a shot falls back to the upload prompt rather than a dead end.
+- **Upload mode**: the first screen is only the drop/upload target plus one Curio line — no title/artist/medium fields, no step chrome. After the file is chosen and cropped, a small card asks "want me to try to identify it?" with "yes, take a look ✦" and "I'll type it myself". Choice remembered for the rest of the session.
+- **Details screen**: appears only after a photo exists. Shows the photo thumbnail, the identify result (or empty fields), and the manual fields. Reflection stays as the following step.
+- Step chrome becomes three beats instead of two: `photo · details · reflection`, rendered in the existing mono/tracking style.
+- Keep the crop editor, HEIC conversion, Enter-never-submits behavior, retake/change, and the `piece-proof` review page exactly as they are.
 
-Complete rewrite to the sketch:
+## 3. Making AI identification feel like a feature
 
-- Cream background, wordmark, tagline "A thermal receipt for your art museum visit."
-- Doodle blob containing the three icons with `SNAP / LOG / SHARE` captions
-- Yellow-on-teal `BEGIN` button
-- Info button stays top-right (About dialog + privacy link unchanged)
-- No name/museum inputs here anymore
+Right now identification hides behind a grey underlined link. Changes:
 
-Tapping any icon opens a card-style pop up (like the info pop up) **animated demo preview** replicating that upload:
-
-- SNAP: ochre bg, sketch photo frame, "SNAP THE ART IN FRONT OF YOU", shutter circle with a tap pulse. should display a quick video of an artwork being snapped in the frame and the camera lens closing. I will upload a video to use later. 
-- LOG: yellow bg, proof-sheet receipt draft, "LOG WHAT THE ART MEANT TO YOU"
-- SHARE: teal bg, printer feeding the receipt (reusing the real feed animation), "SHARE YOUR MEMORY WITH THE WORLD"
-
-These are static mock content — no DB writes, dismissible, swipeable between the three. There's an "X" on these pop-ups so user can close it anytime.
-
----
-
-## 3. Onboarding survey (new route `src/routes/begin.tsx`)
-
-One question per screen, cream background, back/next:
-
-1. **Name** — prefilled from `localStorage` if remembered
-2. **"Are you still at the museum?"** — Still here / Already left
-3. **Museum name** — existing autocomplete component, moved here
-
-On finish: creates the visit exactly as today and navigates to `/visit/$visitId`, carrying the capture mode (`snap` or `upload`) in search params so the visit page opens the right entry path.
-
----
-
-## 4. Snap mode (new `src/components/camera-capture.tsx`)
-
-For "still at the museum": a live in-page camera in the sketch style — `getUserMedia` with rear camera preference, sketch-border viewfinder, hand-drawn shutter circle. Captured frame becomes a File handed to the **existing** upload/identify pipeline — no change to identification, cropping, palette extraction, or proof sheet. Use the ochre bg color for this mode.
-
-Falls back to the current file picker if permission is denied or the API is unavailable. "Already left" keeps today's upload flow unchanged.
-
----
-
-## 5. Print page redesign (`visit.$visitId.tsx` print view + `printer-stage.tsx`)
-
-- Teal background, SHARE pixel mark at the top
-- Flat printer housing swapped in; slot geometry re-measured against the new artwork so the receipt still emerges from the slot
-- Feed animation, timing, crumple/grain texture, receipt layout, and export logic all unchanged
-- Two buttons stay: `SAVE TO CAMERA ROLL` and `LOG NEW MUSEUM`, restyled yellow-on-teal per the design
-
----
-
-## 6. Global pixel-icon header
-
-A small `ModeMark` component renders the single relevant pixel icon centered at the top of each screen: `+` on snap, `■` on the artwork entry/proof pages, `⠿` on the print page. Homepage shows all three inside the doodle as in its design.
-
----
+- **Promote it to the primary action** on the "want me to identify it?" card and as an automatic run in snap mode.
+- **A visible thinking state**: while the call is in flight, the photo thumbnail gets a scanning treatment — a thin teal line sweeping across the image plus a rotating set of Curio lines ("looking at the brushwork…", "checking the plaque…", "cross-referencing…"). This makes the ~2–5s wait feel intentional. Pure CSS, no new deps.
+- **A result card with confidence**: the returned fields land in a receipt-styled card headed "I think this is…", each field on its own line, with a confidence badge from the existing `confident` flag ("pretty sure ✦" vs "a guess — check me"). Fields the model returned empty are shown as "you tell me". Accept-all, or tap any single line to correct it before accepting.
+- **Graceful failure**: no red error toast. Curio says it doesn't know the piece and hands over the manual fields, with a "try again ✦" affordance.
+- **Small credit on the receipt draft**: the proof sheet notes identified fields with a subtle ✦ mark, so the user sees where Curio helped.
 
 ## Technical notes
 
-- Receipt component, `dither.ts`, `renderReceiptBlob`, edge function, and all server functions are untouched.
-- Slot alignment constants in `printer-stage.tsx` are currently locked; they will be re-derived for the new flat printer image and the lock comment updated.
-- Camera code is client-only (`useEffect` + `<ClientOnly>` gating) so SSR is unaffected.
-- Each new route gets its own `head()` metadata.
-- Visual verification via a headless browser pass over homepage, each demo, survey steps, and the print page at mobile width.
+- `src/routes/begin.tsx` — copy only.
+- `src/routes/visit.$visitId.tsx` — `PieceForm`'s `step` state goes from `"piece" | "reflection"` to `"capture" | "details" | "reflection"`; auto-open `CameraCapture` on mount when `captureMode === "snap"`; auto-run `runIdentify` after `acceptFile` in snap mode; add the identify-offer card for upload mode. Existing `runIdentify`, abort handling, HEIC conversion, and save pipeline are reused unchanged.
+- New `src/components/identify-panel.tsx` — scanning thumbnail state, rotating status lines, and the result/confidence card, extracted so `PieceForm` stays readable.
+- `src/styles.css` — one keyframe utility for the scan sweep.
+- `src/components/piece-proof.tsx`, `src/components/receipt.tsx` — copy plus the ✦ identified marker.
+- No backend, schema, or edge-function changes; the `identify-artwork` function and its response contract stay as-is.
