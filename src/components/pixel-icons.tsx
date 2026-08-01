@@ -1,11 +1,17 @@
 /**
- * The three Curio pixel marks, traced from the homepage sketch:
- *   SNAP  = thick plus
+ * The three Curio pixel marks, traced 1:1 from the reference artwork:
+ *   SNAP  = plus with a hollow square at the centre
  *   LOG   = solid square
  *   SHARE = 3x3 dot grid
  * Rendered as SVG so they stay crisp at every size.
  */
 type IconProps = { size?: number | string; className?: string; color?: string };
+
+// Measured from the reference: arm thickness / hole = 4.88 of 24, arms 9.65 long.
+const T = 4.88; // bar thickness
+const A = 9.65; // arm length
+const S = (24 - T) / 2; // bar start offset = 9.56
+const E = S + T; // 14.44
 
 export function SnapIcon({ size = 24, className, color = "currentColor" }: IconProps) {
   return (
@@ -17,11 +23,12 @@ export function SnapIcon({ size = 24, className, color = "currentColor" }: IconP
       className={className}
       aria-hidden
     >
-      {/* Plus with a hollow square at the centre */}
-      <rect x="8.5" y="0" width="7" height="8.5" />
-      <rect x="8.5" y="15.5" width="7" height="8.5" />
-      <rect x="0" y="8.5" width="8.5" height="7" />
-      <rect x="15.5" y="8.5" width="8.5" height="7" />
+      <rect x={S} y="0" width={T} height={A} />
+      <rect x={S} y={24 - A} width={T} height={A} />
+      <rect x="0" y={S} width={A} height={T} />
+      <rect x={24 - A} y={S} width={A} height={T} />
+      <rect x={S} y={S} width={T} height={T} fill="none" />
+      <rect x={E - 0.01} y={S} width="0.01" height={T} />
     </svg>
   );
 }
@@ -42,7 +49,8 @@ export function LogIcon({ size = 24, className, color = "currentColor" }: IconPr
 }
 
 export function ShareIcon({ size = 24, className, color = "currentColor" }: IconProps) {
-  const pos = [0, 9, 18];
+  // Reference: dot 4.8, gap 4.8 → positions 0 / 9.6 / 19.2
+  const pos = [0, 9.6, 19.2];
   return (
     <svg
       width={size}
@@ -53,7 +61,7 @@ export function ShareIcon({ size = 24, className, color = "currentColor" }: Icon
       aria-hidden
     >
       {pos.map((y) =>
-        pos.map((x) => <rect key={`${x}-${y}`} x={x} y={y} width="6" height="6" />),
+        pos.map((x) => <rect key={`${x}-${y}`} x={x} y={y} width="4.8" height="4.8" />),
       )}
     </svg>
   );
