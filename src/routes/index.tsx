@@ -19,16 +19,16 @@ import wordmark from "@/assets/curio-wordmark-thin.png.asset.json";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Curio — Print your favorite museum art piece" },
+      { title: "Curio | Your Pocket Companion for Art Museum Visits" },
       {
         name: "description",
         content:
-          "Turn your favorite piece from a museum visit into a thermal receipt keepsake. Snap it, log it, print it.",
+          "Snap the art that stops you in your tracks. Curio uses AI to identify the artwork, capture your personal thoughts, and print a custom receipt for your gallery visit.",
       },
-      { property: "og:title", content: "Curio — Your favorite art piece, on receipt paper" },
+      { property: "og:title", content: "Curio | Your Pocket Companion for Art Museum Visits" },
       {
         property: "og:description",
-        content: "A printable memento of your favorite piece from every museum trip.",
+        content: "Snap the art that stops you in your tracks. Curio uses AI to identify the artwork, capture your personal thoughts, and print a custom receipt for your gallery visit.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
