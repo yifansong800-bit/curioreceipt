@@ -7,6 +7,7 @@ Three changes, in one pass: give Curio a consistent first-person voice, split th
 Today the app speaks as a neutral system ("Step 1 · The piece", "Upload a photo to continue", "Couldn't identify artwork"). Curio should speak as a small companion who is walking the museum with you: first person, warm, brief, a little wry — never cutesy, never long.
 
 Rules to apply everywhere:
+
 - Curio says "I" and "we"; the user is "you". Never "the user", never "we" meaning the company.
 - One short line per moment. No stacked helper text.
 - Lowercase-friendly mono voice, matching the existing type; keep the ALL-CAPS tracking style only for structural labels.
@@ -14,20 +15,22 @@ Rules to apply everywhere:
 
 Copy pass across the flow (illustrative, final wording tuned while implementing):
 
-| Where | Now | Curio |
-| --- | --- | --- |
-| Begin q1 | "First — what should we call you?" | "hi. what should I call you?" |
-| Begin q2 | "Are you still at the museum?" | "are we still in the museum together?" / "yes, I'm in front of it" · "no, I've already left" |
-| Begin q3 | "Which museum are you in?" | "which museum are we in?" |
-| Begin CTA | "begin visit →" | "let's go →" |
-| Capture prompt | "✦ Upload a photo of your favorite piece" | "show me the piece you couldn't walk past" |
-| Identify running | "Identifying…" | "let me look…" / "I think I know this one…" |
-| Identify result | "✦ Is this right?" | "I think this is… did I get it right?" |
-| Identify fail | "couldn't identify — enter manually" | "I don't know this one. tell me about it?" |
-| Reflection step | "How did this piece land with you?" | "so — how did it land with you?" |
-| Note field | placeholder | "what were you thinking, standing there?" |
-| Printing | "opening receipt…" | "warming up the printer…" |
-| Done | save/share labels | "here's ours. keep it." |
+
+| Where            | Now                                       | Curio                                                                                        |
+| ---------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Begin q1         | "First — what should we call you?"        | "hi. what should I call you?"                                                                |
+| Begin q2         | "Are you still at the museum?"            | "are we still in the museum together?" / "yes, I'm in front of it" · "no, I've already left" |
+| Begin q3         | "Which museum are you in?"                | "which museum are we in?"                                                                    |
+| Begin CTA        | "begin visit →"                           | "let's go →"                                                                                 |
+| Capture prompt   | "✦ Upload a photo of your favorite piece" | "show me the piece you couldn't walk past"                                                   |
+| Identify running | "Identifying…"                            | "let me look…" / "I think I know this one…"                                                  |
+| Identify result  | "✦ Is this right?"                        | "I think this is… did I get it right?"                                                       |
+| Identify fail    | "couldn't identify — enter manually"      | "I don't know this one. tell me about it?"                                                   |
+| Reflection step  | "How did this piece land with you?"       | "so — how did it land with you?"                                                             |
+| Note field       | placeholder                               | "what were you thinking, standing there?"                                                    |
+| Printing         | "opening receipt…"                        | "warming up the printer…"                                                                    |
+| Done             | save/share labels                         | "here's ours. keep it."                                                                      |
+
 
 Also update the begin-page and visit-page `head()` titles/descriptions to the same voice.
 
@@ -59,6 +62,7 @@ Right now identification hides behind a grey underlined link. Changes:
 
 ## Technical notes
 
+- Fix the current camera snap mode UI: remove the current sketched out camera frame border. It should look clean on any devices. For the snap button, generate a graphic of an actual shirt button that is aesthetic and creative.
 - `src/routes/begin.tsx` — copy only.
 - `src/routes/visit.$visitId.tsx` — `PieceForm`'s `step` state goes from `"piece" | "reflection"` to `"capture" | "details" | "reflection"`; auto-open `CameraCapture` on mount when `captureMode === "snap"`; auto-run `runIdentify` after `acceptFile` in snap mode; add the identify-offer card for upload mode. Existing `runIdentify`, abort handling, HEIC conversion, and save pipeline are reused unchanged.
 - New `src/components/identify-panel.tsx` — scanning thumbnail state, rotating status lines, and the result/confidence card, extracted so `PieceForm` stays readable.

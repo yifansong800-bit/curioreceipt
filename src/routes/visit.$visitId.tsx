@@ -19,6 +19,8 @@ import { Receipt, type ReceiptArtwork } from "@/components/receipt";
 import { PrinterStage } from "@/components/printer-stage";
 import { ModeMark } from "@/components/pixel-icons";
 import { CameraCapture } from "@/components/camera-capture";
+import { IdentifyResultCard, ScanThumb, ThinkingLines } from "@/components/identify-panel";
+
 import { PieceProof } from "@/components/piece-proof";
 import { PhotoCropper } from "@/components/photo-cropper";
 import { StarRating } from "@/components/star-rating";
@@ -602,8 +604,9 @@ function VisitPage() {
               <ModeMark mode="log" size={22} className="mb-5" />
               <div className="flex items-center justify-between">
                 <Link to="/" className="text-xs uppercase tracking-widest underline">
-                  ← New visit
+                  ← start over
                 </Link>
+
                 <span
                   className="text-xs uppercase tracking-widest"
                   style={{ color: "var(--ink-soft)" }}
@@ -624,8 +627,9 @@ function VisitPage() {
                 {visit.museum}
               </h1>
               <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
-                Curated by {visit.visitor_name}
+                here with {visit.visitor_name}
               </p>
+
               <LocationEditor
                 city={visit.city ?? null}
                 country={visit.country ?? null}
@@ -684,8 +688,9 @@ function VisitPage() {
                 }}
               >
                 {artworks.length === 0
-                  ? "Add an artwork first"
-                  : "Ready to print? →"}
+                  ? "show me a piece first"
+                  : "ready? let's print it →"}
+
               </button>
             </motion.div>
           ) : (
@@ -703,7 +708,7 @@ function VisitPage() {
                   className="text-xs uppercase tracking-widest underline"
                   style={{ color: "var(--ink-soft)" }}
                 >
-                  ← Edit entries
+                  ← let me fix something
                 </button>
                 {stage === "printed" ? (
                   <button
@@ -811,11 +816,10 @@ function VisitPage() {
           style={{ backgroundColor: "var(--paper)", color: "var(--ink)", border: "1px solid var(--ink)" }}
         >
           <div className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--ink-soft)" }}>
-            Missing linger time
+            one thing
           </div>
           <p className="text-sm leading-relaxed">
-            You haven't logged linger time for {confirmMissing}{" "}
-            {confirmMissing === 1 ? "artwork" : "artworks"}. Print receipt anyway?
+            you didn't tell me how long you lingered. want me to print it anyway?
           </p>
           <div className="mt-6 flex gap-2">
             <button
@@ -824,7 +828,7 @@ function VisitPage() {
               className="flex-1 uppercase tracking-widest text-xs py-2 border"
               style={{ borderColor: "var(--ink)", color: "var(--ink)", backgroundColor: "transparent" }}
             >
-              Cancel
+              let me add it
             </button>
             <button
               type="button"
@@ -832,8 +836,9 @@ function VisitPage() {
               className="flex-1 uppercase tracking-widest text-xs py-2 border"
               style={{ borderColor: "var(--ink)", backgroundColor: "var(--teal)", color: "var(--yellow)", fontWeight: 700 }}
             >
-              Print anyway
+              print it
             </button>
+
           </div>
         </div>
       </div>
@@ -967,9 +972,11 @@ function PieceForm({
   onSave: (payload: PiecePayload) => Promise<void> | void;
 }) {
   // Identification runs through the `identify-artwork` Supabase Edge Function
-  // (Vision reverse-image → scrape → DeepSeek extraction).
+  // (Vision reverse-image → Gemini reasoning).
 
-  const [step, setStep] = useState<"piece" | "reflection">("piece");
+  // Nothing but the photo prompt shows first — details only appear once
+  // Curio has something to look at.
+  const [step, setStep] = useState<"capture" | "details" | "reflection">("capture");
 
   // Step 1: the piece
   const [file, setFile] = useState<File | null>(null);
@@ -981,15 +988,19 @@ function PieceForm({
   const [medium, setMedium] = useState("");
   const [identifying, setIdentifying] = useState(false);
   const [identifyFailed, setIdentifyFailed] = useState(false);
+  // null = not asked yet (upload mode shows the offer card)
+  const [identifyChoice, setIdentifyChoice] = useState<boolean | null>(null);
   const [suggestion, setSuggestion] = useState<{
     title: string;
     artist: string;
     year: string;
     medium: string;
+    confident: boolean;
   } | null>(null);
   const identifyAbortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(captureMode === "snap");
+
 
   // Step 2: the reflection
   const [lingerMin, setLingerMin] = useState<string>("");
@@ -1050,7 +1061,7 @@ function PieceForm({
       if (abort.signal.aborted) return;
       if (invokeError) {
         console.error("[curio] identify-artwork invoke error", invokeError);
-        toast.error("Couldn't identify artwork", { description: invokeError.message ?? "Please enter details manually." });
+        toast("I couldn't get a look at that one", { description: "tell me about it instead?" });
         setIdentifyFailed(true);
         return;
       }
@@ -1069,23 +1080,28 @@ function PieceForm({
       const hasAnyField = Boolean(rTitle || rArtist || rYear || rMedium);
       if (!hasAnyField) {
         setIdentifyFailed(true);
-        toast("Couldn't identify this piece", { description: "Enter the details manually." });
         return;
       }
       // Surface as a suggestion the user can accept or dismiss.
-      setSuggestion({ title: rTitle, artist: rArtist, year: rYear, medium: rMedium });
-      setIdentifyFailed(!result?.confident);
-      if (result?.confident) toast.success("Found a possible match");
+      setSuggestion({
+        title: rTitle,
+        artist: rArtist,
+        year: rYear,
+        medium: rMedium,
+        confident: Boolean(result?.confident),
+      });
+      setIdentifyFailed(false);
     } catch (err) {
       if (!abort.signal.aborted) {
         console.error("[curio] identify failed", err);
-        toast.error("Identification failed", { description: err instanceof Error ? err.message : "Enter details manually." });
+        toast("I couldn't get a look at that one", { description: "tell me about it instead?" });
         setIdentifyFailed(true);
       }
     } finally {
       if (identifyAbortRef.current === abort) identifyAbortRef.current = null;
       setIdentifying(false);
     }
+
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -1136,7 +1152,32 @@ function PieceForm({
     setMedium("");
     setIdentifyFailed(false);
     setSuggestion(null);
-    // Identification is now opt-in — user clicks "Identify for me" if needed.
+    setStep("details");
+
+    // Snapping means standing in front of the work — Curio looks straight
+    // away. Uploads get asked first (unless already answered this session).
+    let remembered: boolean | null = identifyChoice;
+    if (remembered === null) {
+      try {
+        const stored = sessionStorage.getItem("curio:identify");
+        if (stored === "yes") remembered = true;
+        else if (stored === "no") remembered = false;
+      } catch {}
+    }
+    if (captureMode === "snap" || remembered === true) {
+      setIdentifyChoice(true);
+      void runIdentify(ready);
+    } else {
+      setIdentifyChoice(remembered);
+    }
+  }
+
+  function chooseIdentify(yes: boolean) {
+    setIdentifyChoice(yes);
+    try {
+      sessionStorage.setItem("curio:identify", yes ? "yes" : "no");
+    } catch {}
+    if (yes && file) void runIdentify(file);
   }
 
   function acceptSuggestion() {
@@ -1147,6 +1188,7 @@ function PieceForm({
     if (suggestion.medium && !medium.trim()) setMedium(suggestion.medium);
     setSuggestion(null);
   }
+
 
   function toggleEmotion(e: string) {
     setEmotions((prev) => (prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e]));
@@ -1217,8 +1259,12 @@ function PieceForm({
         className="text-xs uppercase tracking-widest flex items-center justify-between"
         style={{ color: "var(--ink-soft)" }}
       >
-        <span>{step === "piece" ? "Step 1 · The piece" : "Step 2 · Your reflection"}</span>
-        <span>{step === "piece" ? "○ ●" : "● ○"}</span>
+        <span>
+          {step === "capture" ? "PHOTO" : step === "details" ? "DETAILS" : "REFLECTION"}
+        </span>
+        <span>
+          {step === "capture" ? "● ○ ○" : step === "details" ? "○ ● ○" : "○ ○ ●"}
+        </span>
       </div>
 
       {cameraOpen ? (
@@ -1231,126 +1277,130 @@ function PieceForm({
         />
       ) : null}
 
-      {step === "piece" ? (
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.heic,.heif,image/heic,image/heif"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {step === "capture" ? (
         <>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,.heic,.heif,image/heic,image/heif"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-
-          {file && preview ? (
-            <div
-              className="flex items-center gap-3 border p-3"
-              style={{ borderColor: "var(--border)" }}
-            >
-              <img src={preview} alt="" className="w-14 h-14 object-cover" />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs uppercase tracking-widest" style={{ color: "var(--ink-soft)" }}>
-                  {identifying ? "Identifying piece…" : "✓ Photo uploaded"}
-                </div>
-                {identifyFailed && !suggestion ? (
-                  <div className="text-xs italic mt-1" style={{ color: "var(--ink-soft)" }}>
-                    couldn't identify — enter manually
-                  </div>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  captureMode === "snap" ? setCameraOpen(true) : fileInputRef.current?.click()
-                }
-                className="text-xs uppercase tracking-widest underline"
-              >
-                {captureMode === "snap" ? "retake" : "change"}
-              </button>
+          <p className="text-sm" style={{ fontFamily: "var(--font-mono)" }}>
+            show me the piece you couldn't walk past.
+          </p>
+          <button
+            type="button"
+            onClick={() =>
+              captureMode === "snap" ? setCameraOpen(true) : fileInputRef.current?.click()
+            }
+            disabled={converting}
+            className="w-full block border-2 border-dashed p-8 text-center disabled:opacity-60"
+            style={{
+              borderColor: "var(--border)",
+              WebkitTapHighlightColor: "transparent",
+              touchAction: "manipulation",
+            }}
+          >
+            <div className="text-sm" style={{ color: "var(--ink)" }}>
+              {converting
+                ? "reading your photo…"
+                : captureMode === "snap"
+                  ? "✦ open the camera"
+                  : "✦ choose a photo"}
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() =>
-                captureMode === "snap" ? setCameraOpen(true) : fileInputRef.current?.click()
-              }
-              disabled={converting}
-              className="w-full block border-2 border-dashed p-6 text-center disabled:opacity-60"
-              style={{
-                borderColor: "var(--border)",
-                WebkitTapHighlightColor: "transparent",
-                touchAction: "manipulation",
-              }}
-            >
-              <div className="text-sm" style={{ color: "var(--ink)" }}>
-                {converting
-                  ? "Converting photo…"
-                  : captureMode === "snap"
-                    ? "✦ Snap the piece in front of you"
-                    : "✦ Upload a photo of your favorite piece"}
-              </div>
-              <div className="text-xs mt-2" style={{ color: "var(--ink-soft)" }}>
-                Fill in the details yourself, or ask us to try identifying it.
-              </div>
-            </button>
-          )}
-
-          {file ? (
+          </button>
+          {captureMode === "snap" ? (
             <div className="text-center">
               <button
                 type="button"
-                onClick={() => file && runIdentify(file)}
-                disabled={identifying}
-                className="text-xs underline disabled:opacity-50"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs underline"
                 style={{ color: "var(--ink-soft)" }}
               >
-                {identifying
-                  ? "Identifying…"
-                  : suggestion
-                    ? "✦ Try identifying again"
-                    : "Can't remember the details? ✦ Identify for me"}
+                or pick one from your camera roll
+              </button>
+            </div>
+          ) : null}
+        </>
+      ) : step === "details" ? (
+        <>
+          <div className="flex items-start gap-3">
+            {preview ? <ScanThumb src={preview} scanning={identifying} /> : null}
+            <div className="flex-1 min-w-0 text-sm" style={{ fontFamily: "var(--font-mono)" }}>
+              {identifying ? (
+                <ThinkingLines />
+              ) : suggestion ? (
+                <span>did I get it right?</span>
+              ) : identifyFailed ? (
+                <span>I don't know this one. tell me about it?</span>
+              ) : identifyChoice === false ? (
+                <span>all yours — what am I looking at?</span>
+              ) : (
+                <span>got it. want me to try to identify it?</span>
+              )}
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    captureMode === "snap" ? setCameraOpen(true) : fileInputRef.current?.click()
+                  }
+                  className="text-xs uppercase tracking-widest underline"
+                  style={{ color: "var(--ink-soft)" }}
+                >
+                  {captureMode === "snap" ? "retake" : "change photo"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {!identifying && !suggestion && identifyChoice === null ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => chooseIdentify(true)}
+                className="flex-1 text-xs uppercase tracking-widest py-3 border"
+                style={{
+                  borderColor: "var(--ink)",
+                  backgroundColor: "var(--teal)",
+                  color: "var(--yellow)",
+                  fontWeight: 700,
+                  touchAction: "manipulation",
+                }}
+              >
+                ✦ yes, take a look
+              </button>
+              <button
+                type="button"
+                onClick={() => chooseIdentify(false)}
+                className="flex-1 text-xs uppercase tracking-widest py-3 border"
+                style={{ borderColor: "var(--ink)", touchAction: "manipulation" }}
+              >
+                I'll type it myself
               </button>
             </div>
           ) : null}
 
           {suggestion ? (
-            <div
-              className="border p-3 space-y-2"
-              style={{ borderColor: "var(--ink)", backgroundColor: "var(--paper)" }}
-            >
-              <div className="text-xs uppercase tracking-widest" style={{ color: "var(--ink-soft)" }}>
-                ✦ Is this right?
-              </div>
-              <div className="text-sm space-y-0.5">
-                <div>
-                  <span className="italic">{suggestion.title || "—"}</span>
-                  {suggestion.artist ? ` — ${suggestion.artist}` : ""}
-                </div>
-                <div className="text-xs" style={{ color: "var(--ink-soft)" }}>
-                  {[suggestion.year, suggestion.medium].filter(Boolean).join(" · ") || "no year/medium found"}
-                </div>
-              </div>
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={acceptSuggestion}
-                  className="flex-1 text-xs uppercase tracking-widest py-2 border"
-                  style={{
-                    borderColor: "var(--ink)",
-                    backgroundColor: "var(--ink)",
-                    color: "var(--paper)",
-                  }}
-                >
-                  Yes, use these
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSuggestion(null)}
-                  className="flex-1 text-xs uppercase tracking-widest py-2 border"
-                  style={{ borderColor: "var(--ink)", color: "var(--ink)" }}
-                >
-                  No, I'll type it
-                </button>
-              </div>
+            <IdentifyResultCard
+              result={suggestion}
+              onAccept={acceptSuggestion}
+              onDismiss={() => setSuggestion(null)}
+              onRetry={() => file && runIdentify(file)}
+            />
+          ) : null}
+
+          {!identifying && !suggestion && identifyChoice !== null ? (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => file && runIdentify(file)}
+                className="text-xs underline"
+                style={{ color: "var(--ink-soft)" }}
+              >
+                ✦ {identifyFailed ? "take another look" : "let me identify it"}
+              </button>
             </div>
           ) : null}
 
@@ -1397,20 +1447,20 @@ function PieceForm({
               touchAction: "manipulation",
             }}
           >
-            {!file
-              ? "Upload a photo to continue"
-              : identifying
-                ? "Identifying…"
-                : !title.trim()
-                  ? "Add a title to continue"
-                  : "Next → Your reflection"}
+            {identifying
+              ? "one second…"
+              : !title.trim()
+                ? "give it a title first"
+                : "next → how it landed"}
           </button>
         </>
       ) : (
+
         <>
-          <div className="text-xs" style={{ color: "var(--ink-soft)", fontStyle: "italic" }}>
-            How did this piece land with you?
+          <div className="text-sm" style={{ fontFamily: "var(--font-mono)" }}>
+            so — how did it land with you?
           </div>
+
 
           <div>
             <div
@@ -1527,7 +1577,7 @@ function PieceForm({
             <input
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="one line on how it felt"
+              placeholder="what were you thinking, standing there?"
               maxLength={NOTE_MAX}
               className="w-full bg-transparent border-b py-1 text-sm outline-none"
               style={{ borderColor: "var(--ink)", fontFamily: "var(--font-mono)" }}
@@ -1540,12 +1590,12 @@ function PieceForm({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setStep("piece")}
+              onClick={() => setStep("details")}
               disabled={saving}
               className="uppercase tracking-widest text-sm py-3 px-4 border disabled:opacity-40"
               style={{ borderColor: "var(--ink)" }}
             >
-              ← Back
+              ← back
             </button>
             <button
               type="button"
@@ -1561,9 +1611,10 @@ function PieceForm({
                 touchAction: "manipulation",
               }}
             >
-              {saving ? "Saving…" : "Save piece"}
+              {saving ? "keeping it…" : "that's the one"}
             </button>
           </div>
+
         </>
       )}
     </div>

@@ -104,13 +104,17 @@ export function CameraCapture({
       </button>
 
       <p className="mb-5 text-center text-[11px] tracking-[0.2em]">
-        SNAP THE ART IN FRONT OF YOU
+        SHOW ME THE PIECE YOU COULDN'T WALK PAST
       </p>
 
       <div className="relative w-full" style={{ maxWidth: 320 }}>
         <div
           className="relative overflow-hidden"
-          style={{ aspectRatio: "3 / 4", backgroundColor: "#141414" }}
+          style={{
+            aspectRatio: "3 / 4",
+            backgroundColor: "#141414",
+            border: "1.5px solid #141414",
+          }}
         >
           {shot ? (
             <img src={shot.url} alt="Captured artwork" className="h-full w-full object-cover" />
@@ -125,24 +129,8 @@ export function CameraCapture({
           )}
           {flash ? <div className="absolute inset-0" style={{ backgroundColor: "#fff" }} /> : null}
         </div>
-        <svg
-          className="pointer-events-none absolute"
-          style={{ inset: "-9px" }}
-          viewBox="0 0 100 133"
-          preserveAspectRatio="none"
-          aria-hidden
-        >
-          <path
-            d="M4 6 C 26 3, 62 5, 96 3 C 97 38, 95 86, 97 129 C 66 127, 34 130, 3 128 C 5 90, 2 46, 4 6 Z"
-            fill="none"
-            stroke="#141414"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
       </div>
+
 
       {error ? (
         <p className="mt-6 max-w-xs text-center text-xs leading-relaxed">{error}</p>
@@ -157,7 +145,7 @@ export function CameraCapture({
             className="inline-flex items-center gap-2 border px-4 py-2 text-xs uppercase tracking-widest"
             style={{ borderColor: "#141414", touchAction: "manipulation" }}
           >
-            <RotateCcw className="h-3.5 w-3.5" /> retake
+            <RotateCcw className="h-3.5 w-3.5" /> let me retry
           </button>
           <button
             type="button"
@@ -173,7 +161,7 @@ export function CameraCapture({
               touchAction: "manipulation",
             }}
           >
-            use this photo →
+            this is the one →
           </button>
         </div>
       ) : (
@@ -182,16 +170,41 @@ export function CameraCapture({
           onClick={capture}
           disabled={!ready}
           aria-label="Take photo"
-          className="mt-7 rounded-full transition-transform active:scale-95 disabled:opacity-40"
-          style={{
-            width: 64,
-            height: 64,
-            border: "3px solid #141414",
-            backgroundColor: "transparent",
-            touchAction: "manipulation",
-          }}
-        />
+          className="mt-7 transition-transform active:scale-95 disabled:opacity-40"
+          style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
+        >
+          <ShirtButton />
+        </button>
       )}
     </div>
   );
 }
+
+/**
+ * The shutter, drawn as a stitched shirt button — Curio is a paper-and-thread
+ * companion, so the one control on this screen should feel sewn on.
+ */
+function ShirtButton({ size = 72 }: { size?: number }) {
+  const holes: [number, number][] = [
+    [42, 42],
+    [58, 42],
+    [42, 58],
+    [58, 58],
+  ];
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden>
+      <circle cx="50" cy="50" r="46" fill="var(--paper)" stroke="#141414" strokeWidth="2.5" />
+      <circle cx="50" cy="50" r="35" fill="none" stroke="#141414" strokeWidth="1" opacity="0.45" />
+      <path
+        d="M42 42 L58 58 M58 42 L42 58"
+        stroke="#141414"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      {holes.map(([cx, cy]) => (
+        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="4.6" fill="var(--ochre)" stroke="#141414" strokeWidth="1.6" />
+      ))}
+    </svg>
+  );
+}
+

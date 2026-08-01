@@ -204,3 +204,15 @@
 }
 .curio-card-in { animation: curio-card-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .curio-overlay-in { animation: curio-overlay-in 180ms ease-out both; }
+
+/* Identification: a thin line sweeping the photo while Curio looks. */
+@keyframes curio-scan {
+  0% { top: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+.curio-scan { animation: curio-scan 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .curio-scan { animation: none; top: 50%; }
+}

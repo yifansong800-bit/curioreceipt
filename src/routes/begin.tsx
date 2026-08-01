@@ -13,20 +13,21 @@ import { Footer } from "@/components/Footer";
 export const Route = createFileRoute("/begin")({
   head: () => ({
     meta: [
-      { title: "Begin your visit — Curio" },
+      { title: "Let's begin — Curio" },
       {
         name: "description",
-        content: "Tell Curio who you are and which museum you're in, then snap or upload your favorite piece.",
+        content: "Tell me your name and which museum we're in, and I'll get the printer warm.",
       },
-      { property: "og:title", content: "Begin your visit — Curio" },
+      { property: "og:title", content: "Let's begin — Curio" },
       {
         property: "og:description",
-        content: "Three quick questions, then print your favorite art piece as a thermal receipt.",
+        content: "Two questions from me, one photo from you, one thermal receipt for the piece you couldn't walk past.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
   }),
+
   component: BeginPage,
 });
 
@@ -127,7 +128,7 @@ function BeginPage() {
         {step === "name" ? (
           <div className="space-y-8">
             <h1 className="text-xl sm:text-2xl" style={{ fontFamily: "var(--font-mono)" }}>
-              First — what should we call you?
+              hi. what should I call you?
             </h1>
             <Field
               label="YOUR NAME"
@@ -148,18 +149,18 @@ function BeginPage() {
         {step === "where" ? (
           <div className="space-y-8">
             <h1 className="text-xl sm:text-2xl" style={{ fontFamily: "var(--font-mono)" }}>
-              Are you still at the museum?
+              are we still in the museum together?
             </h1>
             <div className="grid gap-3">
               <ChoiceButton
-                label="Yes — I'm standing in front of it"
+                label="yes — I'm standing in front of it"
                 onClick={() => {
                   setStillHere(true);
                   setStep("museum");
                 }}
               />
               <ChoiceButton
-                label="No — I've already left"
+                label="no — I've already left"
                 onClick={() => {
                   setStillHere(false);
                   setStep("museum");
@@ -172,7 +173,7 @@ function BeginPage() {
         {step === "museum" ? (
           <div className="space-y-8">
             <h1 className="text-xl sm:text-2xl" style={{ fontFamily: "var(--font-mono)" }}>
-              Which museum {stillHere ? "are you in" : "was it"}?
+              {stillHere ? "which museum are we in?" : "where were we?"}
             </h1>
             <MuseumAutocomplete
               value={museum}
@@ -190,15 +191,16 @@ function BeginPage() {
             <PrimaryButton
               disabled={!museum.trim() || opening}
               onClick={() => mut.mutate()}
-              label={opening ? "opening receipt…" : "begin visit →"}
+              label={opening ? "warming up the printer…" : "let's go →"}
             />
             {mut.isError ? (
               <p className="text-sm" style={{ color: "var(--destructive)" }}>
-                Couldn't start visit. Try again.
+                that didn't take — try me again?
               </p>
             ) : null}
           </div>
         ) : null}
+
       </div>
 
       <Footer className="absolute bottom-0" />
