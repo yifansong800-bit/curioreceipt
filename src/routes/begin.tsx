@@ -90,10 +90,14 @@ function BeginPage() {
   const opening = mut.isPending || mut.isSuccess;
 
   function back() {
-    if (step === "museum") setStep("where");
-    else if (step === "where") setStep("name");
+    if (step === "museum") go("where", "back");
+    else if (step === "where") go("name", "back");
     else navigate({ to: "/" });
   }
+
+  const stepIndex = STEPS.indexOf(step);
+  const anim = dir === "fwd" ? "curio-step-fwd" : "curio-step-back";
+
 
   return (
     <div
