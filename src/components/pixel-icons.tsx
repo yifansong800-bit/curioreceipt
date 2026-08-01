@@ -27,8 +27,7 @@ export function SnapIcon({ size = 24, className, color = "currentColor" }: IconP
       <rect x={S} y={24 - A} width={T} height={A} />
       <rect x="0" y={S} width={A} height={T} />
       <rect x={24 - A} y={S} width={A} height={T} />
-      <rect x={S} y={S} width={T} height={T} fill="none" />
-      <rect x={E - 0.01} y={S} width="0.01" height={T} />
+
     </svg>
   );
 }
