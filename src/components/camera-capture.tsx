@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X, RotateCcw } from "lucide-react";
-import star from "@/assets/curio-star.png.asset.json";
+import shutter from "@/assets/curio-button.png.asset.json";
+import { SnapIcon } from "@/components/pixel-icons";
 
 /**
  * In-page camera for "still at the museum" mode. Streams the rear camera
@@ -21,6 +22,19 @@ export function CameraCapture({
   const [shot, setShot] = useState<{ url: string; file: File } | null>(null);
   // Bumped on retry so the stream is re-acquired if the track was released.
   const [session, setSession] = useState(0);
+  const [zoomRange, setZoomRange] = useState<{ min: number; max: number; step: number } | null>(
+    null,
+  );
+  const [zoom, setZoom] = useState(1);
+
+  function applyZoom(value: number) {
+    setZoom(value);
+    const track = streamRef.current?.getVideoTracks()[0];
+    void track
+      ?.applyConstraints({ advanced: [{ zoom: value }] } as unknown as MediaTrackConstraints)
+      .catch(() => {});
+  }
+
 
   const stop = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -44,6 +58,15 @@ export function CameraCapture({
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play().catch(() => {});
+        }
+        // Optical/digital zoom, where the device exposes it.
+        const track = stream.getVideoTracks()[0];
+        const caps = (track?.getCapabilities?.() ?? {}) as { zoom?: { min: number; max: number; step?: number } };
+        if (caps.zoom) {
+          setZoomRange({ min: caps.zoom.min, max: caps.zoom.max, step: caps.zoom.step || 0.1 });
+          setZoom(caps.zoom.min);
+        } else {
+          setZoomRange(null);
         }
         setReady(true);
         setError(null);
@@ -135,9 +158,9 @@ export function CameraCapture({
         <X className="h-5 w-5" />
       </button>
 
-      <p className="mb-5 text-center text-[11px] tracking-[0.2em]">
-        SHOW ME THE PIECE YOU COULDN'T WALK PAST
-      </p>
+      <div className="mb-5 flex justify-center">
+        <SnapIcon size={30} color="#141414" />
+      </div>
 
       <div className="relative w-full" style={{ maxWidth: 320 }}>
         <div
@@ -153,7 +176,10 @@ export function CameraCapture({
             playsInline
             muted
             autoPlay
-            className="h-full w-full object-cover"
+            controls={false}
+            disablePictureInPicture
+            controlsList="nodownload noplaybackrate noremoteplayback"
+            className="no-media-controls h-full w-full object-cover"
           />
           {shot ? (
             <img
@@ -164,7 +190,26 @@ export function CameraCapture({
           ) : null}
           {flash ? <div className="absolute inset-0" style={{ backgroundColor: "#fff" }} /> : null}
         </div>
+
+        {!shot && zoomRange && zoomRange.max > zoomRange.min ? (
+          <div className="mt-3 flex items-center gap-2 text-[10px] tracking-[0.15em]">
+            <span>1×</span>
+            <input
+              type="range"
+              aria-label="Zoom"
+              min={zoomRange.min}
+              max={zoomRange.max}
+              step={zoomRange.step}
+              value={zoom}
+              onChange={(e) => applyZoom(Number(e.target.value))}
+              className="flex-1"
+              style={{ accentColor: "#141414", touchAction: "manipulation" }}
+            />
+            <span>{zoomRange.max}×</span>
+          </div>
+        ) : null}
       </div>
+
 
       {error ? (
         <p className="mt-6 max-w-xs text-center text-xs leading-relaxed">{error}</p>
@@ -204,7 +249,7 @@ export function CameraCapture({
           className="mt-7 transition-transform active:scale-95 disabled:opacity-40"
           style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
         >
-          <img src={star.url} alt="" aria-hidden width={78} height={78} draggable={false} />
+          <img src={shutter.url} alt="" aria-hidden width={82} height={82} draggable={false} />
         </button>
       )}
     </div>
