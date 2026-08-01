@@ -33,16 +33,24 @@ export const Route = createFileRoute("/begin")({
 
 type Step = "name" | "where" | "museum";
 
+const STEPS: Step[] = ["name", "where", "museum"];
+
 function BeginPage() {
   const navigate = useNavigate();
   const createFn = useServerFn(createVisit);
   const suggestFn = useServerFn(suggestMuseums);
 
   const [step, setStep] = useState<Step>("name");
+  const [dir, setDir] = useState<"fwd" | "back">("fwd");
   const [visitor, setVisitor] = useState("");
   const [stillHere, setStillHere] = useState<boolean | null>(null);
   const [museum, setMuseum] = useState("");
   const [picked, setPicked] = useState<Suggestion | null>(null);
+
+  function go(next: Step, direction: "fwd" | "back" = "fwd") {
+    setDir(direction);
+    setStep(next);
+  }
 
   useEffect(() => {
     try {
@@ -50,6 +58,7 @@ function BeginPage() {
       if (stored && stored.trim()) setVisitor(stored);
     } catch {}
   }, []);
+
 
   const mut = useMutation({
     mutationFn: async () => {
