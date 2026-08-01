@@ -71,18 +71,15 @@ export function Receipt({
         hyphens: "auto",
       }}
     >
-      <div
-        style={{
-          fontFamily: "var(--font-display)",
-          fontSize: 54,
-          lineHeight: 1,
-          textAlign: "center",
-          letterSpacing: 2,
-          fontWeight: 700,
-        }}
-      >
-        CURIO
+      <div style={{ textAlign: "center" }}>
+        <img
+          src={wordmark.url}
+          alt="CURIO"
+          crossOrigin="anonymous"
+          style={{ display: "inline-block", width: 200, height: "auto" }}
+        />
       </div>
+
       <div style={{ textAlign: "center", marginTop: 14, letterSpacing: 1 }}>
         ****** www.curioreceipt.com ******
       </div>
