@@ -20,6 +20,8 @@ export function CurioFigure({ className = "" }: { className?: string }) {
         alt=""
         aria-hidden
         className="curio-wink absolute inset-0 h-full w-full object-contain"
+        /* Only the winking eye is revealed, so the open eye and mouth stay put. */
+        style={{ clipPath: "inset(21% 34% 55% 42%)" }}
         draggable={false}
       />
       <img
