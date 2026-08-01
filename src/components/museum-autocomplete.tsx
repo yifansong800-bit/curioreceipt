@@ -9,6 +9,7 @@ export function Field({
   placeholder,
   maxLength,
   autoFocus,
+  onEnter,
 }: {
   label: string;
   value: string;
@@ -16,6 +17,7 @@ export function Field({
   placeholder?: string;
   maxLength?: number;
   autoFocus?: boolean;
+  onEnter?: () => void;
 }) {
   return (
     <label className="block">
@@ -25,10 +27,16 @@ export function Field({
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && onEnter) {
+            e.preventDefault();
+            onEnter();
+          }
+        }}
         placeholder={placeholder}
         maxLength={maxLength}
         autoFocus={autoFocus}
-        className="w-full bg-transparent border-b px-0 py-2 text-sm sm:text-base outline-none focus:border-b-2"
+        className="w-full bg-transparent border-b px-0 py-2 text-sm sm:text-base outline-none transition-colors focus:border-b-2"
         style={{
           borderColor: "var(--ink)",
           fontFamily: "var(--font-mono)",

@@ -205,6 +205,26 @@
 .curio-card-in { animation: curio-card-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .curio-overlay-in { animation: curio-overlay-in 180ms ease-out both; }
 
+/* Survey step transitions: content slides in from the direction of travel. */
+@keyframes curio-step-fwd {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes curio-step-back {
+  from { opacity: 0; transform: translateX(-18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.curio-step-fwd { animation: curio-step-fwd 280ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.curio-step-back { animation: curio-step-back 280ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.curio-stagger > * { animation: curio-card-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.curio-stagger > *:nth-child(1) { animation-delay: 40ms; }
+.curio-stagger > *:nth-child(2) { animation-delay: 110ms; }
+.curio-stagger > *:nth-child(3) { animation-delay: 180ms; }
+.curio-stagger > *:nth-child(4) { animation-delay: 240ms; }
+@media (prefers-reduced-motion: reduce) {
+  .curio-step-fwd, .curio-step-back, .curio-stagger > * { animation: none; }
+}
+
 /* Identification: a thin line sweeping the photo while Curio looks. */
 @keyframes curio-scan {
   0% { top: 0%; opacity: 0; }
