@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { ditherImage, getCachedDither } from "@/lib/dither";
 import { formatLingerShort, formatReceiptDate } from "@/lib/format";
+import wordmark from "@/assets/curio-wordmark-thin.png.asset.json";
+
 
 export type ReceiptArtwork = {
   id: string;
@@ -71,18 +73,15 @@ export function Receipt({
         hyphens: "auto",
       }}
     >
-      <div
-        style={{
-          fontFamily: "var(--font-display)",
-          fontSize: 54,
-          lineHeight: 1,
-          textAlign: "center",
-          letterSpacing: 2,
-          fontWeight: 700,
-        }}
-      >
-        CURIO
+      <div style={{ textAlign: "center" }}>
+        <img
+          src={wordmark.url}
+          alt="CURIO"
+          crossOrigin="anonymous"
+          style={{ display: "inline-block", width: 200, height: "auto" }}
+        />
       </div>
+
       <div style={{ textAlign: "center", marginTop: 14, letterSpacing: 1 }}>
         ****** www.curioreceipt.com ******
       </div>
