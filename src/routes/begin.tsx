@@ -131,7 +131,7 @@ function BeginPage() {
       </div>
 
       <div className="w-full max-w-md">
-      <div className="w-full max-w-md">
+
         <div className="mb-6">
           <div
             className="text-xs uppercase tracking-[0.25em] mb-2 text-center"
