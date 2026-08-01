@@ -1056,7 +1056,7 @@ function PieceForm({
       if (abort.signal.aborted) return;
       if (invokeError) {
         console.error("[curio] identify-artwork invoke error", invokeError);
-        toast.error("Couldn't identify artwork", { description: invokeError.message ?? "Please enter details manually." });
+        toast("I couldn't get a look at that one", { description: "tell me about it instead?" });
         setIdentifyFailed(true);
         return;
       }
@@ -1075,23 +1075,28 @@ function PieceForm({
       const hasAnyField = Boolean(rTitle || rArtist || rYear || rMedium);
       if (!hasAnyField) {
         setIdentifyFailed(true);
-        toast("Couldn't identify this piece", { description: "Enter the details manually." });
         return;
       }
       // Surface as a suggestion the user can accept or dismiss.
-      setSuggestion({ title: rTitle, artist: rArtist, year: rYear, medium: rMedium });
-      setIdentifyFailed(!result?.confident);
-      if (result?.confident) toast.success("Found a possible match");
+      setSuggestion({
+        title: rTitle,
+        artist: rArtist,
+        year: rYear,
+        medium: rMedium,
+        confident: Boolean(result?.confident),
+      });
+      setIdentifyFailed(false);
     } catch (err) {
       if (!abort.signal.aborted) {
         console.error("[curio] identify failed", err);
-        toast.error("Identification failed", { description: err instanceof Error ? err.message : "Enter details manually." });
+        toast("I couldn't get a look at that one", { description: "tell me about it instead?" });
         setIdentifyFailed(true);
       }
     } finally {
       if (identifyAbortRef.current === abort) identifyAbortRef.current = null;
       setIdentifying(false);
     }
+
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
