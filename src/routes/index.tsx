@@ -9,10 +9,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Footer } from "@/components/Footer";
-import { CurioDoodle } from "@/components/curio-doodle";
+import { CurioFigure } from "@/components/curio-figure";
 import { DemoPreview } from "@/components/demo-previews";
+import { SnapIcon, LogIcon, ShareIcon } from "@/components/pixel-icons";
 import type { CurioMode } from "@/components/pixel-icons";
-import wordmark from "@/assets/curio-wordmark.png.asset.json";
+import wordmark from "@/assets/curio-wordmark-thin.png.asset.json";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
