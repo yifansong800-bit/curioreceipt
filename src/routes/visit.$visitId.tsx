@@ -1147,7 +1147,32 @@ function PieceForm({
     setMedium("");
     setIdentifyFailed(false);
     setSuggestion(null);
-    // Identification is now opt-in — user clicks "Identify for me" if needed.
+    setStep("details");
+
+    // Snapping means standing in front of the work — Curio looks straight
+    // away. Uploads get asked first (unless already answered this session).
+    let remembered: boolean | null = identifyChoice;
+    if (remembered === null) {
+      try {
+        const stored = sessionStorage.getItem("curio:identify");
+        if (stored === "yes") remembered = true;
+        else if (stored === "no") remembered = false;
+      } catch {}
+    }
+    if (captureMode === "snap" || remembered === true) {
+      setIdentifyChoice(true);
+      void runIdentify(ready);
+    } else {
+      setIdentifyChoice(remembered);
+    }
+  }
+
+  function chooseIdentify(yes: boolean) {
+    setIdentifyChoice(yes);
+    try {
+      sessionStorage.setItem("curio:identify", yes ? "yes" : "no");
+    } catch {}
+    if (yes && file) void runIdentify(file);
   }
 
   function acceptSuggestion() {
@@ -1158,6 +1183,7 @@ function PieceForm({
     if (suggestion.medium && !medium.trim()) setMedium(suggestion.medium);
     setSuggestion(null);
   }
+
 
   function toggleEmotion(e: string) {
     setEmotions((prev) => (prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e]));
