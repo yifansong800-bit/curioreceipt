@@ -525,7 +525,10 @@ function VisitPage() {
       const nav = navigator as Navigator & {
         canShare?: (data: ShareData) => boolean;
       };
-      if (nav.canShare?.({ files: [file] })) {
+      // Only hand off to the OS share sheet on touch devices (where "save to
+      // photos" lives). On desktop we always download the file directly.
+      const isTouch = window.matchMedia?.("(pointer: coarse)").matches === true;
+      if (isTouch && nav.canShare?.({ files: [file] })) {
         try {
           await nav.share({
             files: [file],
@@ -538,14 +541,17 @@ function VisitPage() {
           if ((err as DOMException)?.name === "AbortError") return;
         }
       }
-      // Fallback for desktop / unsupported devices: trigger a download
+      // Desktop / unsupported devices: trigger a real download.
       const url = URL.createObjectURL(out.blob);
       const link = document.createElement("a");
       link.download = out.filename;
       link.href = url;
+      document.body.appendChild(link);
       link.click();
-      URL.revokeObjectURL(url);
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       setSaved(true);
+
     } finally {
       setSaving(false);
     }
