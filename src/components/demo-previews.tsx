@@ -4,8 +4,8 @@ import { X } from "lucide-react";
 import { ModeMark, type CurioMode } from "@/components/pixel-icons";
 import { PrinterStage } from "@/components/printer-stage";
 import { SnapFlowDemo } from "@/components/snap-flow-demo";
-import logDemo from "@/assets/log-demo.jpg.asset.json";
-import demoReceipt from "@/assets/demo-receipt.png.asset.json";
+import logDemo from "@/assets/log-demo-lovers.jpg.asset.json";
+import demoReceipt from "@/assets/demo-receipt-lovers.png.asset.json";
 
 const BG: Record<CurioMode, string> = {
   snap: "var(--ochre)",
@@ -176,7 +176,7 @@ function LogDemo() {
         <div className="text-center tracking-widest">****** RECEIPT DRAFT ******</div>
         <Dashes />
         <div className="font-bold">
-          01 <span className="italic">Gun</span> (2001) — Liu Ye
+          01 <span className="italic">The Lovers</span> (1928) — René Magritte
         </div>
         <Row label="★ MEDIUM" value="OIL ON CANVAS" />
         <Row label="★ LINGER TIME" value="2:45" />
