@@ -4,8 +4,7 @@ import star from "@/assets/curio-star.png.asset.json";
 
 /**
  * In-page camera for "still at the museum" mode. Streams the rear camera
- * into a live viewfinder framed by the hand-drawn Curio frame, and hands
- * back a JPEG File on capture.
+ * into a live viewfinder and hands back a JPEG File on capture.
  */
 export function CameraCapture({
   onCapture,
@@ -20,6 +19,8 @@ export function CameraCapture({
   const [ready, setReady] = useState(false);
   const [flash, setFlash] = useState(false);
   const [shot, setShot] = useState<{ url: string; file: File } | null>(null);
+  // Bumped on retry so the stream is re-acquired if the track was released.
+  const [session, setSession] = useState(0);
 
   const stop = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -28,6 +29,7 @@ export function CameraCapture({
 
   useEffect(() => {
     let cancelled = false;
+    setReady(false);
     (async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -44,6 +46,7 @@ export function CameraCapture({
           await videoRef.current.play().catch(() => {});
         }
         setReady(true);
+        setError(null);
       } catch (err) {
         console.error("[curio] camera unavailable", err);
         setError(
@@ -55,7 +58,16 @@ export function CameraCapture({
       cancelled = true;
       stop();
     };
-  }, [stop]);
+  }, [stop, session]);
+
+  // Full-screen: nothing behind the camera should scroll into view.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -83,10 +95,29 @@ export function CameraCapture({
     setShot({ url: URL.createObjectURL(file), file });
   }
 
+  function retry() {
+    if (shot) URL.revokeObjectURL(shot.url);
+    setShot(null);
+    const live = streamRef.current?.getVideoTracks().some((t) => t.readyState === "live");
+    if (live && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      void videoRef.current.play().catch(() => {});
+    } else {
+      stop();
+      setSession((s) => s + 1);
+    }
+  }
+
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6 py-8"
-      style={{ backgroundColor: "var(--ochre)", color: "#141414" }}
+      className="fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-hidden px-6"
+      style={{
+        height: "100dvh",
+        backgroundColor: "var(--ochre)",
+        color: "#141414",
+        paddingTop: "max(2rem, env(safe-area-inset-top))",
+        paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
+      }}
       role="dialog"
       aria-modal="true"
       aria-label="Snap the art in front of you"
@@ -117,21 +148,23 @@ export function CameraCapture({
             border: "1.5px solid #141414",
           }}
         >
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            autoPlay
+            className="h-full w-full object-cover"
+          />
           {shot ? (
-            <img src={shot.url} alt="Captured artwork" className="h-full w-full object-cover" />
-          ) : (
-            <video
-              ref={videoRef}
-              playsInline
-              muted
-              autoPlay
-              className="h-full w-full object-cover"
+            <img
+              src={shot.url}
+              alt="Captured artwork"
+              className="absolute inset-0 h-full w-full object-cover"
             />
-          )}
+          ) : null}
           {flash ? <div className="absolute inset-0" style={{ backgroundColor: "#fff" }} /> : null}
         </div>
       </div>
-
 
       {error ? (
         <p className="mt-6 max-w-xs text-center text-xs leading-relaxed">{error}</p>
@@ -139,10 +172,7 @@ export function CameraCapture({
         <div className="mt-7 flex items-center gap-4">
           <button
             type="button"
-            onClick={() => {
-              URL.revokeObjectURL(shot.url);
-              setShot(null);
-            }}
+            onClick={retry}
             className="inline-flex items-center gap-2 border px-4 py-2 text-xs uppercase tracking-widest"
             style={{ borderColor: "#141414", touchAction: "manipulation" }}
           >
@@ -174,38 +204,9 @@ export function CameraCapture({
           className="mt-7 transition-transform active:scale-95 disabled:opacity-40"
           style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
         >
-          <ShirtButton />
+          <img src={star.url} alt="" aria-hidden width={78} height={78} draggable={false} />
         </button>
       )}
     </div>
   );
 }
-
-/**
- * The shutter, drawn as a stitched shirt button — Curio is a paper-and-thread
- * companion, so the one control on this screen should feel sewn on.
- */
-function ShirtButton({ size = 72 }: { size?: number }) {
-  const holes: [number, number][] = [
-    [42, 42],
-    [58, 42],
-    [42, 58],
-    [58, 58],
-  ];
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden>
-      <circle cx="50" cy="50" r="46" fill="var(--paper)" stroke="#141414" strokeWidth="2.5" />
-      <circle cx="50" cy="50" r="35" fill="none" stroke="#141414" strokeWidth="1" opacity="0.45" />
-      <path
-        d="M42 42 L58 58 M58 42 L42 58"
-        stroke="#141414"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      {holes.map(([cx, cy]) => (
-        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="4.6" fill="var(--ochre)" stroke="#141414" strokeWidth="1.6" />
-      ))}
-    </svg>
-  );
-}
-
