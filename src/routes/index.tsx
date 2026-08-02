@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 import { Info } from "lucide-react";
 
 import {
@@ -14,6 +15,14 @@ import { DemoPreview } from "@/components/demo-previews";
 import { SnapIcon, LogIcon, ShareIcon } from "@/components/pixel-icons";
 import type { CurioMode } from "@/components/pixel-icons";
 import wordmark from "@/assets/curio-wordmark-thin.png.asset.json";
+import logDemoAsset from "@/assets/log-demo-lovers.jpg.asset.json";
+import demoReceiptAsset from "@/assets/demo-receipt-lovers.png.asset.json";
+import snapPosterAsset from "@/assets/snap-poster.jpg.asset.json";
+import snapClipAsset from "@/assets/snap-live.mp4.asset.json";
+import loversAsset from "@/assets/lovers-ii.jpg.asset.json";
+import shutterAsset from "@/assets/curio-button.png.asset.json";
+import figureOpenAsset from "@/assets/curio-figure-open.png.asset.json";
+import figureWinkAsset from "@/assets/curio-figure-wink.png.asset.json";
 
 
 export const Route = createFileRoute("/")({
@@ -40,6 +49,42 @@ export const Route = createFileRoute("/")({
 function Index() {
   const navigate = useNavigate();
   const [demo, setDemo] = useState<CurioMode | null>(null);
+
+  // Warm the demo media (and the /begin route) on idle so the first tap on an
+  // icon — and the first print — render instantly instead of fetching then.
+  useEffect(() => {
+    const warm = () => {
+      [
+        logDemoAsset.url,
+        demoReceiptAsset.url,
+        snapPosterAsset.url,
+        loversAsset.url,
+        shutterAsset.url,
+        figureOpenAsset.url,
+        figureWinkAsset.url,
+      ].forEach((url) => {
+        const img = new Image();
+        img.decoding = "async";
+        img.src = url;
+      });
+      const v = document.createElement("video");
+      v.preload = "auto";
+      v.muted = true;
+      v.src = snapClipAsset.url;
+      v.load();
+    };
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(warm);
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const t = window.setTimeout(warm, 300);
+    return () => window.clearTimeout(t);
+  }, []);
+
 
   return (
     <Dialog>

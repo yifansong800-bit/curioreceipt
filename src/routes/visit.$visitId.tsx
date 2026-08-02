@@ -153,8 +153,33 @@ function VisitPage() {
   }, []);
   const printStageRef = useRef<HTMLDivElement | null>(null);
 
+  // Height available for the printer + receipt so it fits without scrolling.
+  const printAreaRef = useRef<HTMLDivElement | null>(null);
+  const [printAreaH, setPrintAreaH] = useState(0);
+  useEffect(() => {
+    const el = printAreaRef.current;
+    if (!el) return;
+    const measure = () => setPrintAreaH(el.clientHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [view]);
+
+  // Paint the document itself teal on the print screen so no cream shows
+  // above the safe area / during overscroll on phones.
+  useEffect(() => {
+    const root = document.documentElement;
+    const prev = root.style.backgroundColor;
+    root.style.backgroundColor = view === "print" ? "var(--teal)" : "";
+    return () => {
+      root.style.backgroundColor = prev;
+    };
+  }, [view]);
+
 
   const receiptRef = useRef<HTMLDivElement | null>(null);
+
 
   const atCap = artworks.length >= MAX_ARTWORKS;
 
@@ -593,25 +618,31 @@ function VisitPage() {
   }
 
   const fadeDuration = reduce ? 0 : 0.15;
+  const printing = view === "print";
 
   return (
     <>
       <div
-        className="min-h-screen transition-colors duration-500"
+        className={
+          printing
+            ? "h-[100dvh] overflow-hidden transition-colors duration-500"
+            : "min-h-screen transition-colors duration-500"
+        }
         style={{
-          backgroundColor: view === "print" ? "var(--teal)" : "var(--paper)",
+          backgroundColor: printing ? "var(--teal)" : "var(--paper)",
         }}
       >
         <div
-          className="mx-auto"
+          className={printing ? "mx-auto h-full" : "mx-auto"}
           style={{
             maxWidth: 640,
             paddingLeft: "max(2.5rem, env(safe-area-inset-left))",
             paddingRight: "max(2.5rem, env(safe-area-inset-right))",
             paddingTop: "max(1.5rem, env(safe-area-inset-top))",
-            paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
+            paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
           }}
         >
+
         <AnimatePresence mode="wait" initial={false}>
           {view === "compose" ? (
             <motion.div
@@ -716,13 +747,16 @@ function VisitPage() {
           ) : (
             <motion.div
               key="print"
+              className="flex h-full flex-col"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: fadeDuration }}
             >
-              <ModeMark mode="share" size={22} className="mb-5" color="#141414" />
-              <div className="flex items-center justify-between">
+
+              <ModeMark mode="share" size={22} className="mb-3 shrink-0" color="#141414" />
+              <div className="flex shrink-0 items-center justify-between">
+
                 <button
                   onClick={goToCompose}
                   className="text-xs uppercase tracking-widest underline"
@@ -748,10 +782,18 @@ function VisitPage() {
                 )}
               </div>
 
-              <div ref={printStageRef} className="mt-8 scroll-mt-6">
+              <div
+
+                ref={(node) => {
+                  printStageRef.current = node;
+                  printAreaRef.current = node;
+                }}
+                className="mt-4 min-h-0 flex-1 scroll-mt-6"
+              >
                 <PrinterStage
                   mode={stage}
                   warmupDuration={PRINTER_WARMUP_MS}
+                  availableHeight={printAreaH}
                   onPrintComplete={() =>
                     setStage((s) => (s === "printing" ? "printed" : s))
                   }
@@ -771,7 +813,11 @@ function VisitPage() {
                 </PrinterStage>
               </div>
 
-              <div className="mx-auto mt-6 space-y-3" style={{ maxWidth: 360 }}>
+              <div
+                className="mx-auto mt-4 w-full shrink-0 space-y-2"
+                style={{ maxWidth: 360, minHeight: 116 }}
+              >
+
                 {stage === "printed" ? (
                   <>
                     <button
