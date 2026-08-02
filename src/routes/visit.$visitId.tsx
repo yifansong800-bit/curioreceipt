@@ -164,7 +164,8 @@ function VisitPage() {
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  });
+  }, [view]);
+
 
   const receiptRef = useRef<HTMLDivElement | null>(null);
 
