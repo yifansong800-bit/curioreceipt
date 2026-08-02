@@ -155,25 +155,20 @@ function VisitPage() {
 
   // Height available for the printer + receipt so it fits without scrolling.
   const printAreaRef = useRef<HTMLDivElement | null>(null);
-  const [printAreaH, setPrintAreaH] = useState(0);
-  useEffect(() => {
-    const el = printAreaRef.current;
-    if (!el) return;
-    const measure = () => setPrintAreaH(el.clientHeight);
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [view]);
 
   // Paint the document itself teal on the print screen so no cream shows
   // above the safe area / during overscroll on phones.
   useEffect(() => {
     const root = document.documentElement;
     const prev = root.style.backgroundColor;
-    root.style.backgroundColor = view === "print" ? "var(--teal)" : "";
+    const body = document.body;
+    const prevBody = body.style.backgroundColor;
+    const teal = getComputedStyle(root).getPropertyValue("--teal").trim() || "#069494";
+    root.style.backgroundColor = view === "print" ? teal : "";
+    body.style.backgroundColor = view === "print" ? teal : "";
     return () => {
       root.style.backgroundColor = prev;
+      body.style.backgroundColor = prevBody;
     };
   }, [view]);
 
@@ -352,7 +347,7 @@ function VisitPage() {
     const warmup = Promise.all(
       withImages.map((a) =>
         import("@/lib/dither").then(({ ditherImage }) =>
-          ditherImage(a.image_url!, target).catch(() => null),
+          ditherImage(a.image_url!, target, ink).catch(() => null),
         ),
       ),
     );
@@ -365,7 +360,7 @@ function VisitPage() {
     return () => {
       cancelled = true;
     };
-  }, [view, stage, artworks]);
+  }, [view, stage, artworks, ink]);
 
   // Keep the printer itself in view during warm-up. Without this, the browser
   // can preserve the compose screen's scroll position and show only the
@@ -625,7 +620,7 @@ function VisitPage() {
       <div
         className={
           printing
-            ? "h-[100dvh] overflow-hidden transition-colors duration-500"
+            ? "min-h-[100dvh] transition-colors duration-500"
             : "min-h-screen transition-colors duration-500"
         }
         style={{
@@ -633,7 +628,7 @@ function VisitPage() {
         }}
       >
         <div
-          className={printing ? "mx-auto h-full" : "mx-auto"}
+          className="mx-auto"
           style={{
             maxWidth: 640,
             paddingLeft: "max(2.5rem, env(safe-area-inset-left))",
@@ -745,7 +740,7 @@ function VisitPage() {
           ) : (
             <motion.div
               key="print"
-              className="flex h-full flex-col"
+              className="flex flex-col"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -786,12 +781,11 @@ function VisitPage() {
                   printStageRef.current = node;
                   printAreaRef.current = node;
                 }}
-                className="mt-4 min-h-0 flex-1 scroll-mt-6"
+                className="mt-4 scroll-mt-6"
               >
                 <PrinterStage
                   mode={stage}
                   warmupDuration={PRINTER_WARMUP_MS}
-                  availableHeight={printAreaH}
                   onPrintComplete={() =>
                     setStage((s) => (s === "printing" ? "printed" : s))
                   }
@@ -911,6 +905,7 @@ function VisitPage() {
       <PhotoCropper
         src={artworks[0].image_url}
         busy={cropBusy}
+        ink={ink}
         onCancel={() => setCropping(false)}
         onConfirm={async (blob) => {
           if (cropBusy) return;

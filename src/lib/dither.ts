@@ -15,6 +15,8 @@ const INK_CUTOFF = 90;
 const INK_ALPHA_MAX = 225;
 const INK_ALPHA_MIN = 130;
 
+export type DitherMode = "bw" | "color";
+
 type DitherResult = { dataUrl: string; width: number; height: number };
 // Module-level cache: identical src+targetWidth returns instantly (sync via
 // getCachedDither). Prevents the receipt from showing empty image slots
@@ -22,25 +24,30 @@ type DitherResult = { dataUrl: string; width: number; height: number };
 const ditherCache = new Map<string, DitherResult>();
 const ditherInflight = new Map<string, Promise<DitherResult>>();
 
-function cacheKey(src: string, targetWidth: number) {
-  return `${src}|${targetWidth}`;
+function cacheKey(src: string, targetWidth: number, mode: DitherMode) {
+  return `${src}|${targetWidth}|${mode}`;
 }
 
-export function getCachedDither(src: string, targetWidth = 220): DitherResult | null {
-  return ditherCache.get(cacheKey(src, targetWidth)) ?? null;
+export function getCachedDither(
+  src: string,
+  targetWidth = 220,
+  mode: DitherMode = "bw",
+): DitherResult | null {
+  return ditherCache.get(cacheKey(src, targetWidth, mode)) ?? null;
 }
 
 export async function ditherImage(
   src: string,
   targetWidth = 220,
+  mode: DitherMode = "bw",
 ): Promise<DitherResult> {
-  const key = cacheKey(src, targetWidth);
+  const key = cacheKey(src, targetWidth, mode);
   const cached = ditherCache.get(key);
   if (cached) return cached;
   const inflight = ditherInflight.get(key);
   if (inflight) return inflight;
   const p = (async () => {
-    const result = await ditherImageUncached(src, targetWidth);
+    const result = await ditherImageUncached(src, targetWidth, mode);
     ditherCache.set(key, result);
     ditherInflight.delete(key);
     return result;
@@ -52,6 +59,7 @@ export async function ditherImage(
 async function ditherImageUncached(
   src: string,
   targetWidth: number,
+  mode: DitherMode = "bw",
 ): Promise<DitherResult> {
   const img = await loadImage(src);
   const outputWidth = Math.max(1, Math.round(targetWidth * OUTPUT_SCALE));
@@ -69,6 +77,11 @@ async function ditherImageUncached(
   sctx.drawImage(img, 0, 0, w, h);
 
   const sourceImage = sctx.getImageData(0, 0, w, h);
+
+  if (mode === "color") {
+    return ditherColor(sourceImage, w, h, src);
+  }
+
   const gray = buildEnhancedGrayscale(sourceImage.data, w, h);
   // Keep a copy of the pre-diffusion tone to modulate ink alpha per pixel.
   const tone = new Float32Array(gray);
@@ -183,4 +196,110 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.onerror = reject;
     img.src = src;
   });
+}
+
+
+// ---------------------------------------------------------------
+// Color thermal dither: per-channel Atkinson diffusion to a small
+// palette, with the same paper-fade alpha ramp as the B/W path so
+// the receipt stock shows through highlights.
+// ---------------------------------------------------------------
+function ditherColor(
+  sourceImage: ImageData,
+  w: number,
+  h: number,
+  src: string,
+): DitherResult {
+  const data = sourceImage.data;
+  const channels: Float32Array[] = [
+    new Float32Array(w * h),
+    new Float32Array(w * h),
+    new Float32Array(w * h),
+  ];
+  const tone = new Float32Array(w * h);
+
+  for (let i = 0; i < w * h; i++) {
+    const p = i * 4;
+    for (let c = 0; c < 3; c++) {
+      channels[c][i] = clamp((data[p + c] - 128) * CONTRAST + 128 + BRIGHTNESS);
+    }
+    tone[i] = 0.299 * data[p] + 0.587 * data[p + 1] + 0.114 * data[p + 2];
+  }
+
+  // Quantize each channel to 3 levels — enough hue range to stay recognizable
+  // while keeping the coarse printed-dot texture.
+  const levels = [0, 128, 255];
+  const quantize = (v: number) => {
+    let best = levels[0];
+    let bestD = Math.abs(v - best);
+    for (const l of levels) {
+      const d = Math.abs(v - l);
+      if (d < bestD) {
+        best = l;
+        bestD = d;
+      }
+    }
+    return best;
+  };
+
+  for (const ch of channels) {
+    const spread = (x: number, y: number, error: number) => {
+      if (x >= 0 && x < w && y >= 0 && y < h) {
+        ch[y * w + x] = clamp(ch[y * w + x] + error / 8);
+      }
+    };
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        const old = ch[i];
+        const next = quantize(old);
+        const error = old - next;
+        ch[i] = next;
+        spread(x + 1, y, error);
+        spread(x + 2, y, error);
+        spread(x - 1, y + 1, error);
+        spread(x, y + 1, error);
+        spread(x + 1, y + 1, error);
+        spread(x, y + 2, error);
+      }
+    }
+  }
+
+  const out = document.createElement("canvas");
+  out.width = w;
+  out.height = h;
+  const octx = out.getContext("2d", { willReadFrequently: true });
+  if (!octx) return { dataUrl: src, width: w, height: h };
+  const output = octx.createImageData(w, h);
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      const p = i * 4;
+      const r = channels[0][i];
+      const g = channels[1][i];
+      const b = channels[2][i];
+
+      const t = tone[i];
+      let alpha: number;
+      if (r >= 255 && g >= 255 && b >= 255) {
+        alpha = 0;
+      } else if (t >= PAPER_CUTOFF) {
+        alpha = 0;
+      } else {
+        const range = PAPER_CUTOFF - INK_CUTOFF;
+        const norm = Math.max(0, Math.min(1, (PAPER_CUTOFF - t) / range));
+        alpha = INK_ALPHA_MIN + (INK_ALPHA_MAX - INK_ALPHA_MIN) * norm;
+        if ((x * 17 + y * 31) % 191 === 0) alpha *= 0.4;
+      }
+
+      output.data[p] = r;
+      output.data[p + 1] = g;
+      output.data[p + 2] = b;
+      output.data[p + 3] = Math.round(alpha);
+    }
+  }
+
+  octx.putImageData(output, 0, 0);
+  return { dataUrl: out.toDataURL("image/png"), width: w, height: h };
 }
