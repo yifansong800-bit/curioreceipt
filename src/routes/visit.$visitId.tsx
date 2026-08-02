@@ -360,7 +360,7 @@ function VisitPage() {
     return () => {
       cancelled = true;
     };
-  }, [view, stage, artworks]);
+  }, [view, stage, artworks, ink]);
 
   // Keep the printer itself in view during warm-up. Without this, the browser
   // can preserve the compose screen's scroll position and show only the
