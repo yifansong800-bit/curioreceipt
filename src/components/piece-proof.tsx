@@ -782,13 +782,14 @@ function PhotoThumb({ src, ink }: { src: string | null; ink: InkMode }) {
   if (!src) {
     return (
       <div
-        className="shrink-0 flex items-center justify-center text-[10px] uppercase tracking-widest"
-        style={{ width: 72, height: 72, border: "1px dashed var(--ink)", color: "var(--ink-soft)" }}
+        className="shrink-0 flex items-center justify-center text-[9px] uppercase tracking-widest"
+        style={{ width: 72, height: 72, border: "1px solid var(--ink)", color: "var(--ink-soft)" }}
       >
-        no photo
+        loading…
       </div>
     );
   }
+
 
   return (
     <div
