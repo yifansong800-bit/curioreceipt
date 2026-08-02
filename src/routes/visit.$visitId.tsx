@@ -347,7 +347,7 @@ function VisitPage() {
     const warmup = Promise.all(
       withImages.map((a) =>
         import("@/lib/dither").then(({ ditherImage }) =>
-          ditherImage(a.image_url!, target).catch(() => null),
+          ditherImage(a.image_url!, target, ink).catch(() => null),
         ),
       ),
     );
