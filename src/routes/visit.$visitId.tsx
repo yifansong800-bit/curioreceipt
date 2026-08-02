@@ -743,8 +743,9 @@ function VisitPage() {
               transition={{ duration: fadeDuration }}
             >
 
-              <ModeMark mode="share" size={22} className="mb-5" color="#141414" />
-              <div className="flex items-center justify-between">
+              <ModeMark mode="share" size={22} className="mb-3 shrink-0" color="#141414" />
+              <div className="flex shrink-0 items-center justify-between">
+
                 <button
                   onClick={goToCompose}
                   className="text-xs uppercase tracking-widest underline"
