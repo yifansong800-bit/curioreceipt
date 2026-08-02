@@ -16,9 +16,9 @@ export function StarRating({
           <span key={n} className={`relative inline-flex leading-none px-1 ${size}`}>
             <span
               aria-hidden
-              style={{ color: full ? "var(--ink)" : "var(--ink-soft)", opacity: full ? 1 : 0.5 }}
+              style={{ color: "var(--ink)", opacity: full ? 1 : 0.25 }}
             >
-              {full ? "\u2605" : "\u2606"}
+              {"\u2605"}
             </span>
             {half ? (
               <span

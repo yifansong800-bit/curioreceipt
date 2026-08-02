@@ -29,11 +29,14 @@ async function loadImage(src: string): Promise<HTMLImageElement> {
 export function PhotoCropper({
   src,
   busy,
+  ink = "bw",
   onCancel,
   onConfirm,
 }: {
   src: string;
   busy?: boolean;
+  /** Matches the receipt's ink selection so the paper preview is accurate. */
+  ink?: "bw" | "color";
   onCancel: () => void;
   onConfirm: (blob: Blob) => void | Promise<void>;
 }) {
@@ -121,7 +124,7 @@ export function PhotoCropper({
       if (!blob || cancelled) return;
       const url = URL.createObjectURL(blob);
       try {
-        const out = await ditherImage(url, 220);
+        const out = await ditherImage(url, 220, ink);
         if (!cancelled) setPreview(out.dataUrl);
       } catch {
         /* preview optional */
@@ -133,7 +136,7 @@ export function PhotoCropper({
       cancelled = true;
       window.clearTimeout(t);
     };
-  }, [crop, renderCrop]);
+  }, [crop, renderCrop, ink]);
 
   function beginDrag(handle: Handle, e: React.PointerEvent) {
     e.preventDefault();

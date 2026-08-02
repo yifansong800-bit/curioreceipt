@@ -726,14 +726,31 @@ function NoteEditor({
 }
 
 function Stars({ value }: { value: number }) {
-  const full = Math.floor(value);
-  const half = value - full >= 0.5;
-  const empty = 5 - full - (half ? 1 : 0);
+  const clamped = Math.max(0, Math.min(5, Math.round(value * 2) / 2));
+  // Solid glyph only — the outline/half glyphs render as empty boxes in the
+  // mono receipt font. Empty + half are expressed with opacity and clipping.
   return (
-    <span>
-      {"★".repeat(full)}
-      {half ? "⯪" : ""}
-      {"☆".repeat(Math.max(0, empty))}
+    <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 1 }}>
+      {[1, 2, 3, 4, 5].map((n) => {
+        const fill = Math.max(0, Math.min(1, clamped - (n - 1)));
+        return (
+          <span key={n} style={{ position: "relative", display: "inline-block", lineHeight: 1 }}>
+            <span style={{ opacity: 0.25 }}>★</span>
+            {fill > 0 ? (
+              <span
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  overflow: "hidden",
+                  width: `${fill * 100}%`,
+                }}
+              >
+                ★
+              </span>
+            ) : null}
+          </span>
+        );
+      })}
     </span>
   );
 }
@@ -748,11 +765,11 @@ function PhotoThumb({ src, ink }: { src: string | null; ink: InkMode }) {
 
   useEffect(() => {
     let cancelled = false;
-    if (!src || ink !== "bw") {
+    if (!src) {
       setDithered(null);
       return;
     }
-    ditherImage(src, 160)
+    ditherImage(src, 160, ink)
       .then((r) => {
         if (!cancelled) setDithered(r.dataUrl);
       })
@@ -779,7 +796,7 @@ function PhotoThumb({ src, ink }: { src: string | null; ink: InkMode }) {
       style={{ width: 72, height: 72, border: "1px solid var(--ink)" }}
     >
       <img
-        src={ink === "bw" ? (dithered ?? src) : src}
+        src={dithered ?? src}
         alt="Your piece"
         className="w-full h-full object-contain"
         decoding="async"
