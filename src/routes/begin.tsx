@@ -65,6 +65,22 @@ function BeginPage() {
     } catch {}
   }, []);
 
+  // iOS Safari ignores user-scalable=no, so block pinch/double-tap zoom here.
+  useEffect(() => {
+    const stop = (e: Event) => e.preventDefault();
+    const events = ["gesturestart", "gesturechange", "gestureend"];
+    events.forEach((n) => document.addEventListener(n, stop, { passive: false }));
+    const onTouch = (e: TouchEvent) => {
+      if (e.touches.length > 1) e.preventDefault();
+    };
+    document.addEventListener("touchmove", onTouch, { passive: false });
+    return () => {
+      events.forEach((n) => document.removeEventListener(n, stop));
+      document.removeEventListener("touchmove", onTouch);
+    };
+  }, []);
+
+
 
   const mut = useMutation({
     mutationFn: async () => {
