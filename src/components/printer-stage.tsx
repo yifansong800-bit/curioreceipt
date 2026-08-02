@@ -260,23 +260,32 @@ export function PrinterStage({
 function ScaledReceipt({
   naturalWidth,
   scale,
+  onNaturalHeight,
   children,
 }: {
   naturalWidth: number;
   scale: number;
+  onNaturalHeight?: (h: number) => void;
   children: ReactNode;
 }) {
   const innerRef = useRef<HTMLDivElement | null>(null);
   const [naturalHeight, setNaturalHeight] = useState(0);
+  const notifyRef = useRef(onNaturalHeight);
+  notifyRef.current = onNaturalHeight;
   useLayoutEffect(() => {
     const el = innerRef.current;
     if (!el) return;
-    const measure = () => setNaturalHeight(el.offsetHeight);
+    const measure = () => {
+      const h = el.offsetHeight;
+      setNaturalHeight(h);
+      notifyRef.current?.(h);
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
   return (
     <div
       style={{
