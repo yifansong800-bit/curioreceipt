@@ -184,10 +184,9 @@ function ArtworkBlock({ art }: { art: ReceiptArtwork }) {
 
 function StarRating({ value }: { value: number }) {
   const clamped = Math.max(0, Math.min(5, Math.round(value * 2) / 2));
-  const full = Math.floor(clamped);
-  const half = clamped - full >= 0.5;
-  const empty = 5 - full - (half ? 1 : 0);
 
+  // Always draw the SOLID star glyph (☆ renders as a tofu box in some mono
+  // fonts) and express "empty" with opacity instead.
   return (
     <span
       style={{
@@ -197,39 +196,37 @@ function StarRating({ value }: { value: number }) {
         lineHeight: 1,
       }}
     >
-      {Array.from({ length: full }).map((_, i) => (
-        <span key={`full-${i}`}>★</span>
-      ))}
-      {half && (
-        <span
-          key="half"
-          style={{
-            position: "relative",
-            display: "inline-block",
-            width: "1ch",
-            height: "1em",
-            lineHeight: 1,
-          }}
-        >
-          <span style={{ position: "absolute", inset: 0 }}>☆</span>
+      {[1, 2, 3, 4, 5].map((n) => {
+        const fill = Math.max(0, Math.min(1, clamped - (n - 1)));
+        return (
           <span
+            key={n}
             style={{
-              position: "absolute",
-              inset: 0,
-              overflow: "hidden",
-              width: "50%",
+              position: "relative",
+              display: "inline-block",
+              lineHeight: 1,
             }}
           >
-            ★
+            <span style={{ opacity: 0.25 }}>★</span>
+            {fill > 0 ? (
+              <span
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  overflow: "hidden",
+                  width: `${fill * 100}%`,
+                }}
+              >
+                ★
+              </span>
+            ) : null}
           </span>
-        </span>
-      )}
-      {Array.from({ length: empty }).map((_, i) => (
-        <span key={`empty-${i}`}>☆</span>
-      ))}
+        );
+      })}
     </span>
   );
 }
+
 
 function ImageGrid({
   artworks,
