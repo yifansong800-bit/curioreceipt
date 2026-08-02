@@ -724,25 +724,23 @@ function VisitPage() {
                 />
               ) : null}
 
-              <button
-                type="button"
-                onClick={goToPrint}
-                disabled={artworks.length === 0}
-                className="mt-10 w-full uppercase tracking-widest text-sm py-3 border disabled:opacity-40"
-                style={{
-                  borderColor: "var(--ink)",
-                  backgroundColor: "var(--teal)",
-                  color: "var(--yellow)",
-                  fontWeight: 700,
-                  WebkitTapHighlightColor: "transparent",
-                  touchAction: "manipulation",
-                }}
-              >
-                {artworks.length === 0
-                  ? "show me a piece first"
-                  : "ready? let's print it →"}
-
-              </button>
+              {artworks.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={goToPrint}
+                  className="mt-10 w-full uppercase tracking-widest text-sm py-3 border"
+                  style={{
+                    borderColor: "var(--ink)",
+                    backgroundColor: "var(--teal)",
+                    color: "var(--yellow)",
+                    fontWeight: 700,
+                    WebkitTapHighlightColor: "transparent",
+                    touchAction: "manipulation",
+                  }}
+                >
+                  ready? let's print it →
+                </button>
+              ) : null}
             </motion.div>
           ) : (
             <motion.div
@@ -1676,7 +1674,7 @@ function PieceForm({
                 touchAction: "manipulation",
               }}
             >
-              {saving ? "keeping it…" : "that's the one"}
+              {saving ? "keeping it…" : "I'm done"}
             </button>
           </div>
 
