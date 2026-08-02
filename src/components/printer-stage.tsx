@@ -200,7 +200,9 @@ export function PrinterStage({
               <ScaledReceipt
                 naturalWidth={receiptNaturalWidth}
                 scale={receiptScale}
+                onNaturalHeight={setReceiptNaturalHeight}
               >
+
                 <div
                   style={{
                     position: "relative",
