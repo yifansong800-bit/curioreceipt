@@ -153,8 +153,21 @@ function VisitPage() {
   }, []);
   const printStageRef = useRef<HTMLDivElement | null>(null);
 
+  // Height available for the printer + receipt so it fits without scrolling.
+  const printAreaRef = useRef<HTMLDivElement | null>(null);
+  const [printAreaH, setPrintAreaH] = useState(0);
+  useEffect(() => {
+    const el = printAreaRef.current;
+    if (!el) return;
+    const measure = () => setPrintAreaH(el.clientHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
 
   const receiptRef = useRef<HTMLDivElement | null>(null);
+
 
   const atCap = artworks.length >= MAX_ARTWORKS;
 
