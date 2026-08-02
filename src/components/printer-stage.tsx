@@ -129,6 +129,26 @@ export function PrinterStage({
   }, [mode, armed, feedDurationMs, onPrintComplete]);
 
 
+  // Final safety net: measure the actually rendered stack (housing + receipt)
+  // and shrink it further if it still overflows the available height. This
+  // catches cases the linear estimate above misses (image aspect ratios that
+  // resolve late, fonts, etc.) so the receipt is never cut off.
+  const stackRef = useRef<HTMLDivElement | null>(null);
+  const [stackHeight, setStackHeight] = useState(0);
+  useLayoutEffect(() => {
+    const el = stackRef.current;
+    if (!el) return;
+    const measure = () => setStackHeight(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const fitScale =
+    availableHeight && availableHeight > 0 && stackHeight > 0
+      ? Math.min(1, (availableHeight * 0.98) / stackHeight)
+      : 1;
+
   return (
     <div
       ref={wrapRef}
@@ -144,10 +164,17 @@ export function PrinterStage({
       `}</style>
 
       <div
+        ref={stackRef}
         className="mx-auto flex flex-col items-center"
-        style={{ width: printerWidth, visibility: measured ? "visible" : "hidden" }}
+        style={{
+          width: printerWidth,
+          visibility: measured ? "visible" : "hidden",
+          transform: fitScale < 1 ? `scale(${fitScale})` : undefined,
+          transformOrigin: "top center",
+        }}
       >
         {/* Flat printer housing, drawn to match the design. */}
+
         <div
           style={{
             width: printerWidth,
