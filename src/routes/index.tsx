@@ -15,6 +15,14 @@ import { DemoPreview } from "@/components/demo-previews";
 import { SnapIcon, LogIcon, ShareIcon } from "@/components/pixel-icons";
 import type { CurioMode } from "@/components/pixel-icons";
 import wordmark from "@/assets/curio-wordmark-thin.png.asset.json";
+import logDemoAsset from "@/assets/log-demo-lovers.jpg.asset.json";
+import demoReceiptAsset from "@/assets/demo-receipt-lovers.png.asset.json";
+import snapPosterAsset from "@/assets/snap-poster.jpg.asset.json";
+import snapClipAsset from "@/assets/snap-live.mp4.asset.json";
+import loversAsset from "@/assets/lovers-ii.jpg.asset.json";
+import shutterAsset from "@/assets/curio-button.png.asset.json";
+import figureOpenAsset from "@/assets/curio-figure-open.png.asset.json";
+import figureWinkAsset from "@/assets/curio-figure-wink.png.asset.json";
 
 
 export const Route = createFileRoute("/")({
