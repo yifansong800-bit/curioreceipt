@@ -771,8 +771,8 @@ function VisitPage() {
                 )}
               </div>
 
-              <div ref={printStageRef} className="mt-8 scroll-mt-6">
               <div
+
                 ref={(node) => {
                   printStageRef.current = node;
                   printAreaRef.current = node;
