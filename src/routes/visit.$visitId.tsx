@@ -607,25 +607,31 @@ function VisitPage() {
   }
 
   const fadeDuration = reduce ? 0 : 0.15;
+  const printing = view === "print";
 
   return (
     <>
       <div
-        className="min-h-screen transition-colors duration-500"
+        className={
+          printing
+            ? "h-[100dvh] overflow-hidden transition-colors duration-500"
+            : "min-h-screen transition-colors duration-500"
+        }
         style={{
-          backgroundColor: view === "print" ? "var(--teal)" : "var(--paper)",
+          backgroundColor: printing ? "var(--teal)" : "var(--paper)",
         }}
       >
         <div
-          className="mx-auto"
+          className={printing ? "mx-auto h-full" : "mx-auto"}
           style={{
             maxWidth: 640,
             paddingLeft: "max(2.5rem, env(safe-area-inset-left))",
             paddingRight: "max(2.5rem, env(safe-area-inset-right))",
             paddingTop: "max(1.5rem, env(safe-area-inset-top))",
-            paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
+            paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
           }}
         >
+
         <AnimatePresence mode="wait" initial={false}>
           {view === "compose" ? (
             <motion.div
