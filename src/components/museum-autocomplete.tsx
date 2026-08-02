@@ -36,10 +36,12 @@ export function Field({
         placeholder={placeholder}
         maxLength={maxLength}
         autoFocus={autoFocus}
-        className="w-full bg-transparent border-b px-0 py-2 text-sm sm:text-base outline-none transition-colors focus:border-b-2"
+        className="w-full bg-transparent border-b px-0 py-2 outline-none transition-colors focus:border-b-2"
         style={{
           borderColor: "var(--ink)",
           fontFamily: "var(--font-mono)",
+          // 16px keeps iOS Safari from zooming the page on focus.
+          fontSize: 16,
           color: "var(--ink)",
         }}
       />
@@ -144,10 +146,11 @@ export function MuseumAutocomplete({
         placeholder="e.g. The Art Institute of Chicago"
         maxLength={80}
         autoComplete="off"
-        className="w-full bg-transparent border-b px-0 py-2 text-sm sm:text-base outline-none focus:border-b-2"
+        className="w-full bg-transparent border-b px-0 py-2 outline-none focus:border-b-2"
         style={{
           borderColor: "var(--ink)",
           fontFamily: "var(--font-mono)",
+          fontSize: 16,
           color: "var(--ink)",
         }}
       />
