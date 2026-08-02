@@ -166,6 +166,17 @@ function VisitPage() {
     return () => ro.disconnect();
   }, [view]);
 
+  // Paint the document itself teal on the print screen so no cream shows
+  // above the safe area / during overscroll on phones.
+  useEffect(() => {
+    const root = document.documentElement;
+    const prev = root.style.backgroundColor;
+    root.style.backgroundColor = view === "print" ? "var(--teal)" : "";
+    return () => {
+      root.style.backgroundColor = prev;
+    };
+  }, [view]);
+
 
   const receiptRef = useRef<HTMLDivElement | null>(null);
 
