@@ -1218,21 +1218,8 @@ function PieceForm({
     setSuggestion(null);
     setStep("details");
 
-    // Curio always asks before looking — unless already answered this session.
-    let remembered: boolean | null = identifyChoice;
-    if (remembered === null) {
-      try {
-        const stored = sessionStorage.getItem("curio:identify");
-        if (stored === "yes") remembered = true;
-        else if (stored === "no") remembered = false;
-      } catch {}
-    }
-    if (remembered === true) {
-      setIdentifyChoice(true);
-      void runIdentify(ready);
-    } else {
-      setIdentifyChoice(remembered);
-    }
+    // Curio never looks on its own — always wait for the user to ask.
+    setIdentifyChoice(null);
   }
 
   function chooseIdentify(yes: boolean) {
