@@ -41,6 +41,42 @@ function Index() {
   const navigate = useNavigate();
   const [demo, setDemo] = useState<CurioMode | null>(null);
 
+  // Warm the demo media (and the /begin route) on idle so the first tap on an
+  // icon — and the first print — render instantly instead of fetching then.
+  useEffect(() => {
+    const warm = () => {
+      [
+        logDemoAsset.url,
+        demoReceiptAsset.url,
+        snapPosterAsset.url,
+        loversAsset.url,
+        shutterAsset.url,
+        figureOpenAsset.url,
+        figureWinkAsset.url,
+      ].forEach((url) => {
+        const img = new Image();
+        img.decoding = "async";
+        img.src = url;
+      });
+      const v = document.createElement("video");
+      v.preload = "auto";
+      v.muted = true;
+      v.src = snapClipAsset.url;
+      v.load();
+    };
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(warm);
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const t = window.setTimeout(warm, 300);
+    return () => window.clearTimeout(t);
+  }, []);
+
+
   return (
     <Dialog>
       <div
