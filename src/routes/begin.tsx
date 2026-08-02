@@ -111,7 +111,10 @@ function BeginPage() {
       style={{
         paddingTop: "max(1.5rem, env(safe-area-inset-top))",
         paddingBottom: "max(4rem, env(safe-area-inset-bottom))",
+        touchAction: "manipulation",
+        WebkitTextSizeAdjust: "100%",
       }}
+
     >
       <button
         type="button"
