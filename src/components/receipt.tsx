@@ -249,11 +249,7 @@ function ImageGrid({
     >
       {artworks.map((a) => (
         <div key={a.id} style={{ textAlign: "center" }}>
-          {colorMode === "color" ? (
-            <ColorImage src={a.image_url!} size={cellW} />
-          ) : (
-            <DitheredImage src={a.image_url!} size={cellW} />
-          )}
+          <DitheredImage src={a.image_url!} size={cellW} mode={colorMode} />
           <div style={{ marginTop: 4 }}>{String(a.position).padStart(2, "0")}</div>
         </div>
       ))}
@@ -261,20 +257,15 @@ function ImageGrid({
   );
 }
 
-function ColorImage({ src, size }: { src: string; size: number }) {
-  return (
-    <div style={{ width: size, display: "block", background: "transparent" }}>
-      <img
-        src={src}
-        alt=""
-        crossOrigin="anonymous"
-        style={{ width: "100%", height: "auto", display: "block" }}
-      />
-    </div>
-  );
-}
-
-function DitheredImage({ src, size }: { src: string; size: number }) {
+function DitheredImage({
+  src,
+  size,
+  mode = "bw",
+}: {
+  src: string;
+  size: number;
+  mode?: "bw" | "color";
+}) {
   // Quantize size to avoid re-dithering on tiny sub-pixel changes from
   // ResizeObserver / zoom scaling during the print animation — which
   // was causing brief flashes back to the original (non-dithered) image.
@@ -285,7 +276,7 @@ function DitheredImage({ src, size }: { src: string; size: number }) {
   // on the very first paint of the print animation on mobile. Without this,
   // the async dither could resolve mid-feed and the receipt showed empty
   // slots until it finished.
-  const initial = getCachedDither(src, target);
+  const initial = getCachedDither(src, target, mode);
   const [out, setOut] = useState<string | null>(initial?.dataUrl ?? null);
   const [aspectRatio, setAspectRatio] = useState<number>(
     initial && initial.height > 0 ? initial.width / initial.height : 1,
@@ -296,7 +287,7 @@ function DitheredImage({ src, size }: { src: string; size: number }) {
     // Do NOT clear `out` here — keep the previous dithered frame on screen
     // while the new one computes so the receipt never flashes back to the
     // original color image mid-print.
-    ditherImage(src, target)
+    ditherImage(src, target, mode)
       .then((result) => {
         if (!cancelled) {
           setOut(result.dataUrl);
@@ -312,7 +303,7 @@ function DitheredImage({ src, size }: { src: string; size: number }) {
     return () => {
       cancelled = true;
     };
-  }, [src, target]);
+  }, [src, target, mode]);
 
   const displayHeight = Math.max(1, Math.round(size / aspectRatio));
 
