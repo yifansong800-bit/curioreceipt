@@ -85,12 +85,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "Curio | Your Pocket Companion for Art Museum Visits" },
       { property: "og:description", content: "Snap the art that stops you in your tracks. Curio uses AI to identify the artwork, capture your personal thoughts, and print a custom receipt for your gallery visit." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Curio | Your Pocket Companion for Art Museum Visits" },
       { name: "twitter:description", content: "Snap the art that stops you in your tracks. Curio uses AI to identify the artwork, capture your personal thoughts, and print a custom receipt for your gallery visit." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0cbe0d50-2f3f-4dd3-9ab9-61e50426005e/id-preview-e37d5116--f4dec416-f58a-4052-b28c-03e6bc204623.lovable.app-1783090155452.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0cbe0d50-2f3f-4dd3-9ab9-61e50426005e/id-preview-e37d5116--f4dec416-f58a-4052-b28c-03e6bc204623.lovable.app-1783090155452.png" },
     ],
     links: [
       {
