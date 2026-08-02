@@ -23,6 +23,7 @@ export function PrinterStage({
   mode,
   onPrintComplete,
   feedDurationMs: feedDurationOverride,
+  availableHeight,
   children,
 }: {
   mode: Mode;
@@ -31,6 +32,8 @@ export function PrinterStage({
   onPrintComplete?: () => void;
   /** Override the stepped feed duration (used by the homepage demo). */
   feedDurationMs?: number;
+  /** When set, the printer + receipt are scaled to fit within this pixel height. */
+  availableHeight?: number;
   children: ReactNode;
 }) {
   const reduce = useReducedMotion();
@@ -40,7 +43,8 @@ export function PrinterStage({
   const wrapRef = useRef<HTMLDivElement | null>(null);
   // Measured synchronously before paint so the housing never renders at the
   // fallback max width first and then snaps down (that jump read as a glitch).
-  const [printerWidth, setPrinterWidth] = useState<number>(0);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [receiptNaturalHeight, setReceiptNaturalHeight] = useState(0);
   useLayoutEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -49,21 +53,35 @@ export function PrinterStage({
       // would include any ancestor scale (e.g. the card entrance animation),
       // which made the printer render small and then jump larger mid-animation.
       const w = el.clientWidth;
-      if (w > 0) setPrinterWidth(Math.min(MAX_PRINTER_WIDTH, Math.floor(w)));
+      if (w > 0) setContainerWidth(Math.min(MAX_PRINTER_WIDTH, Math.floor(w)));
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const measured = printerWidth > 0;
+
+  const receiptNaturalWidth = 360;
+
+  // Total rendered height is linear in printer width:
+  //   housing visible part = w * HOUSING_RATIO * (SLOT_Y_PCT/100)
+  //   receipt              = receiptHeight * (w * SLOT_WIDTH_PCT/100) / 360
+  let printerWidth = containerWidth;
+  if (availableHeight && availableHeight > 0 && receiptNaturalHeight > 0 && containerWidth > 0) {
+    const k =
+      HOUSING_RATIO * (SLOT_Y_PCT / 100) +
+      (receiptNaturalHeight * (SLOT_WIDTH_PCT / 100)) / receiptNaturalWidth;
+    const fitWidth = Math.floor(availableHeight / k);
+    printerWidth = Math.max(180, Math.min(containerWidth, fitWidth));
+  }
+  const measured = containerWidth > 0;
 
   const printerHeight = Math.round(printerWidth * HOUSING_RATIO);
   const slotY = (printerHeight * SLOT_Y_PCT) / 100;
   const pullUp = printerHeight - slotY;
 
-  const receiptNaturalWidth = 360;
   const receiptScale = (printerWidth * (SLOT_WIDTH_PCT / 100)) / receiptNaturalWidth;
+
 
   // The housing is pure CSS, so there is nothing to wait on.
   const printerLoaded = measured;
