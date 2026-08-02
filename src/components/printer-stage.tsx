@@ -71,9 +71,12 @@ export function PrinterStage({
     const k =
       HOUSING_RATIO * (SLOT_Y_PCT / 100) +
       (receiptNaturalHeight * (SLOT_WIDTH_PCT / 100)) / receiptNaturalWidth;
-    const fitWidth = Math.floor(availableHeight / k);
-    printerWidth = Math.max(180, Math.min(containerWidth, fitWidth));
+    // 0.92 safety margin: the receipt keeps growing while dithered images
+    // decode, so leave headroom rather than fitting to the pixel.
+    const fitWidth = Math.floor((availableHeight * 0.92) / k);
+    printerWidth = Math.max(120, Math.min(containerWidth, fitWidth));
   }
+
   const measured = containerWidth > 0;
 
   const printerHeight = Math.round(printerWidth * HOUSING_RATIO);
