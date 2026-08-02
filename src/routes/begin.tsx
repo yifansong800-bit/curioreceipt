@@ -13,7 +13,13 @@ import { Footer } from "@/components/Footer";
 export const Route = createFileRoute("/begin")({
   head: () => ({
     meta: [
+      {
+        name: "viewport",
+        content:
+          "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+      },
       { title: "Let's begin — Curio" },
+
       {
         name: "description",
         content: "Tell me your name and which museum we're in, and I'll get the printer warm.",
