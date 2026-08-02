@@ -772,9 +772,17 @@ function VisitPage() {
               </div>
 
               <div ref={printStageRef} className="mt-8 scroll-mt-6">
+              <div
+                ref={(node) => {
+                  printStageRef.current = node;
+                  printAreaRef.current = node;
+                }}
+                className="mt-4 min-h-0 flex-1 scroll-mt-6"
+              >
                 <PrinterStage
                   mode={stage}
                   warmupDuration={PRINTER_WARMUP_MS}
+                  availableHeight={printAreaH}
                   onPrintComplete={() =>
                     setStage((s) => (s === "printing" ? "printed" : s))
                   }
@@ -794,7 +802,11 @@ function VisitPage() {
                 </PrinterStage>
               </div>
 
-              <div className="mx-auto mt-6 space-y-3" style={{ maxWidth: 360 }}>
+              <div
+                className="mx-auto mt-4 w-full shrink-0 space-y-2"
+                style={{ maxWidth: 360, minHeight: 116 }}
+              >
+
                 {stage === "printed" ? (
                   <>
                     <button
