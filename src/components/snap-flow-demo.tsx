@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import shutter from "@/assets/curio-button.png.asset.json";
 import liveClip from "@/assets/snap-live.mp4.asset.json";
 import poster from "@/assets/snap-poster.jpg.asset.json";
 import lovers from "@/assets/lovers-ii.jpg.asset.json";
@@ -34,6 +33,8 @@ const FIELDS: [string, string][] = [
   ["WHERE", "The Met, New York"],
 ];
 
+const FRAME_BORDER = "1px solid rgba(20,20,20,0.35)";
+
 export function SnapFlowDemo() {
   const [stage, setStage] = useState<Stage>("live");
   const [tick, setTick] = useState(0);
@@ -62,124 +63,148 @@ export function SnapFlowDemo() {
   const shotTaken = stage === "flash";
 
   return (
-    <div className="flex w-full flex-col items-center justify-center gap-4">
-      {/* Viewfinder / photo */}
-      <div className="relative w-full overflow-hidden" style={{ maxWidth: 240, aspectRatio: "4 / 5" }}>
-        {/* First frame as a still, so the viewfinder is visible instantly on
-            phones/Safari where the video needs a moment to decode. */}
-        <img
-          src={poster.url}
-          alt=""
-          aria-hidden
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        <video
-          src={liveClip.url}
-          poster={poster.url}
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-          className="relative h-full w-full object-cover"
-          aria-hidden
-        />
-
-        {captured ? (
-          <img
-            src={lovers.url}
-            alt="The Lovers II by René Magritte"
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        ) : null}
-        {shotTaken ? (
-          <div className="absolute inset-0" style={{ backgroundColor: "#fff" }} />
-        ) : null}
-        {stage === "scanning" ? (
-          <>
-            <div className="absolute inset-0" style={{ backgroundColor: "rgba(6,148,148,0.16)" }} />
-            <div
-              className="curio-scan absolute inset-x-0"
-              style={{ height: 2, backgroundColor: "var(--teal)" }}
-            />
-          </>
-        ) : null}
-      </div>
-
-      {/* Beat-specific caption / UI */}
-      <div
-        className="flex w-full flex-col items-center justify-start gap-2 text-center"
-        style={{ maxWidth: 240, fontFamily: "var(--font-mono)", minHeight: 104 }}
-      >
-        {stage === "live" || stage === "flash" ? (
-          <div className="flex flex-col items-center gap-2">
+    <div
+      className="flex w-full flex-col items-center justify-center"
+      style={{ maxWidth: 240, minHeight: 396 }}
+    >
+      {captured ? (
+        /* ── Captured artwork, fitted whole, with the beat's copy below ── */
+        <div className="flex w-full flex-col items-center gap-3">
+          <div
+            className="relative w-full overflow-hidden"
+            style={{ aspectRatio: "900 / 670", border: FRAME_BORDER }}
+          >
             <img
-              src={shutter.url}
-              alt=""
-              aria-hidden
-              width={46}
-              height={46}
-              className="transition-transform duration-200"
-              style={{ transform: shotTaken ? "scale(0.86)" : "scale(1)" }}
+              src={lovers.url}
+              alt="The Lovers II by René Magritte"
+              className="h-full w-full object-cover"
             />
-            <span className="text-[10px] tracking-[0.16em]">tap to snap</span>
-          </div>
-        ) : null}
-
-        {stage === "offer" || stage === "chosen" ? (
-          <div className="curio-card-in w-full">
-            <p className="mb-2 text-[10px] tracking-[0.16em]">want me to identify it?</p>
-            <div className="flex justify-center gap-2">
-              <span
-                className="border px-2 py-1 text-[9px] tracking-[0.12em] transition-colors"
-                style={{
-                  borderColor: "#141414",
-                  backgroundColor: stage === "chosen" ? "#141414" : "transparent",
-                  color: stage === "chosen" ? "var(--paper)" : "#141414",
-                }}
-              >
-                yes, take a look ✦
-              </span>
-              <span
-                className="border px-2 py-1 text-[9px] tracking-[0.12em]"
-                style={{ borderColor: "#141414", opacity: 0.5 }}
-              >
-                I'll type it
-              </span>
-            </div>
-          </div>
-        ) : null}
-
-        {stage === "scanning" ? (
-          <p className="text-[10px] tracking-[0.16em]">{THINKING[tick % THINKING.length]}</p>
-        ) : null}
-
-        {stage === "fields" || stage === "done" ? (
-          <div className="w-full text-left">
-            <p className="mb-1.5 text-[10px] tracking-[0.16em]">I think this is…</p>
-            <div className="space-y-[3px]">
-              {FIELDS.map(([label, value], i) => (
+            {stage === "scanning" ? (
+              <>
                 <div
-                  key={label}
-                  className="curio-card-in flex justify-between gap-2 text-[9px] tracking-[0.08em]"
-                  style={{ animationDelay: `${i * 220}ms` }}
-                >
-                  <span style={{ opacity: 0.55 }}>{label}</span>
-                  <span className="truncate">{value}</span>
-                </div>
-              ))}
-            </div>
-            {stage === "done" ? (
-              <p
-                className="curio-card-in mt-2 inline-block border px-2 py-1 text-[9px] tracking-[0.12em]"
-                style={{ borderColor: "#141414" }}
-              >
-                pretty sure ✦
-              </p>
+                  className="absolute inset-0"
+                  style={{ backgroundColor: "rgba(6,148,148,0.16)" }}
+                />
+                <div
+                  className="curio-scan absolute inset-x-0"
+                  style={{ height: 2, backgroundColor: "var(--teal)" }}
+                />
+              </>
             ) : null}
           </div>
-        ) : null}
-      </div>
+
+          <div
+            className="flex w-full flex-col items-center justify-start gap-2 text-center"
+            style={{ fontFamily: "var(--font-mono)", minHeight: 116 }}
+          >
+            {stage === "offer" || stage === "chosen" ? (
+              <div className="curio-card-in w-full">
+                <p className="mb-2 text-[10px] tracking-[0.16em]">want me to identify it?</p>
+                <div className="flex justify-center gap-2">
+                  <span
+                    className="border px-2 py-1 text-[9px] tracking-[0.12em] transition-colors"
+                    style={{
+                      borderColor: "#141414",
+                      backgroundColor: stage === "chosen" ? "#141414" : "transparent",
+                      color: stage === "chosen" ? "var(--paper)" : "#141414",
+                    }}
+                  >
+                    yes, take a look ✦
+                  </span>
+                  <span
+                    className="border px-2 py-1 text-[9px] tracking-[0.12em]"
+                    style={{ borderColor: "#141414", opacity: 0.5 }}
+                  >
+                    I'll type it
+                  </span>
+                </div>
+              </div>
+            ) : null}
+
+            {stage === "scanning" ? (
+              <p className="text-[10px] tracking-[0.16em]">{THINKING[tick % THINKING.length]}</p>
+            ) : null}
+
+            {stage === "fields" || stage === "done" ? (
+              <div className="w-full text-left">
+                <p className="mb-1.5 text-[10px] tracking-[0.16em]">I think this is…</p>
+                <div className="space-y-[3px]">
+                  {FIELDS.map(([label, value], i) => (
+                    <div
+                      key={label}
+                      className="curio-card-in flex justify-between gap-2 text-[9px] tracking-[0.08em]"
+                      style={{ animationDelay: `${i * 220}ms` }}
+                    >
+                      <span style={{ opacity: 0.55 }}>{label}</span>
+                      <span className="truncate">{value}</span>
+                    </div>
+                  ))}
+                </div>
+                {stage === "done" ? (
+                  <p
+                    className="curio-card-in mt-2 inline-block border px-2 py-1 text-[9px] tracking-[0.12em]"
+                    style={{ borderColor: "#141414" }}
+                  >
+                    pretty sure ✦
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        /* ── Live viewfinder, tall, with the shutter overlaid at the bottom ── */
+        <div
+          className="relative w-full overflow-hidden"
+          style={{ aspectRatio: "36 / 58", border: FRAME_BORDER }}
+        >
+          {/* First frame as a still, so the viewfinder is visible instantly on
+              phones/Safari where the video needs a moment to decode. */}
+          <img
+            src={poster.url}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <video
+            src={liveClip.url}
+            poster={poster.url}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="relative h-full w-full object-cover"
+            aria-hidden
+          />
+          {shotTaken ? (
+            <div className="absolute inset-0" style={{ backgroundColor: "#fff" }} />
+          ) : null}
+
+          {/* Shutter */}
+          <div
+            className="absolute inset-x-0 flex justify-center"
+            style={{ bottom: 18 }}
+            aria-hidden
+          >
+            <span
+              className="flex items-center justify-center rounded-full transition-transform duration-200"
+              style={{
+                width: 52,
+                height: 52,
+                border: "2px solid #141414",
+                backgroundColor: "transparent",
+                transform: shotTaken ? "scale(0.88)" : "scale(1)",
+              }}
+            >
+              <span
+                className="rounded-full"
+                style={{ width: 40, height: 40, backgroundColor: "#F7F4EF" }}
+              />
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
