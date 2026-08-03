@@ -16,7 +16,7 @@ const BG: Record<CurioMode, string> = {
 const CAPTION: Record<CurioMode, string> = {
   snap: "Snap it and I'll identify the art for you.",
   log: "Tell me what it made you think, feel, or question.",
-  share: "I’ll print our receipt —\nso you can share it with the world.",
+  share: "I'll print a receipt of your visit.",
 };
 
 const INK: Record<CurioMode, string> = {
