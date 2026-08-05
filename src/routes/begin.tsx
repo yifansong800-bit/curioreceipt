@@ -33,6 +33,9 @@ export const Route = createFileRoute("/begin")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    again: search.again === true || search.again === "true" ? true : undefined,
+  }),
 
   component: BeginPage,
 });
