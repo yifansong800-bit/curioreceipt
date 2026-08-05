@@ -14,7 +14,7 @@ import { CurioFigure } from "@/components/curio-figure";
 import { DemoPreview } from "@/components/demo-previews";
 import { SnapIcon, LogIcon, ShareIcon } from "@/components/pixel-icons";
 import type { CurioMode } from "@/components/pixel-icons";
-import wordmark from "@/assets/curio-wordmark-thin.png.asset.json";
+import wordmark from "@/assets/curio-wordmark-ochre.png.asset.json";
 import logDemoAsset from "@/assets/log-demo-lovers.jpg.asset.json";
 import demoReceiptAsset from "@/assets/demo-receipt-lovers.png.asset.json";
 import snapPosterAsset from "@/assets/snap-poster.jpg.asset.json";

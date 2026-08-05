@@ -9,7 +9,7 @@ import lovers from "@/assets/lovers-ii.jpg.asset.json";
  * Purely illustrative; nothing is uploaded or identified for real.
  */
 
-type Stage = "live" | "flash" | "offer" | "chosen" | "scanning" | "fields" | "done";
+type Stage = "live" | "flash" | "offer" | "chosen" | "scanning" | "fields" | "done" | "confirmed";
 
 // Cumulative beats of the loop, in ms.
 const BEATS: { stage: Stage; at: number }[] = [
@@ -20,6 +20,7 @@ const BEATS: { stage: Stage; at: number }[] = [
   { stage: "scanning", at: 4800 },
   { stage: "fields", at: 7600 },
   { stage: "done", at: 9600 },
+  { stage: "confirmed", at: 10600 },
 ];
 const LOOP = 11800;
 
@@ -62,7 +63,7 @@ export function SnapFlowDemo() {
   const captured = stage !== "live" && stage !== "flash";
   const shotTaken = stage === "flash";
   // The real artwork only appears once Curio has recognised it.
-  const identified = stage === "fields" || stage === "done";
+  const identified = stage === "fields" || stage === "done" || stage === "confirmed";
 
   return (
     <div
@@ -137,7 +138,7 @@ export function SnapFlowDemo() {
                 style={{
                   width: 52,
                   height: 52,
-                  border: "2px solid #141414",
+                  border: "2px solid #F7F4EF",
                   backgroundColor: "transparent",
                   transform: shotTaken ? "scale(0.88)" : "scale(1)",
                 }}
@@ -201,10 +202,15 @@ export function SnapFlowDemo() {
                   </div>
                 ))}
               </div>
-              {stage === "done" ? (
+              {stage === "done" || stage === "confirmed" ? (
                 <p
-                  className="curio-card-in mt-2 inline-block border px-2 py-1 text-[9px] tracking-[0.12em]"
-                  style={{ borderColor: "#141414" }}
+                  className="curio-card-in mt-2 inline-block border px-2 py-1 text-[9px] tracking-[0.12em] transition-colors duration-200"
+                  style={{
+                    borderColor: "#141414",
+                    backgroundColor: stage === "confirmed" ? "#141414" : "transparent",
+                    color: stage === "confirmed" ? "var(--paper)" : "#141414",
+                    transform: stage === "confirmed" ? "scale(0.96)" : "scale(1)",
+                  }}
                 >
                   pretty sure ✦
                 </p>
