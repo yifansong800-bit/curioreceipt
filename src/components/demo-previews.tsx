@@ -5,7 +5,7 @@ import { ModeMark, type CurioMode } from "@/components/pixel-icons";
 import { PrinterStage } from "@/components/printer-stage";
 import { SnapFlowDemo } from "@/components/snap-flow-demo";
 import logDemo from "@/assets/log-demo-lovers.jpg.asset.json";
-import demoReceipt from "@/assets/demo-receipt-lovers-2.png.asset.json";
+import demoReceipt from "@/assets/demo-receipt-lovers-3.png.asset.json";
 
 const BG: Record<CurioMode, string> = {
   snap: "var(--ochre)",
