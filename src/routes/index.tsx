@@ -116,7 +116,7 @@ function Index() {
         <img
           src={wordmark.url}
           alt="CURIO"
-          className="absolute z-10 block w-[28%] max-w-[120px]"
+          className="absolute z-10 block w-[19%] max-w-[92px]"
           style={{
             top: "max(2rem, env(safe-area-inset-top))",
             left: "max(2.25rem, env(safe-area-inset-left))",
