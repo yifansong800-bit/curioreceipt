@@ -33,6 +33,9 @@ export const Route = createFileRoute("/begin")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    again: search.again === true || search.again === "true" ? true : undefined,
+  }),
 
   component: BeginPage,
 });
@@ -43,6 +46,7 @@ const STEPS: Step[] = ["name", "where", "museum"];
 
 function BeginPage() {
   const navigate = useNavigate();
+  const { again } = Route.useSearch();
   const createFn = useServerFn(createVisit);
   const suggestFn = useServerFn(suggestMuseums);
 
@@ -61,9 +65,15 @@ function BeginPage() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem("curio:visitor");
-      if (stored && stored.trim()) setVisitor(stored);
+      if (stored && stored.trim()) {
+        setVisitor(stored);
+        // Coming back for another museum in the same session: skip the name
+        // question and go straight to where they are.
+        if (again) setStep("where");
+      }
     } catch {}
-  }, []);
+  }, [again]);
+
 
   // iOS Safari ignores user-scalable=no, so block pinch/double-tap zoom here.
   useEffect(() => {
@@ -113,7 +123,7 @@ function BeginPage() {
 
   function back() {
     if (step === "museum") go("where", "back");
-    else if (step === "where") go("name", "back");
+    else if (step === "where" && !again) go("name", "back");
     else navigate({ to: "/" });
   }
 

@@ -836,6 +836,7 @@ function VisitPage() {
                     </button>
                     <Link
                       to="/begin"
+                      search={{ again: true }}
                       className="block w-full text-center uppercase tracking-widest text-sm py-3"
                       style={{
                         backgroundColor: "var(--yellow)",
@@ -846,6 +847,17 @@ function VisitPage() {
                       }}
                     >
                       Log another museum
+                    </Link>
+                    <Link
+                      to="/"
+                      className="block w-full text-center uppercase tracking-widest text-xs py-2 underline"
+                      style={{
+                        color: "var(--paper)",
+                        WebkitTapHighlightColor: "transparent",
+                        touchAction: "manipulation",
+                      }}
+                    >
+                      Back to home
                     </Link>
                   </>
                 ) : null}
