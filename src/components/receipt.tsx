@@ -78,7 +78,9 @@ export function Receipt({
           src={wordmark.url}
           alt="CURIO"
           crossOrigin="anonymous"
-          style={{ display: "inline-block", width: 200, height: "auto" }}
+          width={150}
+          height={78}
+          style={{ display: "inline-block", width: 150, height: 78 }}
         />
       </div>
 
