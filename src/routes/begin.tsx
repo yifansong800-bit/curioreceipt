@@ -123,7 +123,7 @@ function BeginPage() {
 
   function back() {
     if (step === "museum") go("where", "back");
-    else if (step === "where") go("name", "back");
+    else if (step === "where" && !again) go("name", "back");
     else navigate({ to: "/" });
   }
 
