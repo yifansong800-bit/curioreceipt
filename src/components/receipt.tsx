@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ditherImage, getCachedDither } from "@/lib/dither";
 import { formatLingerShort, formatReceiptDate } from "@/lib/format";
-import wordmark from "@/assets/curio-wordmark-thin.png.asset.json";
+import wordmark from "@/assets/curio-wordmark-2.png.asset.json";
 
 
 export type ReceiptArtwork = {
