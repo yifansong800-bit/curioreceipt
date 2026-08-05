@@ -137,7 +137,7 @@ export function SnapFlowDemo() {
                 style={{
                   width: 52,
                   height: 52,
-                  border: "2px solid #141414",
+                  border: "2px solid #F7F4EF",
                   backgroundColor: "transparent",
                   transform: shotTaken ? "scale(0.88)" : "scale(1)",
                 }}
