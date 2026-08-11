@@ -180,7 +180,7 @@ function Index() {
           <div className="mt-9 flex justify-center">
             <button
               type="button"
-              onClick={() => navigate({ to: "/begin" })}
+              onClick={() => navigate({ to: "/begin", search: { again: undefined } })}
               className="w-full uppercase tracking-[0.25em] text-sm py-3.5 transition-transform duration-100 active:scale-[0.98]"
               style={{
                 backgroundColor: "var(--teal)",
