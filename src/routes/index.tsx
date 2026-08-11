@@ -85,12 +85,14 @@ function Index() {
       requestIdleCallback?: (cb: () => void) => number;
       cancelIdleCallback?: (id: number) => void;
     };
+    // Warm immediately: a user can tap an icon well before an idle callback
+    // fires, and a cold image cache is what made the first demo stutter.
+    warm();
     if (w.requestIdleCallback) {
       const id = w.requestIdleCallback(warm);
       return () => w.cancelIdleCallback?.(id);
     }
-    const t = window.setTimeout(warm, 300);
-    return () => window.clearTimeout(t);
+    return;
   }, []);
 
 
@@ -180,7 +182,7 @@ function Index() {
           <div className="mt-9 flex justify-center">
             <button
               type="button"
-              onClick={() => navigate({ to: "/begin" })}
+              onClick={() => navigate({ to: "/begin", search: { again: undefined } })}
               className="w-full uppercase tracking-[0.25em] text-sm py-3.5 transition-transform duration-100 active:scale-[0.98]"
               style={{
                 backgroundColor: "var(--teal)",

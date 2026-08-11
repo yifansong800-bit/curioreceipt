@@ -203,8 +203,10 @@ function LogDemo() {
               alt="Crop preview of the artwork"
               className="max-h-full max-w-full object-contain transition-[filter] duration-500"
               style={{ filter: color ? "none" : "grayscale(1) contrast(1.5)" }}
-              loading="lazy"
+              loading="eager"
+              decoding="async"
             />
+
           </div>
           <div className="min-w-0">
             <div className="underline tracking-widest">CROP / ADJUST →</div>
@@ -260,14 +262,40 @@ function Dashes() {
 /** The real printer, looping the stepped feed animation. */
 function ShareDemo() {
   const [phase, setPhase] = useState<"idle" | "printing" | "printed">("idle");
+  // Wait until the receipt bitmap is fully decoded before starting the feed.
+  // Otherwise the lane animates while the image still has zero height, which
+  // read as a glitch/jump the very first time the demo was opened.
+  const [ready, setReady] = useState(false);
+
   useEffect(() => {
     let alive = true;
-    const start = window.setTimeout(() => alive && setPhase("printing"), 400);
+    const img = new Image();
+    img.decoding = "async";
+    img.src = demoReceipt.url;
+    const done = () => alive && setReady(true);
+    if (img.decode) {
+      img.decode().then(done).catch(done);
+    } else {
+      img.onload = done;
+      img.onerror = done;
+    }
+    // Never block the demo for longer than a moment on a slow network.
+    const bail = window.setTimeout(done, 2500);
+    return () => {
+      alive = false;
+      window.clearTimeout(bail);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    let alive = true;
+    const start = window.setTimeout(() => alive && setPhase("printing"), 250);
     return () => {
       alive = false;
       window.clearTimeout(start);
     };
-  }, []);
+  }, [ready]);
 
   return (
     // Top-anchored so the printer stays put while the receipt feeds downward.
@@ -281,6 +309,7 @@ function ShareDemo() {
           <img
             src={demoReceipt.url}
             alt="Example Curio receipt"
+            decoding="sync"
             style={{ width: 360, display: "block" }}
           />
         </PrinterStage>
