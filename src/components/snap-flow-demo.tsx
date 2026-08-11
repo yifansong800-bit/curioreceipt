@@ -55,8 +55,10 @@ export function SnapFlowDemo() {
     const img = new Image();
     img.decoding = "async";
     img.src = lovers.url;
+    let started = false;
     const start = () => {
-      if (!alive) return;
+      if (!alive || started) return;
+      started = true;
       setStage("live");
       run();
     };

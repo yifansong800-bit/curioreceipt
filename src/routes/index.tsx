@@ -85,12 +85,14 @@ function Index() {
       requestIdleCallback?: (cb: () => void) => number;
       cancelIdleCallback?: (id: number) => void;
     };
+    // Warm immediately: a user can tap an icon well before an idle callback
+    // fires, and a cold image cache is what made the first demo stutter.
+    warm();
     if (w.requestIdleCallback) {
       const id = w.requestIdleCallback(warm);
       return () => w.cancelIdleCallback?.(id);
     }
-    const t = window.setTimeout(warm, 300);
-    return () => window.clearTimeout(t);
+    return;
   }, []);
 
 
