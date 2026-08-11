@@ -42,14 +42,36 @@ export function SnapFlowDemo() {
 
   useEffect(() => {
     const timers: number[] = [];
+    let alive = true;
     const run = () => {
+      if (!alive) return;
       BEATS.forEach((b) => {
         timers.push(window.setTimeout(() => setStage(b.stage), b.at));
       });
       timers.push(window.setTimeout(run, LOOP));
     };
-    run();
-    return () => timers.forEach((t) => window.clearTimeout(t));
+    // Don't start the timeline until the artwork bitmap is decoded, so the
+    // "identified" beat never pops in half-loaded on a first visit.
+    const img = new Image();
+    img.decoding = "async";
+    img.src = lovers.url;
+    const start = () => {
+      if (!alive) return;
+      setStage("live");
+      run();
+    };
+    if (img.decode) {
+      img.decode().then(start).catch(start);
+    } else {
+      img.onload = start;
+      img.onerror = start;
+    }
+    const bail = window.setTimeout(start, 2000);
+    return () => {
+      alive = false;
+      window.clearTimeout(bail);
+      timers.forEach((t) => window.clearTimeout(t));
+    };
   }, []);
 
   // Rotating "thinking" lines while Curio looks.
