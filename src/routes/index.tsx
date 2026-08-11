@@ -40,8 +40,16 @@ export const Route = createFileRoute("/")({
         content: "Snap the art that stops you in your tracks. Curio uses AI to identify the artwork, capture your personal thoughts, and print a custom receipt for your gallery visit.",
       },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:url", content: "https://curioreceipt.com/" },
+      { property: "og:site_name", content: "Curio" },
+      // Small square icon preview (no large screenshot card).
+      { property: "og:image", content: "https://curioreceipt.com/favicon.png" },
+      { property: "og:image:width", content: "64" },
+      { property: "og:image:height", content: "64" },
+      { name: "twitter:card", content: "summary" },
+      { name: "twitter:image", content: "https://curioreceipt.com/favicon.png" },
     ],
+    links: [{ rel: "canonical", href: "https://curioreceipt.com/" }],
   }),
   component: Index,
 });
