@@ -203,8 +203,10 @@ function LogDemo() {
               alt="Crop preview of the artwork"
               className="max-h-full max-w-full object-contain transition-[filter] duration-500"
               style={{ filter: color ? "none" : "grayscale(1) contrast(1.5)" }}
-              loading="lazy"
+              loading="eager"
+              decoding="async"
             />
+
           </div>
           <div className="min-w-0">
             <div className="underline tracking-widest">CROP / ADJUST →</div>
