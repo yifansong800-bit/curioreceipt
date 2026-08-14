@@ -311,14 +311,38 @@ function VisitPage() {
 
 
   function goToPrint() {
-    if (artworks.length === 0) return;
-    const missing = artworks.filter((a) => a.linger_seconds < 0);
+    const piece = artworks[0];
+    if (!piece) return;
+
+    // A still-saving (optimistic) row must never reach the printer — that's
+    // what produced blank receipts.
+    if (String(piece.id).startsWith("temp-")) {
+      toast("still saving your piece", { description: "one second, then we can print." });
+      return;
+    }
+
+    if (!piece.title?.trim()) {
+      toast.error("your piece needs a title", {
+        description: "give it a title before we print.",
+      });
+      return;
+    }
+
+    const missing: string[] = [];
+    if (!piece.image_url) missing.push("the photo");
+    if (!piece.artist?.trim()) missing.push("artist");
+    if (!piece.year?.trim()) missing.push("year");
+    if (!piece.medium?.trim()) missing.push("medium");
+    if (piece.linger_seconds < 0) missing.push("linger time");
+    if (!piece.emotions?.length) missing.push("how you felt");
+    if (!piece.rating) missing.push("rating");
     if (missing.length > 0) {
-      setConfirmMissing(missing.length);
+      setConfirmMissing(missing);
       return;
     }
     proceedToPrint();
   }
+
 
   function proceedToPrint() {
     setConfirmMissing(null);
