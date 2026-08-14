@@ -1218,6 +1218,24 @@ function PieceForm({
       name.endsWith(".heic") ||
       name.endsWith(".heif");
 
+    // Videos and other non-image files can't be printed — say so plainly
+    // instead of letting a broken file slip into the receipt.
+    const isVideo =
+      picked.type.startsWith("video/") ||
+      /\.(mov|mp4|m4v|avi|mkv|webm|hevc|3gp|gif?v)$/i.test(name);
+    if (isVideo) {
+      toast.error("that's a video — I can't print those", {
+        description: "pick a still photo (JPG, PNG or HEIC) instead.",
+      });
+      return;
+    }
+    if (!isHeic && !picked.type.startsWith("image/")) {
+      toast.error("that format isn't supported", {
+        description: "I can only read photos — JPG, PNG, WEBP or HEIC.",
+      });
+      return;
+    }
+
     let ready: File;
     if (isHeic) {
       setConverting(true);
@@ -1233,7 +1251,7 @@ function PieceForm({
         ready = new File([blob], jpgName, { type: "image/jpeg" });
       } catch (err) {
         console.error("HEIC conversion failed", err);
-        alert("Couldn't read this photo — try a JPG or PNG.");
+        toast.error("I couldn't read that photo", { description: "try a JPG or PNG." });
         setConverting(false);
         return;
       } finally {
@@ -1242,8 +1260,31 @@ function PieceForm({
     } else {
       ready = picked;
     }
+
+    // Final guard: the file must actually decode as an image.
+    const decodes = await new Promise<boolean>((resolve) => {
+      const url = URL.createObjectURL(ready);
+      const probe = new Image();
+      probe.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(probe.naturalWidth > 0 && probe.naturalHeight > 0);
+      };
+      probe.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(false);
+      };
+      probe.src = url;
+    });
+    if (!decodes) {
+      toast.error("I couldn't open that file", {
+        description: "it doesn't look like a photo — try a JPG or PNG.",
+      });
+      return;
+    }
+
     acceptFile(ready);
   }
+
 
   function acceptFile(ready: File) {
     setFile(ready);
