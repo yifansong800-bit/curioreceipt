@@ -141,7 +141,7 @@ function VisitPage() {
   const [ink, setInk] = useState<"bw" | "color">("bw");
   const [cropping, setCropping] = useState(false);
   const [cropBusy, setCropBusy] = useState(false);
-  const [confirmMissing, setConfirmMissing] = useState<number | null>(null);
+  const [confirmMissing, setConfirmMissing] = useState<string[] | null>(null);
 
 
 
@@ -263,7 +263,9 @@ function VisitPage() {
           imagePath = path;
         } catch (uploadErr) {
           console.error("[curio] photo upload failed", uploadErr);
-          imagePath = null;
+          // Never create a photo-less row behind the user's back — that's how
+          // people ended up printing a blank receipt.
+          throw new Error("I couldn't upload that photo. check your connection and try again?");
         }
       }
 
@@ -284,6 +286,7 @@ function VisitPage() {
           note: payload.note,
         },
       });
+      if (!row) throw new Error("the piece didn't save. try once more?");
       await qc.invalidateQueries({ queryKey: ["visit", visitId] });
 
     } catch (err) {
@@ -297,23 +300,49 @@ function VisitPage() {
         };
       });
       const msg = err instanceof Error ? err.message : String(err);
-      alert(`Couldn't add artwork: ${msg}`);
+      toast.error("I couldn't keep that piece", { description: msg });
+      throw err instanceof Error ? err : new Error(msg);
     }
   }
+
 
 
 
 
 
   function goToPrint() {
-    if (artworks.length === 0) return;
-    const missing = artworks.filter((a) => a.linger_seconds < 0);
+    const piece = artworks[0];
+    if (!piece) return;
+
+    // A still-saving (optimistic) row must never reach the printer — that's
+    // what produced blank receipts.
+    if (String(piece.id).startsWith("temp-")) {
+      toast("still saving your piece", { description: "one second, then we can print." });
+      return;
+    }
+
+    if (!piece.title?.trim()) {
+      toast.error("your piece needs a title", {
+        description: "give it a title before we print.",
+      });
+      return;
+    }
+
+    const missing: string[] = [];
+    if (!piece.image_url) missing.push("the photo");
+    if (!piece.artist?.trim()) missing.push("artist");
+    if (!piece.year?.trim()) missing.push("year");
+    if (!piece.medium?.trim()) missing.push("medium");
+    if (piece.linger_seconds < 0) missing.push("linger time");
+    if (!piece.emotions?.length) missing.push("how you felt");
+    if (!piece.rating) missing.push("rating");
     if (missing.length > 0) {
-      setConfirmMissing(missing.length);
+      setConfirmMissing(missing);
       return;
     }
     proceedToPrint();
   }
+
 
   function proceedToPrint() {
     setConfirmMissing(null);
@@ -886,11 +915,13 @@ function VisitPage() {
           style={{ backgroundColor: "var(--paper)", color: "var(--ink)", border: "1px solid var(--ink)" }}
         >
           <div className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--ink-soft)" }}>
-            one thing
+            {confirmMissing.length === 1 ? "one thing" : "a few blanks"}
           </div>
           <p className="text-sm leading-relaxed">
-            you didn't tell me how long you lingered. want me to print it anyway?
+            these are still empty: {confirmMissing.join(", ")}. they'll print blank — want me
+            to print it anyway?
           </p>
+
           <div className="mt-6 flex gap-2">
             <button
               type="button"
@@ -1081,6 +1112,9 @@ function PieceForm({
   const [rating, setRating] = useState<number>(0);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [nextWarned, setNextWarned] = useState(false);
+  const [saveWarned, setSaveWarned] = useState(false);
+
 
   useEffect(() => {
     if (!file) {
@@ -1187,6 +1221,24 @@ function PieceForm({
       name.endsWith(".heic") ||
       name.endsWith(".heif");
 
+    // Videos and other non-image files can't be printed — say so plainly
+    // instead of letting a broken file slip into the receipt.
+    const isVideo =
+      picked.type.startsWith("video/") ||
+      /\.(mov|mp4|m4v|avi|mkv|webm|hevc|3gp|gif?v)$/i.test(name);
+    if (isVideo) {
+      toast.error("that's a video — I can't print those", {
+        description: "pick a still photo (JPG, PNG or HEIC) instead.",
+      });
+      return;
+    }
+    if (!isHeic && !picked.type.startsWith("image/")) {
+      toast.error("that format isn't supported", {
+        description: "I can only read photos — JPG, PNG, WEBP or HEIC.",
+      });
+      return;
+    }
+
     let ready: File;
     if (isHeic) {
       setConverting(true);
@@ -1202,7 +1254,7 @@ function PieceForm({
         ready = new File([blob], jpgName, { type: "image/jpeg" });
       } catch (err) {
         console.error("HEIC conversion failed", err);
-        alert("Couldn't read this photo — try a JPG or PNG.");
+        toast.error("I couldn't read that photo", { description: "try a JPG or PNG." });
         setConverting(false);
         return;
       } finally {
@@ -1211,8 +1263,31 @@ function PieceForm({
     } else {
       ready = picked;
     }
+
+    // Final guard: the file must actually decode as an image.
+    const decodes = await new Promise<boolean>((resolve) => {
+      const url = URL.createObjectURL(ready);
+      const probe = new Image();
+      probe.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(probe.naturalWidth > 0 && probe.naturalHeight > 0);
+      };
+      probe.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(false);
+      };
+      probe.src = url;
+    });
+    if (!decodes) {
+      toast.error("I couldn't open that file", {
+        description: "it doesn't look like a photo — try a JPG or PNG.",
+      });
+      return;
+    }
+
     acceptFile(ready);
   }
+
 
   function acceptFile(ready: File) {
     setFile(ready);
@@ -1260,13 +1335,33 @@ function PieceForm({
   const canGoNext = !!file && title.trim().length > 0 && !identifying;
 
   function goNext() {
-    if (!canGoNext) return;
+    if (!file) {
+      toast.error("I need a photo first");
+      return;
+    }
+    if (!title.trim()) {
+      toast.error("your piece needs a title", { description: "add one before we go on." });
+      return;
+    }
+    if (identifying) return;
+
+    const blanks = [
+      !artist.trim() && "artist",
+      !year.trim() && "year",
+      !medium.trim() && "medium",
+    ].filter(Boolean) as string[];
+    if (blanks.length > 0 && !nextWarned) {
+      setNextWarned(true);
+      toast("still blank: " + blanks.join(", "), {
+        description: "fill them in, or tap again to continue without them.",
+      });
+      return;
+    }
     setStep("reflection");
   }
 
   async function handleSave() {
     if (saving) return;
-    setSaving(true);
     const minRaw = lingerMin.trim();
     const secRaw = lingerSec.trim();
     const lingerSeconds =
@@ -1274,6 +1369,28 @@ function PieceForm({
         ? -1
         : Math.max(0, Math.floor(parseInt(minRaw || "0", 10))) * 60 +
           Math.max(0, Math.floor(parseInt(secRaw || "0", 10)));
+
+    if (!file || !title.trim()) {
+      toast.error("something's missing", {
+        description: !file ? "I need a photo of the piece." : "your piece needs a title.",
+      });
+      return;
+    }
+
+    const blanks = [
+      lingerSeconds < 0 && "linger time",
+      emotions.length === 0 && "how you felt",
+      !rating && "a rating",
+    ].filter(Boolean) as string[];
+    if (blanks.length > 0 && !saveWarned) {
+      setSaveWarned(true);
+      toast("still blank: " + blanks.join(", "), {
+        description: "fill them in, or tap again to keep it as is.",
+      });
+      return;
+    }
+
+    setSaving(true);
     try {
       await onSave({
         file,
@@ -1287,14 +1404,14 @@ function PieceForm({
         note: note.trim(),
       });
     } catch (err) {
+      // addArtworkFromPayload already surfaced a friendly toast.
       console.error("[curio] save piece failed", err);
-      const msg = err instanceof Error ? err.message : String(err);
-      alert(`Couldn't save piece: ${msg}`);
     } finally {
       // Give the button a beat of "saving…" even on fast optimistic paths.
       window.setTimeout(() => setSaving(false), 600);
     }
   }
+
 
   return (
     <div

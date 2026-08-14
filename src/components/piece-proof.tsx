@@ -64,12 +64,24 @@ export function PieceProof({
     }
   }
 
+  const blanks = [
+    !artwork.title?.trim() && "title",
+    !artwork.artist?.trim() && "artist",
+    !artwork.year?.trim() && "year",
+    !artwork.medium?.trim() && "medium",
+    artwork.linger_seconds < 0 && "linger time",
+    !artwork.emotions?.length && "how you felt",
+    !artwork.rating && "rating",
+    !artwork.image_url && "the photo",
+  ].filter(Boolean) as string[];
+
   const titleLine = [
     artwork.title || "Untitled",
     artwork.year ? `(${artwork.year})` : "",
   ]
     .filter(Boolean)
     .join(" ");
+
 
   return (
     <div className="mt-8">
@@ -96,12 +108,24 @@ export function PieceProof({
           ****** RECEIPT DRAFT ******
         </div>
 
+        {blanks.length > 0 ? (
+          <div
+            className="mt-3 px-2 py-2 text-[11px] leading-relaxed"
+            style={{ border: "1px dashed var(--ink)", color: "var(--ink)" }}
+          >
+            {!artwork.title?.trim()
+              ? "your piece still needs a title — tap the first line to add it."
+              : `still blank: ${blanks.join(", ")} — tap a line to fill it in, or print as is.`}
+          </div>
+        ) : null}
+
         <div
           style={{ marginTop: 10, whiteSpace: "nowrap", overflow: "hidden" }}
           aria-hidden
         >
           {DASH}
         </div>
+
 
         {/* Title / artist */}
         <ProofRow
