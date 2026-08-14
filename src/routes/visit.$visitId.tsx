@@ -1332,13 +1332,33 @@ function PieceForm({
   const canGoNext = !!file && title.trim().length > 0 && !identifying;
 
   function goNext() {
-    if (!canGoNext) return;
+    if (!file) {
+      toast.error("I need a photo first");
+      return;
+    }
+    if (!title.trim()) {
+      toast.error("your piece needs a title", { description: "add one before we go on." });
+      return;
+    }
+    if (identifying) return;
+
+    const blanks = [
+      !artist.trim() && "artist",
+      !year.trim() && "year",
+      !medium.trim() && "medium",
+    ].filter(Boolean) as string[];
+    if (blanks.length > 0 && !nextWarned) {
+      setNextWarned(true);
+      toast("still blank: " + blanks.join(", "), {
+        description: "fill them in, or tap again to continue without them.",
+      });
+      return;
+    }
     setStep("reflection");
   }
 
   async function handleSave() {
     if (saving) return;
-    setSaving(true);
     const minRaw = lingerMin.trim();
     const secRaw = lingerSec.trim();
     const lingerSeconds =
@@ -1346,6 +1366,28 @@ function PieceForm({
         ? -1
         : Math.max(0, Math.floor(parseInt(minRaw || "0", 10))) * 60 +
           Math.max(0, Math.floor(parseInt(secRaw || "0", 10)));
+
+    if (!file || !title.trim()) {
+      toast.error("something's missing", {
+        description: !file ? "I need a photo of the piece." : "your piece needs a title.",
+      });
+      return;
+    }
+
+    const blanks = [
+      lingerSeconds < 0 && "linger time",
+      emotions.length === 0 && "how you felt",
+      !rating && "a rating",
+    ].filter(Boolean) as string[];
+    if (blanks.length > 0 && !saveWarned) {
+      setSaveWarned(true);
+      toast("still blank: " + blanks.join(", "), {
+        description: "fill them in, or tap again to keep it as is.",
+      });
+      return;
+    }
+
+    setSaving(true);
     try {
       await onSave({
         file,
@@ -1359,14 +1401,14 @@ function PieceForm({
         note: note.trim(),
       });
     } catch (err) {
+      // addArtworkFromPayload already surfaced a friendly toast.
       console.error("[curio] save piece failed", err);
-      const msg = err instanceof Error ? err.message : String(err);
-      alert(`Couldn't save piece: ${msg}`);
     } finally {
       // Give the button a beat of "saving…" even on fast optimistic paths.
       window.setTimeout(() => setSaving(false), 600);
     }
   }
+
 
   return (
     <div
