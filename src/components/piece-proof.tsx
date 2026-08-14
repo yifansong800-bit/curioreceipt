@@ -96,12 +96,24 @@ export function PieceProof({
           ****** RECEIPT DRAFT ******
         </div>
 
+        {blanks.length > 0 ? (
+          <div
+            className="mt-3 px-2 py-2 text-[11px] leading-relaxed"
+            style={{ border: "1px dashed var(--ink)", color: "var(--ink)" }}
+          >
+            {!artwork.title?.trim()
+              ? "your piece still needs a title — tap the first line to add it."
+              : `still blank: ${blanks.join(", ")} — tap a line to fill it in, or print as is.`}
+          </div>
+        ) : null}
+
         <div
           style={{ marginTop: 10, whiteSpace: "nowrap", overflow: "hidden" }}
           aria-hidden
         >
           {DASH}
         </div>
+
 
         {/* Title / artist */}
         <ProofRow
