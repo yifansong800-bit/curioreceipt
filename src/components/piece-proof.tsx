@@ -64,12 +64,24 @@ export function PieceProof({
     }
   }
 
+  const blanks = [
+    !artwork.title?.trim() && "title",
+    !artwork.artist?.trim() && "artist",
+    !artwork.year?.trim() && "year",
+    !artwork.medium?.trim() && "medium",
+    artwork.linger_seconds < 0 && "linger time",
+    !artwork.emotions?.length && "how you felt",
+    !artwork.rating && "rating",
+    !artwork.image_url && "the photo",
+  ].filter(Boolean) as string[];
+
   const titleLine = [
     artwork.title || "Untitled",
     artwork.year ? `(${artwork.year})` : "",
   ]
     .filter(Boolean)
     .join(" ");
+
 
   return (
     <div className="mt-8">
