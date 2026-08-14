@@ -915,11 +915,13 @@ function VisitPage() {
           style={{ backgroundColor: "var(--paper)", color: "var(--ink)", border: "1px solid var(--ink)" }}
         >
           <div className="text-xs uppercase tracking-widest mb-3" style={{ color: "var(--ink-soft)" }}>
-            one thing
+            {confirmMissing.length === 1 ? "one thing" : "a few blanks"}
           </div>
           <p className="text-sm leading-relaxed">
-            you didn't tell me how long you lingered. want me to print it anyway?
+            these are still empty: {confirmMissing.join(", ")}. they'll print blank — want me
+            to print it anyway?
           </p>
+
           <div className="mt-6 flex gap-2">
             <button
               type="button"
