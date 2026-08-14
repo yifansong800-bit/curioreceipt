@@ -141,7 +141,7 @@ function VisitPage() {
   const [ink, setInk] = useState<"bw" | "color">("bw");
   const [cropping, setCropping] = useState(false);
   const [cropBusy, setCropBusy] = useState(false);
-  const [confirmMissing, setConfirmMissing] = useState<number | null>(null);
+  const [confirmMissing, setConfirmMissing] = useState<string[] | null>(null);
 
 
 
