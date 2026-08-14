@@ -1112,6 +1112,9 @@ function PieceForm({
   const [rating, setRating] = useState<number>(0);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [nextWarned, setNextWarned] = useState(false);
+  const [saveWarned, setSaveWarned] = useState(false);
+
 
   useEffect(() => {
     if (!file) {
