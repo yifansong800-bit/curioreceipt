@@ -263,7 +263,9 @@ function VisitPage() {
           imagePath = path;
         } catch (uploadErr) {
           console.error("[curio] photo upload failed", uploadErr);
-          imagePath = null;
+          // Never create a photo-less row behind the user's back — that's how
+          // people ended up printing a blank receipt.
+          throw new Error("I couldn't upload that photo. check your connection and try again?");
         }
       }
 
@@ -284,6 +286,7 @@ function VisitPage() {
           note: payload.note,
         },
       });
+      if (!row) throw new Error("the piece didn't save. try once more?");
       await qc.invalidateQueries({ queryKey: ["visit", visitId] });
 
     } catch (err) {
@@ -297,9 +300,11 @@ function VisitPage() {
         };
       });
       const msg = err instanceof Error ? err.message : String(err);
-      alert(`Couldn't add artwork: ${msg}`);
+      toast.error("I couldn't keep that piece", { description: msg });
+      throw err instanceof Error ? err : new Error(msg);
     }
   }
+
 
 
 
