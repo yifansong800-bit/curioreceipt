@@ -1140,7 +1140,17 @@ function PieceForm({
     identifyAbortRef.current = abort;
     setIdentifying(true);
     setIdentifyFailed(false);
+    // Don't let a stuck identification hold the flow hostage — 10s max.
+    let timedOut = false;
+    const timeoutId = window.setTimeout(() => {
+      timedOut = true;
+      abort.abort();
+      setIdentifying(false);
+      setIdentifyFailed(true);
+      toast("couldn't identify — try again", { description: "or tell me about it yourself" });
+    }, 10_000);
     try {
+
       const downscaled = await downscaleImage(target, 1024, 0.85);
       if (abort.signal.aborted) return;
       const buf = await downscaled.arrayBuffer();
@@ -1153,7 +1163,7 @@ function PieceForm({
       if (abort.signal.aborted) return;
       const museumContext = [museum, city, country].filter(Boolean).join(", ");
       console.log("[curio] invoking identify-artwork edge function", { museumContext });
-      const { data: result, error: invokeError } = await supabase.functions.invoke("identify-artwork", {
+      const invokePromise = supabase.functions.invoke("identify-artwork", {
         body: {
           imageBase64,
           mimeType: "image/jpeg",
@@ -1163,7 +1173,14 @@ function PieceForm({
           country,
         },
       });
-      if (abort.signal.aborted) return;
+      // Resolve as soon as either the call finishes or the 10s cap aborts.
+      const abortPromise = new Promise<null>((resolve) => {
+        abort.signal.addEventListener("abort", () => resolve(null), { once: true });
+      });
+      const raced = await Promise.race([invokePromise, abortPromise]);
+      if (abort.signal.aborted || !raced) return;
+      const { data: result, error: invokeError } = raced;
+
       if (invokeError) {
         console.error("[curio] identify-artwork invoke error", invokeError);
         toast("I couldn't get a look at that one", { description: "tell me about it instead?" });
@@ -1203,9 +1220,11 @@ function PieceForm({
         setIdentifyFailed(true);
       }
     } finally {
+      window.clearTimeout(timeoutId);
       if (identifyAbortRef.current === abort) identifyAbortRef.current = null;
-      setIdentifying(false);
+      if (!timedOut) setIdentifying(false);
     }
+
 
   }
 
