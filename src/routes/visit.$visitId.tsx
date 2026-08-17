@@ -1163,7 +1163,7 @@ function PieceForm({
       if (abort.signal.aborted) return;
       const museumContext = [museum, city, country].filter(Boolean).join(", ");
       console.log("[curio] invoking identify-artwork edge function", { museumContext });
-      const { data: result, error: invokeError } = await supabase.functions.invoke("identify-artwork", {
+      const invokePromise = supabase.functions.invoke("identify-artwork", {
         body: {
           imageBase64,
           mimeType: "image/jpeg",
@@ -1173,7 +1173,14 @@ function PieceForm({
           country,
         },
       });
-      if (abort.signal.aborted) return;
+      // Resolve as soon as either the call finishes or the 10s cap aborts.
+      const abortPromise = new Promise<null>((resolve) => {
+        abort.signal.addEventListener("abort", () => resolve(null), { once: true });
+      });
+      const raced = await Promise.race([invokePromise, abortPromise]);
+      if (abort.signal.aborted || !raced) return;
+      const { data: result, error: invokeError } = raced;
+
       if (invokeError) {
         console.error("[curio] identify-artwork invoke error", invokeError);
         toast("I couldn't get a look at that one", { description: "tell me about it instead?" });
