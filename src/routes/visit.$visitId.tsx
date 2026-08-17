@@ -1220,9 +1220,11 @@ function PieceForm({
         setIdentifyFailed(true);
       }
     } finally {
+      window.clearTimeout(timeoutId);
       if (identifyAbortRef.current === abort) identifyAbortRef.current = null;
-      setIdentifying(false);
+      if (!timedOut) setIdentifying(false);
     }
+
 
   }
 
