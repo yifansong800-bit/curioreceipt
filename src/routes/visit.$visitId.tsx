@@ -1140,7 +1140,17 @@ function PieceForm({
     identifyAbortRef.current = abort;
     setIdentifying(true);
     setIdentifyFailed(false);
+    // Don't let a stuck identification hold the flow hostage — 10s max.
+    let timedOut = false;
+    const timeoutId = window.setTimeout(() => {
+      timedOut = true;
+      abort.abort();
+      setIdentifying(false);
+      setIdentifyFailed(true);
+      toast("couldn't identify — try again", { description: "or tell me about it yourself" });
+    }, 10_000);
     try {
+
       const downscaled = await downscaleImage(target, 1024, 0.85);
       if (abort.signal.aborted) return;
       const buf = await downscaled.arrayBuffer();
