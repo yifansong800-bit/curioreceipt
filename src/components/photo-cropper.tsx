@@ -28,12 +28,15 @@ async function loadImage(src: string): Promise<HTMLImageElement> {
  */
 export function PhotoCropper({
   src,
+  originalSrc,
   busy,
   ink = "bw",
   onCancel,
   onConfirm,
 }: {
   src: string;
+  /** The untouched upload, when the current photo is already a saved crop. */
+  originalSrc?: string;
   busy?: boolean;
   /** Matches the receipt's ink selection so the paper preview is accurate. */
   ink?: "bw" | "color";
