@@ -990,6 +990,7 @@ function VisitPage() {
                 palette,
               },
             });
+            if (!originalPhoto && preCropUrl) setOriginalPhoto(preCropUrl);
             await qc.invalidateQueries({ queryKey: ["visit", visitId] });
             setCropping(false);
           } catch (err) {
