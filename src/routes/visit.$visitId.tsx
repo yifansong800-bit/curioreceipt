@@ -962,6 +962,7 @@ function VisitPage() {
         onConfirm={async (blob) => {
           if (cropBusy) return;
           setCropBusy(true);
+          const preCropUrl = artworks[0].image_url;
           try {
             const file = new File([blob], "crop.jpg", { type: "image/jpeg" });
             let palette: string[] = [];
