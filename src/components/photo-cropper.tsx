@@ -386,7 +386,18 @@ export function PhotoCropper({
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setCrop({ x: 0, y: 0, w: 1, h: 1 })}
+            onClick={() => {
+              setCrop({ x: 0, y: 0, w: 1, h: 1 });
+              // Reverts to the untouched upload when a crop was already saved.
+              if (originalSrc) {
+                setWorkingSrc((prev) => {
+                  if (prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+                  return originalSrc;
+                });
+              } else {
+                setWorkingSrc(src);
+              }
+            }}
             className="uppercase tracking-widest text-sm py-3 px-4 border"
             style={{ borderColor: "var(--paper)", color: "var(--paper)", touchAction: "manipulation" }}
           >
