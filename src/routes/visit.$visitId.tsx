@@ -953,6 +953,9 @@ function VisitPage() {
     {cropping && artworks[0]?.image_url ? (
       <PhotoCropper
         src={artworks[0].image_url}
+        originalSrc={
+          originalPhoto && originalPhoto !== artworks[0].image_url ? originalPhoto : undefined
+        }
         busy={cropBusy}
         ink={ink}
         onCancel={() => setCropping(false)}
