@@ -141,6 +141,8 @@ function VisitPage() {
   const [ink, setInk] = useState<"bw" | "color">("bw");
   const [cropping, setCropping] = useState(false);
   const [cropBusy, setCropBusy] = useState(false);
+  // Remembers the untouched upload so "reset" can revert after a crop is saved.
+  const [originalPhoto, setOriginalPhoto] = useState<string | null>(null);
   const [confirmMissing, setConfirmMissing] = useState<string[] | null>(null);
 
 
