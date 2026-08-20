@@ -141,6 +141,8 @@ function VisitPage() {
   const [ink, setInk] = useState<"bw" | "color">("bw");
   const [cropping, setCropping] = useState(false);
   const [cropBusy, setCropBusy] = useState(false);
+  // Remembers the untouched upload so "reset" can revert after a crop is saved.
+  const [originalPhoto, setOriginalPhoto] = useState<string | null>(null);
   const [confirmMissing, setConfirmMissing] = useState<string[] | null>(null);
 
 
@@ -574,10 +576,14 @@ function VisitPage() {
       const nav = navigator as Navigator & {
         canShare?: (data: ShareData) => boolean;
       };
-      // Only hand off to the OS share sheet on touch devices (where "save to
-      // photos" lives). On desktop we always download the file directly.
-      const isTouch = window.matchMedia?.("(pointer: coarse)").matches === true;
-      if (isTouch && nav.canShare?.({ files: [file] })) {
+      // iOS can't download files to Photos, so hand off to the share sheet
+      // there. Android + desktop download the file directly instead — the
+      // Android share sheet has no "save to camera roll" target.
+      const ua = navigator.userAgent;
+      const isIOS =
+        /iPad|iPhone|iPod/.test(ua) ||
+        (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+      if (isIOS && nav.canShare?.({ files: [file] })) {
         try {
           await nav.share({
             files: [file],
@@ -947,12 +953,16 @@ function VisitPage() {
     {cropping && artworks[0]?.image_url ? (
       <PhotoCropper
         src={artworks[0].image_url}
+        originalSrc={
+          originalPhoto && originalPhoto !== artworks[0].image_url ? originalPhoto : undefined
+        }
         busy={cropBusy}
         ink={ink}
         onCancel={() => setCropping(false)}
         onConfirm={async (blob) => {
           if (cropBusy) return;
           setCropBusy(true);
+          const preCropUrl = artworks[0].image_url;
           try {
             const file = new File([blob], "crop.jpg", { type: "image/jpeg" });
             let palette: string[] = [];
@@ -980,6 +990,7 @@ function VisitPage() {
                 palette,
               },
             });
+            if (!originalPhoto && preCropUrl) setOriginalPhoto(preCropUrl);
             await qc.invalidateQueries({ queryKey: ["visit", visitId] });
             setCropping(false);
           } catch (err) {

@@ -28,12 +28,15 @@ async function loadImage(src: string): Promise<HTMLImageElement> {
  */
 export function PhotoCropper({
   src,
+  originalSrc,
   busy,
   ink = "bw",
   onCancel,
   onConfirm,
 }: {
   src: string;
+  /** The untouched upload, when the current photo is already a saved crop. */
+  originalSrc?: string;
   busy?: boolean;
   /** Matches the receipt's ink selection so the paper preview is accurate. */
   ink?: "bw" | "color";
@@ -383,7 +386,18 @@ export function PhotoCropper({
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setCrop({ x: 0, y: 0, w: 1, h: 1 })}
+            onClick={() => {
+              setCrop({ x: 0, y: 0, w: 1, h: 1 });
+              // Reverts to the untouched upload when a crop was already saved.
+              if (originalSrc) {
+                setWorkingSrc((prev) => {
+                  if (prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+                  return originalSrc;
+                });
+              } else {
+                setWorkingSrc(src);
+              }
+            }}
             className="uppercase tracking-widest text-sm py-3 px-4 border"
             style={{ borderColor: "var(--paper)", color: "var(--paper)", touchAction: "manipulation" }}
           >
