@@ -574,10 +574,14 @@ function VisitPage() {
       const nav = navigator as Navigator & {
         canShare?: (data: ShareData) => boolean;
       };
-      // Only hand off to the OS share sheet on touch devices (where "save to
-      // photos" lives). On desktop we always download the file directly.
-      const isTouch = window.matchMedia?.("(pointer: coarse)").matches === true;
-      if (isTouch && nav.canShare?.({ files: [file] })) {
+      // iOS can't download files to Photos, so hand off to the share sheet
+      // there. Android + desktop download the file directly instead — the
+      // Android share sheet has no "save to camera roll" target.
+      const ua = navigator.userAgent;
+      const isIOS =
+        /iPad|iPhone|iPod/.test(ua) ||
+        (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+      if (isIOS && nav.canShare?.({ files: [file] })) {
         try {
           await nav.share({
             files: [file],
