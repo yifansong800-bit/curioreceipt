@@ -20,6 +20,7 @@ import { PrinterStage } from "@/components/printer-stage";
 import { ModeMark } from "@/components/pixel-icons";
 import { CameraCapture } from "@/components/camera-capture";
 import { IdentifyResultCard, ScanThumb, ThinkingLines } from "@/components/identify-panel";
+import { identifyArtworkFn } from "@/lib/identify.functions";
 
 import { PieceProof } from "@/components/piece-proof";
 import { PhotoCropper } from "@/components/photo-cropper";
@@ -1159,7 +1160,7 @@ function PieceForm({
       setIdentifying(false);
       setIdentifyFailed(true);
       toast("couldn't identify — try again", { description: "or tell me about it yourself" });
-    }, 10_000);
+    }, 20_000);
     try {
 
       const downscaled = await downscaleImage(target, 1024, 0.85);
@@ -1173,18 +1174,12 @@ function PieceForm({
       const imageBase64 = btoa(binary);
       if (abort.signal.aborted) return;
       const museumContext = [museum, city, country].filter(Boolean).join(", ");
-      console.log("[curio] invoking identify-artwork edge function", { museumContext });
-      const invokePromise = supabase.functions.invoke("identify-artwork", {
-        body: {
-          imageBase64,
-          mimeType: "image/jpeg",
-          museumContext,
-          museum,
-          city,
-          country,
-        },
-      });
-      // Resolve as soon as either the call finishes or the 10s cap aborts.
+      const invokePromise = identifyArtworkFn({
+        data: { imageBase64, mimeType: "image/jpeg", museumContext },
+      })
+        .then((data) => ({ data, error: null as unknown }))
+        .catch((error: unknown) => ({ data: null, error }));
+      // Resolve as soon as either the call finishes or the time cap aborts.
       const abortPromise = new Promise<null>((resolve) => {
         abort.signal.addEventListener("abort", () => resolve(null), { once: true });
       });
@@ -1192,8 +1187,8 @@ function PieceForm({
       if (abort.signal.aborted || !raced) return;
       const { data: result, error: invokeError } = raced;
 
-      if (invokeError) {
-        console.error("[curio] identify-artwork invoke error", invokeError);
+      if (invokeError || !result) {
+        console.error("[curio] identify error", invokeError);
         toast("I couldn't get a look at that one", { description: "tell me about it instead?" });
         setIdentifyFailed(true);
         return;
