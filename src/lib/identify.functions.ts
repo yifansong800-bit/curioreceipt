@@ -13,7 +13,8 @@ export const identifyArtworkFn = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const key = process.env.LOVABLE_API_KEY;
+    const key = process.env.NEW_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
     if (!key) throw new Error("AI not configured");
-    return identifyArtwork(key, data.imageBase64, data.mimeType, data.museumContext);
+    const visionKey = process.env.VISION_API_KEY || undefined;
+    return identifyArtwork(key, visionKey, data.imageBase64, data.mimeType, data.museumContext);
   });

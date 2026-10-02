@@ -1,4 +1,5 @@
-// Artwork identification via Lovable AI Gateway (OpenAI Responses, streamed).
+// Artwork identification via Google Gemini 2.5 Flash (direct API),
+// with optional Google Vision hints (plaque OCR + reverse-image web detection).
 
 export type IdentifyOut = {
   title: string;
@@ -8,20 +9,12 @@ export type IdentifyOut = {
   confident: boolean;
 };
 
-const MODEL = "openai/gpt-6-astra";
+// Tried in order; falls through on "busy" (503/429/500) or "model unavailable" (404).
+const GEMINI_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash"];
+const endpoint = (m: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 
-const SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  required: ["title", "artist", "year", "medium", "confident"],
-  properties: {
-    title: { type: "string" },
-    artist: { type: "string" },
-    year: { type: "string" },
-    medium: { type: "string" },
-    confident: { type: "boolean" },
-  },
-};
+const EMPTY: IdentifyOut = { title: "", artist: "", year: "", medium: "", confident: false };
 
 function clean(v: unknown): string {
   if (typeof v !== "string") return "";
@@ -30,92 +23,144 @@ function clean(v: unknown): string {
   return s;
 }
 
+async function visionHints(visionKey: string, imageBase64: string): Promise<string> {
+  try {
+    const resp = await fetch(
+      `https://vision.googleapis.com/v1/images:annotate?key=${encodeURIComponent(visionKey)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requests: [
+            {
+              image: { content: imageBase64 },
+              features: [
+                { type: "WEB_DETECTION", maxResults: 10 },
+                { type: "TEXT_DETECTION", maxResults: 1 },
+              ],
+            },
+          ],
+        }),
+      },
+    );
+    if (!resp.ok) {
+      console.error("[identify] vision error", resp.status, (await resp.text()).slice(0, 300));
+      return "";
+    }
+    const j = (await resp.json()) as {
+      responses?: {
+        fullTextAnnotation?: { text?: string };
+        webDetection?: {
+          bestGuessLabels?: { label?: string }[];
+          webEntities?: { description?: string; score?: number }[];
+          pagesWithMatchingImages?: { pageTitle?: string; url?: string }[];
+        };
+      }[];
+    };
+    const r = j.responses?.[0];
+    const wd = r?.webDetection;
+    const ocr = (r?.fullTextAnnotation?.text ?? "").slice(0, 800);
+    const best = (wd?.bestGuessLabels ?? []).map((b) => b.label).filter(Boolean).join(" | ");
+    const ents = (wd?.webEntities ?? [])
+      .filter((e) => e.description)
+      .slice(0, 10)
+      .map((e) => `- ${e.description} (${(e.score ?? 0).toFixed(2)})`)
+      .join("\n");
+    const pages = (wd?.pagesWithMatchingImages ?? [])
+      .slice(0, 8)
+      .map((p) => `- ${(p.pageTitle ?? "").replace(/<[^>]+>/g, "")} — ${p.url ?? ""}`)
+      .join("\n");
+    return [
+      `PLAQUE OCR:\n${ocr || "(none)"}`,
+      `REVERSE-IMAGE BEST GUESS:\n${best || "(none)"}`,
+      `WEB ENTITIES:\n${ents || "(none)"}`,
+      `PAGES WITH MATCHING IMAGE:\n${pages || "(none)"}`,
+    ].join("\n\n");
+  } catch (e) {
+    console.error("[identify] vision threw", e);
+    return "";
+  }
+}
+
 export async function identifyArtwork(
-  apiKey: string,
+  geminiKey: string,
+  visionKey: string | undefined,
   imageBase64: string,
   mimeType: string,
   museumContext: string,
 ): Promise<IdentifyOut> {
-  const instructions = `You are an expert museum curator and art historian identifying an artwork from a visitor's phone photo.
+  const hints = visionKey ? await visionHints(visionKey, imageBase64) : "";
+
+  const systemPrompt = `You are an expert museum curator and art historian identifying an artwork from a visitor's phone photo.
 Venue: ${museumContext || "unknown"}.
+
+REVERSE-IMAGE / OCR EVIDENCE (helpful but noisy):
+${hints || "(unavailable)"}
+
 Rules:
-- Look closely at the image. If a wall label/plaque is visible, read it and trust it above all else.
-- Use your art-historical knowledge plus the venue's collection to name the specific work.
-- Never invent a title just because you recognise the style; if unsure of the exact work, leave title "" but still give the artist if you can.
-- Year: a specific year or range as catalogued (e.g. "1928" or "1503–1519"); never vague.
+- Look at the photo first. If a wall label is visible (or in the OCR), trust it above all else.
+- Accept a web-evidence candidate only if it matches what you actually see and fits the venue.
+- If evidence is empty but you genuinely recognise this exact work, use your own knowledge.
+- Never invent a title just because you recognise the artist/style; leave title "" but still give the artist.
+- Year: a specific year or catalogued range (e.g. "1928", "1503–1519"); never vague.
 - Medium: catalogue wording (e.g. "Oil on canvas").
-- confident = true only if you clearly recognise this exact work (or read it on a label).
+- confident = true only if title AND artist are clearly supported.
 Return empty strings for anything you cannot support.`;
 
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+  const init: RequestInit = {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Lovable-API-Key": apiKey,
-      "X-Lovable-AIG-SDK": "fetch",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: MODEL,
-      instructions,
-      input: [
+      systemInstruction: { role: "system", parts: [{ text: systemPrompt }] },
+      contents: [
         {
           role: "user",
-          content: [
-            { type: "input_text", text: "Identify this artwork." },
-            { type: "input_image", image_url: `data:${mimeType};base64,${imageBase64}` },
+          parts: [
+            { text: "Identify this artwork. Return only JSON." },
+            { inline_data: { mime_type: mimeType, data: imageBase64 } },
           ],
         },
       ],
-      text: { format: { type: "json_schema", name: "artwork", strict: true, schema: SCHEMA } },
-      reasoning: { effort: "low" },
-      stream: true,
-      store: false,
+      generationConfig: {
+        temperature: 0,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            title: { type: "STRING" },
+            artist: { type: "STRING" },
+            year: { type: "STRING" },
+            medium: { type: "STRING" },
+            confident: { type: "BOOLEAN" },
+          },
+          required: ["title", "artist", "year", "medium", "confident"],
+        },
+      },
     }),
-  });
-
-  if (!resp.ok || !resp.body) {
+  };
+  let resp: Response | null = null;
+  for (const m of GEMINI_MODELS) {
+    resp = await fetch(`${endpoint(m)}?key=${encodeURIComponent(geminiKey)}`, init);
+    if (resp.ok) break;
     const t = await resp.text().catch(() => "");
-    console.error("[identify] gateway error", resp.status, t.slice(0, 500));
-    throw new Error(`gateway ${resp.status}`);
+    console.error("[identify] gemini error", m, resp.status, t.slice(0, 300));
+    if (![404, 429, 500, 503].includes(resp.status)) throw new Error(`gemini ${resp.status}`);
   }
+  if (!resp || !resp.ok) throw new Error("gemini unavailable");
 
-  const reader = resp.body.getReader();
-  const dec = new TextDecoder();
-  let buf = "";
-  let text = "";
-  let refused = false;
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    let idx: number;
-    while ((idx = buf.indexOf("\n\n")) >= 0) {
-      const frame = buf.slice(0, idx);
-      buf = buf.slice(idx + 2);
-      for (const line of frame.split("\n")) {
-        if (!line.startsWith("data:")) continue;
-        const data = line.slice(5).trim();
-        if (!data || data === "[DONE]") continue;
-        try {
-          const ev = JSON.parse(data);
-          if (ev.type === "response.output_text.delta") text += ev.delta ?? "";
-          else if (ev.type === "response.refusal.delta") refused = true;
-          else if (ev.type === "error" || ev.type === "response.failed") {
-            console.error("[identify] stream error", data.slice(0, 500));
-          }
-        } catch {
-          /* partial */
-        }
-      }
-    }
-  }
+  const payload = (await resp.json().catch(() => null)) as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  } | null;
+  const text = payload?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+  if (!text) return EMPTY;
 
-  if (refused || !text) return { title: "", artist: "", year: "", medium: "", confident: false };
   let parsed: Record<string, unknown> = {};
   try {
-    parsed = JSON.parse(text);
+    const m = text.match(/\{[\s\S]*\}/);
+    parsed = JSON.parse(m ? m[0] : text);
   } catch {
     console.error("[identify] parse fail", text.slice(0, 300));
+    return EMPTY;
   }
   const title = clean(parsed.title);
   const artist = clean(parsed.artist);
