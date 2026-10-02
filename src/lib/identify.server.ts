@@ -136,7 +136,8 @@ Return empty strings for anything you cannot support.`;
           required: ["title", "artist", "year", "medium", "confident"],
         },
       },
-    }),;
+    }),
+  };
   let resp: Response | null = null;
   for (const m of GEMINI_MODELS) {
     resp = await fetch(`${endpoint(m)}?key=${encodeURIComponent(geminiKey)}`, init);
