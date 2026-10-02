@@ -9,8 +9,10 @@ export type IdentifyOut = {
   confident: boolean;
 };
 
-const GEMINI_MODEL = "gemini-3.8-flash";
-const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+// Tried in order; falls through on "busy" (503/429/500) or "model unavailable" (404).
+const GEMINI_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash"];
+const endpoint = (m: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 
 const EMPTY: IdentifyOut = { title: "", artist: "", year: "", medium: "", confident: false };
 
@@ -105,7 +107,7 @@ Rules:
 - confident = true only if title AND artist are clearly supported.
 Return empty strings for anything you cannot support.`;
 
-  const resp = await fetch(`${GEMINI_ENDPOINT}?key=${encodeURIComponent(geminiKey)}`, {
+  const init: RequestInit = {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -134,14 +136,16 @@ Return empty strings for anything you cannot support.`;
           required: ["title", "artist", "year", "medium", "confident"],
         },
       },
-    }),
-  });
-
-  if (!resp.ok) {
+    }),;
+  let resp: Response | null = null;
+  for (const m of GEMINI_MODELS) {
+    resp = await fetch(`${endpoint(m)}?key=${encodeURIComponent(geminiKey)}`, init);
+    if (resp.ok) break;
     const t = await resp.text().catch(() => "");
-    console.error("[identify] gemini error", resp.status, t.slice(0, 500));
-    throw new Error(`gemini ${resp.status}`);
+    console.error("[identify] gemini error", m, resp.status, t.slice(0, 300));
+    if (![404, 429, 500, 503].includes(resp.status)) throw new Error(`gemini ${resp.status}`);
   }
+  if (!resp || !resp.ok) throw new Error("gemini unavailable");
 
   const payload = (await resp.json().catch(() => null)) as {
     candidates?: { content?: { parts?: { text?: string }[] } }[];
