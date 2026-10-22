@@ -1,4 +1,4 @@
-// Artwork identification via Google Gemini 2.5 Flash (direct API),
+// Artwork identification via Anthropic Claude (direct Messages API),
 // with optional Google Vision hints (plaque OCR + reverse-image web detection).
 
 export type IdentifyOut = {
@@ -9,10 +9,8 @@ export type IdentifyOut = {
   confident: boolean;
 };
 
-// Tried in order; falls through on "busy" (503/429/500) or "model unavailable" (404).
-const GEMINI_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash"];
-const endpoint = (m: string) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
+const ANTHROPIC_MODEL = "claude-haiku-4-5";
+const ANTHROPIC_ENDPOINT = "https://api.anthropic.com/v1/messages";
 
 const EMPTY: IdentifyOut = { title: "", artist: "", year: "", medium: "", confident: false };
 
@@ -44,7 +42,7 @@ async function visionHints(visionKey: string, imageBase64: string): Promise<stri
       },
     );
     if (!resp.ok) {
-      console.error("[identify] vision error", resp.status, (await resp.text()).slice(0, 300));
+      console.error("[identify] vision error", resp.status);
       return "";
     }
     const j = (await resp.json()) as {
@@ -83,7 +81,7 @@ async function visionHints(visionKey: string, imageBase64: string): Promise<stri
 }
 
 export async function identifyArtwork(
-  geminiKey: string,
+    geminiKey: string,
   visionKey: string | undefined,
   imageBase64: string,
   mimeType: string,
