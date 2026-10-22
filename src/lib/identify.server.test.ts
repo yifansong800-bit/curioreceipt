@@ -1,3 +1,4 @@
+/// <reference types="bun" />
 import { afterEach, expect, test, mock } from "bun:test";
 import { identifyArtwork } from "./identify.server";
 
