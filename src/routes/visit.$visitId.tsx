@@ -27,6 +27,9 @@ import { PhotoCropper } from "@/components/photo-cropper";
 import { StarRating } from "@/components/star-rating";
 import { Footer } from "@/components/Footer";
 import { slugify } from "@/lib/format";
+import { Button } from '@/components/ui/button';
+import { importGuestVisit } from '@/lib/collection.functions';
+import { readDraft, writeDraft, removeDraft } from '@/lib/local-drafts';
 
 type View = "compose" | "print";
 type Stage = "idle" | "printing" | "printed";
@@ -99,6 +102,11 @@ function VisitPage() {
   const updateFn = useServerFn(updateArtwork);
   const updateLocFn = useServerFn(updateVisitLocation);
   const uploadFn = useServerFn(uploadArtworkPhoto);
+  const keepFn = useServerFn(importGuestVisit);
+  const [accountUser, setAccountUser] = useState<string | null>(null);
+  const [kept, setKept] = useState(false);
+  const [keeping, setKeeping] = useState(false);
+  useEffect(() => { void supabase.auth.getUser().then(({data}) => setAccountUser(data.user?.id ?? null)); }, []);
 
   const reduce = useReducedMotion();
 
@@ -144,6 +152,31 @@ function VisitPage() {
   const [cropBusy, setCropBusy] = useState(false);
   // Remembers the untouched upload so "reset" can revert after a crop is saved.
   const [originalPhoto, setOriginalPhoto] = useState<string | null>(null);
+  async function keepInLibrary(status: 'saved' | 'draft' = 'saved') {
+    if (!accountUser || keeping) return;
+    setKeeping(true);
+    const key = `curio:pending:${accountUser}:${visitId}`;
+    const payload = {visitId,sessionId,status,ink};
+    localStorage.setItem(key, JSON.stringify(payload));
+    try {
+      await keepFn({data:payload});
+      localStorage.removeItem(key);
+      await qc.invalidateQueries({queryKey:['collection']});
+      if (status === 'saved') { setKept(true); toast('Kept in your Library.'); }
+    } catch { toast('Saved on this device. I’ll try syncing when you’re online.'); }
+    finally { setKeeping(false); }
+  }
+  useEffect(() => {
+    if (!accountUser) return;
+    const sync = async () => {
+      const key = `curio:pending:${accountUser}:${visitId}`;
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      try { await keepFn({data:JSON.parse(raw)}); localStorage.removeItem(key); setKept(true); await qc.invalidateQueries({queryKey:['collection']}); } catch {}
+    };
+    window.addEventListener('online', sync); void sync();
+    return () => window.removeEventListener('online', sync);
+  }, [accountUser, visitId, keepFn, qc]);
   const [confirmMissing, setConfirmMissing] = useState<string[] | null>(null);
 
 
@@ -291,6 +324,7 @@ function VisitPage() {
       });
       if (!row) throw new Error("the piece didn't save. try once more?");
       await qc.invalidateQueries({ queryKey: ["visit", visitId] });
+      if (accountUser && localStorage.getItem(`curio:account-visit:${visitId}`)) await keepInLibrary('draft');
 
     } catch (err) {
       console.error("[curio] add artwork failed", err);
@@ -729,6 +763,7 @@ function VisitPage() {
                   museum={visit.museum}
                   city={visit.city ?? null}
                   country={visit.country ?? null}
+                  draftKey={`${accountUser ?? 'guest'}:${visitId}`}
                   onSave={(payload) => addArtworkFromPayload(payload)}
                 />
               ) : artworks[0] ? (
@@ -848,6 +883,8 @@ function VisitPage() {
 
                 {stage === "printed" ? (
                   <>
+                    {accountUser ? <Button disabled={keeping || kept} className="w-full h-12 bg-yellow text-teal" onClick={() => void keepInLibrary()}>{kept?'Kept in Library':keeping?'keeping it…':'Keep in my Library'}</Button> : <Button asChild className="w-full h-12 bg-yellow text-teal"><Link to="/auth">Create a collection</Link></Button>}
+                    {accountUser && <Button asChild variant="link" className="w-full text-yellow"><Link to="/library">Go to Library</Link></Button>}
                     <button
                       onClick={saved ? () => {} : handleSaveToCameraRoll}
                       disabled={saving}
@@ -1078,12 +1115,14 @@ function PieceForm({
   city,
   country,
   onSave,
+  draftKey,
 }: {
   captureMode: "snap" | "upload";
   museum: string;
   city: string | null;
   country: string | null;
   onSave: (payload: PiecePayload) => Promise<void> | void;
+  draftKey: string;
 }) {
   // Identification runs through the `identify-artwork` Supabase Edge Function
   // (Vision reverse-image → Gemini reasoning).
@@ -1126,6 +1165,22 @@ function PieceForm({
   const [saving, setSaving] = useState(false);
   const [nextWarned, setNextWarned] = useState(false);
   const [saveWarned, setSaveWarned] = useState(false);
+  const [restored, setRestored] = useState(false);
+  const [draftStatus, setDraftStatus] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    void readDraft<{file:File|null;title:string;artist:string;year:string;medium:string;lingerMin:string;lingerSec:string;emotions:string[];rating:number;note:string;step:'capture'|'details'|'reflection'}>(draftKey).then(d => {
+      if(cancelled) return;
+      if(d){setFile(d.file);setTitle(d.title);setArtist(d.artist);setYear(d.year);setMedium(d.medium);setLingerMin(d.lingerMin);setLingerSec(d.lingerSec);setEmotions(d.emotions);setRating(d.rating);setNote(d.note);setStep(d.step);setDraftStatus('draft restored · saved on this device');}
+      setRestored(true);
+    }).catch(()=>setRestored(true));
+    return()=>{cancelled=true;};
+  }, [draftKey]);
+  useEffect(() => {
+    if(!restored || (!file && !title && !note)) return;
+    const timer=setTimeout(()=>{void writeDraft(draftKey,{file,title,artist,year,medium,lingerMin,lingerSec,emotions,rating,note,step}).then(()=>setDraftStatus('draft saved on this device')).catch(()=>setDraftStatus('I couldn’t save this draft on your device.'));},350);
+    return()=>clearTimeout(timer);
+  }, [restored,draftKey,file,title,artist,year,medium,lingerMin,lingerSec,emotions,rating,note,step]);
 
 
   useEffect(() => {
@@ -1428,6 +1483,7 @@ function PieceForm({
         rating,
         note: note.trim(),
       });
+      await removeDraft(draftKey);
     } catch (err) {
       // addArtworkFromPayload already surfaced a friendly toast.
       console.error("[curio] save piece failed", err);
@@ -1465,6 +1521,7 @@ function PieceForm({
           {step === "capture" ? "● ○ ○" : step === "details" ? "○ ● ○" : "○ ○ ●"}
         </span>
       </div>
+      {draftStatus && <p role="status" className="text-[10px] text-ink-soft">{draftStatus}</p>}
 
       {cameraOpen ? (
         <CameraCapture

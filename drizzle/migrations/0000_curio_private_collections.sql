@@ -1,0 +1,17 @@
+CREATE TABLE public.profiles (id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE, username text UNIQUE CHECK (username ~ '^[a-z0-9_]{3,24}$'), display_name text NOT NULL DEFAULT '', avatar_path text, preferences jsonb NOT NULL DEFAULT '{}'::jsonb, onboarded boolean NOT NULL DEFAULT false);
+GRANT SELECT, INSERT, UPDATE ON public.profiles TO authenticated;
+GRANT ALL ON public.profiles TO service_role;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY profiles_owner ON public.profiles FOR ALL TO authenticated USING (id = auth.uid()) WITH CHECK (id = auth.uid());
+CREATE FUNCTION public.curio_create_profile() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$ BEGIN INSERT INTO public.profiles(id) VALUES (NEW.id); RETURN NEW; END; $$;
+CREATE TRIGGER curio_profile_signup AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.curio_create_profile();
+CREATE TABLE public.collection_entries (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL, guest_visit_id uuid UNIQUE, category text NOT NULL DEFAULT 'Uncategorized', status text NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','saved')), ink text NOT NULL DEFAULT 'bw' CHECK(ink IN ('bw','color')), snapshot jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.collection_entries TO authenticated;
+GRANT ALL ON public.collection_entries TO service_role;
+ALTER TABLE public.collection_entries ENABLE ROW LEVEL SECURITY;
+CREATE POLICY collection_owner ON public.collection_entries FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+CREATE TABLE public.museum_bookmarks (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL, name text NOT NULL, city text, country text, created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(user_id,name));
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.museum_bookmarks TO authenticated;
+GRANT ALL ON public.museum_bookmarks TO service_role;
+ALTER TABLE public.museum_bookmarks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY bookmarks_owner ON public.museum_bookmarks FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());

@@ -10,13 +10,39 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AccountDeletedRouteImport } from './routes/account-deleted'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BeginRouteImport } from './routes/begin'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
+import { Route as AuthenticatedMuseumsRouteImport } from './routes/_authenticated/museums'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedWantToGoRouteImport } from './routes/_authenticated/want-to-go'
 import { Route as VisitVisitIdRouteImport } from './routes/visit.$visitId'
+import { Route as AuthenticatedCollectionEntryIdRouteImport } from './routes/_authenticated/collection.$entryId'
+import { Route as AuthenticatedMuseumNameRouteImport } from './routes/_authenticated/museum.$name'
+import { Route as AuthenticatedStackCategoryRouteImport } from './routes/_authenticated/stack.$category'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountDeletedRoute = AccountDeletedRouteImport.update({
+  id: '/account-deleted',
+  path: '/account-deleted',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BeginRoute = BeginRouteImport.update({
@@ -29,43 +55,175 @@ const PrivacyRoute = PrivacyRouteImport.update({
   path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedLibraryRoute = AuthenticatedLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMuseumsRoute = AuthenticatedMuseumsRouteImport.update({
+  id: '/museums',
+  path: '/museums',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedWantToGoRoute = AuthenticatedWantToGoRouteImport.update({
+  id: '/want-to-go',
+  path: '/want-to-go',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const VisitVisitIdRoute = VisitVisitIdRouteImport.update({
   id: '/visit/$visitId',
   path: '/visit/$visitId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedCollectionEntryIdRoute =
+  AuthenticatedCollectionEntryIdRouteImport.update({
+    id: '/collection/$entryId',
+    path: '/collection/$entryId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMuseumNameRoute = AuthenticatedMuseumNameRouteImport.update({
+  id: '/museum/$name',
+  path: '/museum/$name',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedStackCategoryRoute =
+  AuthenticatedStackCategoryRouteImport.update({
+    id: '/stack/$category',
+    path: '/stack/$category',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account-deleted': typeof AccountDeletedRoute
+  '/auth': typeof AuthRoute
   '/begin': typeof BeginRoute
   '/privacy': typeof PrivacyRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/library': typeof AuthenticatedLibraryRoute
+  '/museums': typeof AuthenticatedMuseumsRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/want-to-go': typeof AuthenticatedWantToGoRoute
   '/visit/$visitId': typeof VisitVisitIdRoute
+  '/collection/$entryId': typeof AuthenticatedCollectionEntryIdRoute
+  '/museum/$name': typeof AuthenticatedMuseumNameRoute
+  '/stack/$category': typeof AuthenticatedStackCategoryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account-deleted': typeof AccountDeletedRoute
+  '/auth': typeof AuthRoute
   '/begin': typeof BeginRoute
   '/privacy': typeof PrivacyRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/library': typeof AuthenticatedLibraryRoute
+  '/museums': typeof AuthenticatedMuseumsRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/want-to-go': typeof AuthenticatedWantToGoRoute
   '/visit/$visitId': typeof VisitVisitIdRoute
+  '/collection/$entryId': typeof AuthenticatedCollectionEntryIdRoute
+  '/museum/$name': typeof AuthenticatedMuseumNameRoute
+  '/stack/$category': typeof AuthenticatedStackCategoryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/account-deleted': typeof AccountDeletedRoute
+  '/auth': typeof AuthRoute
   '/begin': typeof BeginRoute
   '/privacy': typeof PrivacyRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/library': typeof AuthenticatedLibraryRoute
+  '/_authenticated/museums': typeof AuthenticatedMuseumsRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/want-to-go': typeof AuthenticatedWantToGoRoute
   '/visit/$visitId': typeof VisitVisitIdRoute
+  '/_authenticated/collection/$entryId': typeof AuthenticatedCollectionEntryIdRoute
+  '/_authenticated/museum/$name': typeof AuthenticatedMuseumNameRoute
+  '/_authenticated/stack/$category': typeof AuthenticatedStackCategoryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/begin' | '/privacy' | '/visit/$visitId'
+  fullPaths:
+    | '/'
+    | '/account-deleted'
+    | '/auth'
+    | '/begin'
+    | '/privacy'
+    | '/reset-password'
+    | '/library'
+    | '/museums'
+    | '/onboarding'
+    | '/profile'
+    | '/want-to-go'
+    | '/visit/$visitId'
+    | '/collection/$entryId'
+    | '/museum/$name'
+    | '/stack/$category'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/begin' | '/privacy' | '/visit/$visitId'
-  id: '__root__' | '/' | '/begin' | '/privacy' | '/visit/$visitId'
+  to:
+    | '/'
+    | '/account-deleted'
+    | '/auth'
+    | '/begin'
+    | '/privacy'
+    | '/reset-password'
+    | '/library'
+    | '/museums'
+    | '/onboarding'
+    | '/profile'
+    | '/want-to-go'
+    | '/visit/$visitId'
+    | '/collection/$entryId'
+    | '/museum/$name'
+    | '/stack/$category'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/account-deleted'
+    | '/auth'
+    | '/begin'
+    | '/privacy'
+    | '/reset-password'
+    | '/_authenticated/library'
+    | '/_authenticated/museums'
+    | '/_authenticated/onboarding'
+    | '/_authenticated/profile'
+    | '/_authenticated/want-to-go'
+    | '/visit/$visitId'
+    | '/_authenticated/collection/$entryId'
+    | '/_authenticated/museum/$name'
+    | '/_authenticated/stack/$category'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AccountDeletedRoute: typeof AccountDeletedRoute
+  AuthRoute: typeof AuthRoute
   BeginRoute: typeof BeginRoute
   PrivacyRoute: typeof PrivacyRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   VisitVisitIdRoute: typeof VisitVisitIdRoute
 }
 
@@ -76,6 +234,27 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account-deleted': {
+      id: '/account-deleted'
+      path: '/account-deleted'
+      fullPath: '/account-deleted'
+      preLoaderRoute: typeof AccountDeletedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/begin': {
@@ -92,6 +271,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/library': {
+      id: '/_authenticated/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof AuthenticatedLibraryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/museums': {
+      id: '/_authenticated/museums'
+      path: '/museums'
+      fullPath: '/museums'
+      preLoaderRoute: typeof AuthenticatedMuseumsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/want-to-go': {
+      id: '/_authenticated/want-to-go'
+      path: '/want-to-go'
+      fullPath: '/want-to-go'
+      preLoaderRoute: typeof AuthenticatedWantToGoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/visit/$visitId': {
       id: '/visit/$visitId'
       path: '/visit/$visitId'
@@ -99,13 +320,63 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VisitVisitIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/collection/$entryId': {
+      id: '/_authenticated/collection/$entryId'
+      path: '/collection/$entryId'
+      fullPath: '/collection/$entryId'
+      preLoaderRoute: typeof AuthenticatedCollectionEntryIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/museum/$name': {
+      id: '/_authenticated/museum/$name'
+      path: '/museum/$name'
+      fullPath: '/museum/$name'
+      preLoaderRoute: typeof AuthenticatedMuseumNameRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/stack/$category': {
+      id: '/_authenticated/stack/$category'
+      path: '/stack/$category'
+      fullPath: '/stack/$category'
+      preLoaderRoute: typeof AuthenticatedStackCategoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
+  AuthenticatedMuseumsRoute: typeof AuthenticatedMuseumsRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedWantToGoRoute: typeof AuthenticatedWantToGoRoute
+  AuthenticatedCollectionEntryIdRoute: typeof AuthenticatedCollectionEntryIdRoute
+  AuthenticatedMuseumNameRoute: typeof AuthenticatedMuseumNameRoute
+  AuthenticatedStackCategoryRoute: typeof AuthenticatedStackCategoryRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
+  AuthenticatedMuseumsRoute: AuthenticatedMuseumsRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedWantToGoRoute: AuthenticatedWantToGoRoute,
+  AuthenticatedCollectionEntryIdRoute: AuthenticatedCollectionEntryIdRoute,
+  AuthenticatedMuseumNameRoute: AuthenticatedMuseumNameRoute,
+  AuthenticatedStackCategoryRoute: AuthenticatedStackCategoryRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AccountDeletedRoute: AccountDeletedRoute,
+  AuthRoute: AuthRoute,
   BeginRoute: BeginRoute,
   PrivacyRoute: PrivacyRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   VisitVisitIdRoute: VisitVisitIdRoute,
 }
 export const routeTree = rootRouteImport

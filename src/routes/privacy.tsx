@@ -17,6 +17,7 @@ export const Route = createFileRoute("/privacy")({
           "Read how Curio handles your photos, visit data, and privacy when you create museum visit receipts.",
       },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: PrivacyPage,
@@ -57,7 +58,7 @@ function PrivacyPage() {
           Privacy Policy
         </h1>
         <p className="mt-4 text-sm" style={{ color: "var(--ink-soft)" }}>
-          Effective Date: July 3, 2026
+          Effective Date: November 13, 2026
         </p>
 
         <div className="mt-8 space-y-8 text-sm leading-relaxed">
@@ -77,7 +78,7 @@ function PrivacyPage() {
             <ul className="list-disc pl-5 mt-2 space-y-2">
               <li>
                 <strong>Uploaded Photos:</strong> We process the photo you upload solely to apply
-                our dither filter and render your final receipt graphic.
+                our dither filter and render your final receipt graphic. When you request identification, a resized photo is sent to Anthropic, and optionally Google Vision for label and matching-image hints.
               </li>
               <li>
                 <strong>Custom Inputs:</strong> Any text you voluntarily input (such as artwork
@@ -100,10 +101,7 @@ function PrivacyPage() {
               2. How Your Images Are Processed
             </h2>
             <p>
-              Your photos belong to you. Images are processed to generate your receipt canvas. Once
-              your final 9:16 receipt graphic is compiled and downloaded to your device, we do not
-              permanently store, sell, or use your original images or generated designs for any
-              other purpose.
+              Your photos belong to you. Photos and visit details are stored privately to support receipt creation and your collection. Account visits are visible only to their owner; other people see them only when you share an exported image. Guest receipts are protected by a device-held session identifier. Drafts may be stored on your device, including while offline.
             </p>
           </section>
 
@@ -115,9 +113,7 @@ function PrivacyPage() {
               3. Third-Party Sharing
             </h2>
             <p>
-              We have zero interest in selling your personal data to advertisers or corporations. We
-              do not share, trade, or distribute your uploaded media or custom inputs with any
-              third parties.
+              We do not sell your personal data. Lovable Cloud hosts accounts, photos and visit data. Anthropic receives photos you ask Curio to identify; Google Vision may receive the same photo for additional evidence. These providers process data under their own terms and privacy policies. Sharing a receipt sends its image to the app or person you choose.
             </p>
           </section>
 
@@ -143,9 +139,7 @@ function PrivacyPage() {
               5. Your Rights & Control
             </h2>
             <p>
-              Because your data is processed dynamically to create your downloadable receipt, you
-              retain full ownership over everything you create. If you have any questions or
-              concerns about how the app handles your information, you can contact us directly.
+              You can edit or delete account visits from your collection and delete your account in Profile → Settings. Account deletion removes your profile, linked visit data, photos and bookmarks. Downloaded or shared images remain on devices or services where you saved them. Profile information includes your username, display name, optional photo and preferences. Location is museum-level only, not a record of your precise movements.
             </p>
           </section>
 

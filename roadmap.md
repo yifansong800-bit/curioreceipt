@@ -1,0 +1,11 @@
+# Curio 1.0
+- [x] Account screens, profile, recovery, onboarding, confirmed deletion
+- [x] Acrylic Library, category stacks, detail view, private persistence
+- [x] Connect existing guest capture/print to account collection; preserve guest flow
+- [x] Device draft restoration and completed-entry reconnect synchronization
+- [x] Museums, bookmarks, profile statistics, privacy
+- [x] Rules tests; guest mobile printing; public mobile/desktop account layouts; device draft isolation
+- [ ] Signed-in end-to-end checks (Library, ownership isolation, save/edit/delete, account deletion) — blocked: no auth users exist; first confirmed account required
+- [ ] Apple consent and email recovery end-to-end — blocked: user-controlled identity/confirmation required
+- [ ] Contact email — blocked: Cassie has not supplied an address
+- [ ] Cross-device unfinished-field draft sync — local drafts are implemented; requires follow-up verification with a confirmed account

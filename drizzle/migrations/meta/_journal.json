@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1794613451774,
+      "tag": "0000_curio_private_collections",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794613822872,
+      "tag": "0001_protect_collection_visit_links",
+      "breakpoints": true
+    }
+  ]
+}

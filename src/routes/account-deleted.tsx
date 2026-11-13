@@ -1,0 +1,5 @@
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { Button } from '@/components/ui/button';
+import { pageHead } from '@/lib/page-head';
+export const Route=createFileRoute('/account-deleted')({head:()=>pageHead('Account deleted','Your Curio account and collection have been deleted.'),component:Deleted});
+function Deleted(){return <main className="account-page"><h1 className="account-title">Your account is deleted.</h1><p className="text-sm text-center leading-relaxed">Your private collection is gone. If you used Apple, you can also disconnect its authorization.</p><Button asChild className="mt-8 w-full"><a href="/~oauth/apple/revoke?redirect_uri=https%3A%2F%2Fcurioreceipt.com" target="_blank" rel="noopener noreferrer">Disconnect Apple</a></Button><Button asChild variant="link" className="mt-4 w-full"><Link to="/">Back to Curio</Link></Button></main>;}

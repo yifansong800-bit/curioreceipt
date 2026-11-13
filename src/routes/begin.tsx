@@ -9,6 +9,8 @@ import { getSessionId } from "@/lib/session";
 import { Field, MuseumAutocomplete, type Suggestion } from "@/components/museum-autocomplete";
 import { ModeMark } from "@/components/pixel-icons";
 import { Footer } from "@/components/Footer";
+import { supabase } from '@/integrations/supabase/client';
+import { getCollection, importGuestVisit } from '@/lib/collection.functions';
 
 export const Route = createFileRoute("/begin")({
   head: () => ({
@@ -49,6 +51,9 @@ function BeginPage() {
   const { again } = Route.useSearch();
   const createFn = useServerFn(createVisit);
   const suggestFn = useServerFn(suggestMuseums);
+  const collectionFn = useServerFn(getCollection);
+  const importFn = useServerFn(importGuestVisit);
+  const [account, setAccount] = useState(false);
 
   const [step, setStep] = useState<Step>("name");
   const [dir, setDir] = useState<"fwd" | "back">("fwd");
@@ -63,6 +68,11 @@ function BeginPage() {
   }
 
   useEffect(() => {
+    if (again) void supabase.auth.getUser().then(async ({data}) => {
+      if (!data.user) return;
+      setAccount(true);
+      try { const c = await collectionFn(); if (c.profile?.display_name) { setVisitor(c.profile.display_name); setStep('where'); } } catch {}
+    });
     try {
       const stored = localStorage.getItem("curio:visitor");
       if (stored && stored.trim()) {
@@ -72,7 +82,7 @@ function BeginPage() {
         if (again) setStep("where");
       }
     } catch {}
-  }, [again]);
+  }, [again, collectionFn]);
 
 
   // iOS Safari ignores user-scalable=no, so block pinch/double-tap zoom here.
@@ -109,7 +119,11 @@ function BeginPage() {
         },
       });
     },
-    onSuccess: (visit) => {
+    onSuccess: async (visit) => {
+      if (account && visit) {
+        localStorage.setItem(`curio:account-visit:${visit.id}`, 'yes');
+        try { await importFn({data:{visitId:visit.id,sessionId:getSessionId(),status:'draft',ink:'bw'}}); } catch {}
+      }
       if (visit)
         navigate({
           to: "/visit/$visitId",

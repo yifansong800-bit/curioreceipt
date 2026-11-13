@@ -79,6 +79,96 @@ export type Database = {
           },
         ]
       }
+      collection_entries: {
+        Row: {
+          category: string
+          created_at: string
+          guest_visit_id: string | null
+          id: string
+          ink: string
+          snapshot: Json
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          guest_visit_id?: string | null
+          id?: string
+          ink?: string
+          snapshot?: Json
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          guest_visit_id?: string | null
+          id?: string
+          ink?: string
+          snapshot?: Json
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      museum_bookmarks: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_path: string | null
+          display_name: string
+          id: string
+          onboarded: boolean
+          preferences: Json
+          username: string | null
+        }
+        Insert: {
+          avatar_path?: string | null
+          display_name?: string
+          id: string
+          onboarded?: boolean
+          preferences?: Json
+          username?: string | null
+        }
+        Update: {
+          avatar_path?: string | null
+          display_name?: string
+          id?: string
+          onboarded?: boolean
+          preferences?: Json
+          username?: string | null
+        }
+        Relationships: []
+      }
       visits: {
         Row: {
           city: string | null

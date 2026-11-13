@@ -2,6 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { Info } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 
 import {
   Dialog,
@@ -57,6 +59,8 @@ export const Route = createFileRoute("/")({
 function Index() {
   const navigate = useNavigate();
   const [demo, setDemo] = useState<CurioMode | null>(null);
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => { void supabase.auth.getUser().then(({data}) => setSignedIn(!!data.user)); }, []);
 
   // Warm the demo media (and the /begin route) on idle so the first tap on an
   // icon — and the first print — render instantly instead of fetching then.
@@ -179,22 +183,9 @@ function Index() {
             ))}
           </div>
 
-          <div className="mt-9 flex justify-center">
-            <button
-              type="button"
-              onClick={() => navigate({ to: "/begin", search: { again: undefined } })}
-              className="w-full uppercase tracking-[0.25em] text-sm py-3.5 transition-transform duration-100 active:scale-[0.98]"
-              style={{
-                backgroundColor: "var(--teal)",
-                color: "var(--yellow)",
-                fontFamily: "var(--font-mono)",
-                fontWeight: 500,
-                touchAction: "manipulation",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              begin
-            </button>
+          <div className="mt-9 flex flex-col gap-3 justify-center">
+            <Button className="w-full h-12 bg-teal text-yellow uppercase tracking-widest" onClick={() => navigate({to:signedIn?'/library':'/auth'})}>{signedIn?'My collection':'Begin my collection'}</Button>
+            <Link to="/begin" search={{again:undefined}} className="text-center text-xs underline text-ink-soft">Try the guest version</Link>
           </div>
         </div>
 

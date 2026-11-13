@@ -164,7 +164,7 @@ export function MuseumAutocomplete({
       ) : null}
       {showList ? (
         <ul
-          className="relative mt-1 border max-h-72 overflow-auto"
+          className="absolute left-0 right-0 top-full z-30 mt-1 border max-h-72 overflow-auto"
           style={{
             backgroundColor: "var(--paper)",
             borderColor: "var(--ink)",
